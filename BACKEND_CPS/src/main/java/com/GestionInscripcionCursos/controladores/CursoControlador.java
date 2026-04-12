@@ -6,21 +6,22 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.CursoServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@RequestMapping("/curso")
+@RestController
+@RequestMapping("/api/curso")
 public class CursoControlador {
 
     @Autowired
@@ -31,92 +32,65 @@ public class CursoControlador {
 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @GetMapping("/registrar")
-    public String registrar() {
-        return "VistaRegistrarCurso.html";
+    public ResponseEntity<?> registrar() {
+        return ResponseEntity.ok(Map.of("mensaje", "Endpoint para registrar curso"));
     }
 
     @PostMapping("/registro")
-    public String registro(
+    public ResponseEntity<?> registro(
             @RequestParam String nombre,
-            @RequestParam String descripcion,
-            ModelMap modelo) {
+            @RequestParam String descripcion) {
 
         try {
-
             cursoServicio.crearCurso(nombre, descripcion);
-            modelo.put("exito", "Curso Registrado Correctamente!");
-
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("mensaje", "Curso registrado correctamente"));
         } catch (MyException ex) {
-
-            modelo.put("error", ex.getMessage());
-
-            return "VistaRegistrarCurso.html";
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
-        return "panelAdmin.html";
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    //@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @GetMapping("/lista")
-    public String listar(ModelMap modelo) {
-        List<Curso> cursos = cursoServicio.listarCursos();
-        modelo.addAttribute("cursos", cursos);
-
-        return "VistaListarCursos.html";
+    public ResponseEntity<List<Curso>> listar() {
+        return ResponseEntity.ok(cursoServicio.listarCursos());
     }
 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @GetMapping("/modificar/{id}")
-    public String modificar(
-            @PathVariable String id,
-            ModelMap modelo) {
-
-        modelo.put("curso", cursoServicio.buscarPorId(id));
-
-        return "VistaModificarCurso.html";
+    public ResponseEntity<Curso> modificar(@PathVariable String id) {
+        return ResponseEntity.ok(cursoServicio.buscarPorId(id));
     }
 
     @PostMapping("/modificar/{id}")
-    public String modificar(
+    public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion,
-            RedirectAttributes redirectAttributes) {
+            @RequestParam String descripcion) {
 
         try {
-
             cursoServicio.modificarCurso(id, nombre, descripcion);
-
-            redirectAttributes.addFlashAttribute("exito", "Curso Modificado Correctamente!");
-
-            return "redirect:../lista";
-
+            return ResponseEntity.ok(cursoServicio.buscarPorId(id));
         } catch (MyException ex) {
-
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
-
-            return "redirect:../modificar/" + id;
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
 
     }
 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @GetMapping("/eliminar/{id}")
-    public String eliminar(@PathVariable String id, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<?> eliminar(@PathVariable String id) {
         try {
             cursoServicio.eliminarCurso(id);
-
-            redirectAttributes.addFlashAttribute("exito", "Curso Eliminado Correctamente!");
-
+            return ResponseEntity.ok(Map.of("mensaje", "Curso eliminado correctamente"));
         } catch (MyException ex) {
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
-
-        return "redirect:../lista";
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
     @GetMapping("/listaDisponiblesProfesor")
-    public String listarCursosDisponiblesProfesor(ModelMap modelo) {
+    public ResponseEntity<List<Curso>> listarCursosDisponiblesProfesor() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -125,15 +99,12 @@ public class CursoControlador {
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
 
         List<Curso> cursos = cursoServicio.listarCursosDisponiblesProfesor(usuario.getId());
-
-        modelo.addAttribute("cursos", cursos);
-
-        return "VistaListarCursosDisponiblesProfesor.html";
+        return ResponseEntity.ok(cursos);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
     @GetMapping("/listaInscritosProfesor")
-    public String listarCursosInscritosProfesor(ModelMap modelo) {
+    public ResponseEntity<List<Curso>> listarCursosInscritosProfesor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String emailUser = authentication.getName();
@@ -141,15 +112,12 @@ public class CursoControlador {
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
 
         List<Curso> cursos = cursoServicio.listarCursosInscritosProfesor(usuario.getId());
-
-        modelo.addAttribute("cursos", cursos);
-
-        return "VistaListarCursosInscritosProfesor.html";
+        return ResponseEntity.ok(cursos);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
     @GetMapping("/listaDisponiblesAlumno")
-    public String listarCursosDisponiblesAlumno(ModelMap modelo) {
+    public ResponseEntity<List<Curso>> listarCursosDisponiblesAlumno() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -158,15 +126,12 @@ public class CursoControlador {
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
 
         List<Curso> cursos = cursoServicio.listarCursosDisponiblesAlumno(usuario.getId());
-
-        modelo.addAttribute("cursos", cursos);
-
-        return "VistaListarCursosDisponiblesAlumno.html";
+        return ResponseEntity.ok(cursos);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
     @GetMapping("/listaInscritosAlumno")
-    public String listarCursosInscritosAlumno(ModelMap modelo) {
+    public ResponseEntity<List<Curso>> listarCursosInscritosAlumno() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String emailUser = authentication.getName();
@@ -174,15 +139,12 @@ public class CursoControlador {
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
 
         List<Curso> cursos = cursoServicio.listarCursosInscritosAlumno(usuario.getId());
-
-        modelo.addAttribute("cursos", cursos);
-
-        return "VistaListarCursosInscritosAlumno.html";
+        return ResponseEntity.ok(cursos);
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR', 'ROLE_ALUMNO')")
     @GetMapping("/inscribir/{id}")
-    public String inscribirCurso(@PathVariable String id, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<?> inscribirCurso(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String emailUser = authentication.getName();
@@ -190,20 +152,12 @@ public class CursoControlador {
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
 
         try {
-
             cursoServicio.inscribirCurso(usuario.getId(), id);
-
-            redirectAttributes.addFlashAttribute("exito", "Curso Inscrito Correctamente!");
-
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "Curso inscrito correctamente",
+                    "rol", usuario.getRol().name()));
         } catch (MyException ex) {
-
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
-        }
-        if (usuario.getRol().name().equals("PROFESOR")) {
-            return "redirect:../listaDisponiblesProfesor";
-
-        } else {
-            return "redirect:../listaDisponiblesAlumno";
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
 
     }

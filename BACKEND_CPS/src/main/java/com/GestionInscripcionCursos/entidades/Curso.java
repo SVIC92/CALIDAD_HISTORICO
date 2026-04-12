@@ -2,6 +2,7 @@ package com.GestionInscripcionCursos.entidades;
 
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,9 +34,11 @@ public class Curso {
     private String descripcion;
     
     @OneToMany(mappedBy = "curso", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Inscripcion> inscripciones;
     
     @OneToMany(mappedBy = "curso", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Actividad> actividades;
 
     public Curso() {

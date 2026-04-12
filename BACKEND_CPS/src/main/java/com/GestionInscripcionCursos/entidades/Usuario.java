@@ -1,5 +1,7 @@
 package com.GestionInscripcionCursos.entidades;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.GestionInscripcionCursos.enumeraciones.Rol;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -33,6 +35,7 @@ public class Usuario {
     protected String email;
     
     @Column(name = "password", nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     protected String password;
 
     @Temporal(TemporalType.DATE)
@@ -43,9 +46,11 @@ public class Usuario {
     
     
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Inscripcion> inscripciones;
     
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Reporte> reportes;
 
     public Usuario() {

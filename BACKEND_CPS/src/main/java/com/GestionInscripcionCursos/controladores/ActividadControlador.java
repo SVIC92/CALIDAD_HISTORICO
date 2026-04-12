@@ -8,21 +8,22 @@ import com.GestionInscripcionCursos.servicios.ActividadServicio;
 import com.GestionInscripcionCursos.servicios.CursoServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-//prueba
-@Controller
-@RequestMapping("/actividad")
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/actividad")
 public class ActividadControlador {
 
     @Autowired
@@ -36,105 +37,73 @@ public class ActividadControlador {
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
     @GetMapping("/registrar/{id}")
-    public String registrar(
-            @PathVariable String id,
-            ModelMap modelo) {
-        modelo.put("curso", cursoServicio.buscarPorId(id));
-        return "VistaRegistrarActividad.html";
+    public ResponseEntity<?> registrar(@PathVariable String id) {
+        return ResponseEntity.ok(cursoServicio.buscarPorId(id));
     }
 
     @PostMapping("/registro/{id}")
-    public String registro(
+    public ResponseEntity<?> registro(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion,
-            RedirectAttributes redirectAttributes) {
+            @RequestParam String descripcion) {
 
         try {
             actividadServicio.crearActividad(nombre, descripcion, id);
-            redirectAttributes.addFlashAttribute("exito", "Actividad Registrada Correctamente!");
-            return "redirect:/curso/listaInscritosProfesor";
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("mensaje", "Actividad registrada correctamente"));
         } catch (MyException ex) {
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
-            return "redirect:/actividad/registrar/" + id;
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR', 'ROLE_ALUMNO')")
     @GetMapping("/listar/{id}")
-    public String listar(
-            @PathVariable String id,
-            ModelMap modelo) {
+    public ResponseEntity<?> listar(@PathVariable String id) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String emailUser = authentication.getName();
 
         Usuario usuario = usuarioServicio.buscarEmail(emailUser);
-        
+
         Rol rol = usuario.getRol();
-        
-        modelo.addAttribute("rol", rol);
 
         List<Actividad> actividades = actividadServicio.listarActividadesPorIdCurso(id);
-        modelo.addAttribute("actividades", actividades);
 
-        return "VistaListarActividades.html";
+        return ResponseEntity.ok(Map.of("rol", rol, "actividades", actividades));
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
     @GetMapping("/modificar/{id}")
-    public String modificar(
-            @PathVariable String id,
-            ModelMap modelo) {
-
-        modelo.put("actividad", actividadServicio.buscarPorId(id));
-
-        return "VistaModificarActividad.html";
+    public ResponseEntity<?> modificar(@PathVariable String id) {
+        return ResponseEntity.ok(actividadServicio.buscarPorId(id));
     }
 
     @PostMapping("/modificar/{id}")
-    public String modificar(
+    public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion,
-            RedirectAttributes redirectAttributes) {
-
-        Actividad actividad = actividadServicio.buscarPorId(id);
+            @RequestParam String descripcion) {
 
         try {
-
             actividadServicio.modificarActividad(id, nombre, descripcion);
-
-            redirectAttributes.addFlashAttribute("exito", "Actividad Modificado Correctamente!");
-
-            return "redirect:/actividad/listar/" + actividad.getCurso().getId();
-
+            return ResponseEntity.ok(actividadServicio.buscarPorId(id));
         } catch (MyException ex) {
-
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
-
-            return "redirect:/actividad/modificar/" + actividad.getId();
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
 
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
     @GetMapping("/eliminar/{id}")
-    public String eliminar(@PathVariable String id, RedirectAttributes redirectAttributes) {
-
-        Actividad actividad = actividadServicio.buscarPorId(id);
+    public ResponseEntity<?> eliminar(@PathVariable String id) {
 
         try {
             actividadServicio.eliminarActividad(id);
-
-            redirectAttributes.addFlashAttribute("exito", "Actividad Eliminado Correctamente!");
-
+            return ResponseEntity.ok(Map.of("mensaje", "Actividad eliminada correctamente"));
         } catch (MyException ex) {
-            redirectAttributes.addFlashAttribute("error", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
-
-        return "redirect:/actividad/listar/" + actividad.getCurso().getId();
     }
 
 }

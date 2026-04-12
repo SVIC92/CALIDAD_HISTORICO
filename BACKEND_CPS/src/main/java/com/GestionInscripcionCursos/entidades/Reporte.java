@@ -1,6 +1,7 @@
 
 package com.GestionInscripcionCursos.entidades;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,6 +38,7 @@ public class Reporte {
     
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
+    @JsonIgnoreProperties({"inscripciones", "reportes", "password"})
     private Usuario usuario;
     
     @ManyToOne
