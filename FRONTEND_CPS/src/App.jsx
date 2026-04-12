@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import Login from './pages/Login'
 import { obtenerCursos } from './services/CursoService'
 
-function App() {
+function CursosPage() {
   const [count, setCount] = useState(0)
   const [cursos, setCursos] = useState([])
 
@@ -137,6 +139,16 @@ function App() {
       <div className="ticks"></div>
       <section id="spacer"></section>
     </>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/cursos" element={<CursosPage />} />
+    </Routes>
   )
 }
 

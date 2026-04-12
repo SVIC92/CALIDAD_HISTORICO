@@ -96,20 +96,16 @@ public class UsuarioServicio implements UserDetailsService {
         if (usuario != null) {
 
             List<GrantedAuthority> permisos = new ArrayList<>();
-
             GrantedAuthority p = new SimpleGrantedAuthority("ROLE_" + usuario.getRol().toString());
-
             permisos.add(p);
 
-            ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
-
-            HttpSession session = attr.getRequest().getSession(true);
-
-            session.setAttribute("usuariosession", usuario);
+            // ¡Se eliminó el bloque de HttpSession porque las API REST no usan sesiones web!
 
             return new User(usuario.getEmail(), usuario.getPassword(), permisos);
+            
         } else {
-            return null;
+            // Spring Security requiere que lancemos esta excepción en lugar de devolver null
+            throw new UsernameNotFoundException("Usuario no encontrado con el email: " + email);
         }
     }
     
