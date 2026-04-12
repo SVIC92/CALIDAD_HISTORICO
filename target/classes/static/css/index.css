@@ -1,0 +1,155 @@
+
+
+/* Navbar */
+.navBar {
+    background-color: #343a40;  /* Fondo oscuro para el navbar */
+}
+
+.nav-link {
+    color: #fff !important; /* Enlaces en blanco */
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #ffcb00 !important; /* Color amarillo en hover */
+}
+
+.nav-item {
+    margin: 0 15px;  /* Espaciado entre los elementos */
+}
+
+.navbar-toggler {
+    border-color: #ffcb00;  /* Color del botón de toggle */
+}
+
+.navbar-toggler-icon {
+    background-color: #ffcb00; /* Color del icono de toggle */
+}
+
+.navbar-brand {
+    color: #fff !important;
+    font-weight: 700;
+}
+
+/* Asegurar que la navbar sea responsiva */
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+}
+
+
+/* Contenido Principal */
+.contenido {
+    position: relative;
+    height: 100vh; /* La altura ocupa toda la pantalla */
+    overflow: hidden; /* Asegura que no haya scroll si la imagen es más grande */
+}
+
+.imagen-portada {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url(../img/FondoUni.jpg); /* Ruta correcta a la imagen */
+    background-size: cover; /* Asegura que la imagen cubra todo el área */
+    background-position: center; /* Centra la imagen */
+    z-index: -1; /* Asegura que la imagen esté en el fondo */
+}
+
+/* Opcional: Si quieres agregar más contenido dentro */
+.contenido .titulo {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 3rem;
+    font-weight: bold;
+}
+
+
+/* Footer */
+.footer {
+    background-color: #343a40; /* Fondo oscuro */
+    color: #fff;
+    padding: 40px 20px;
+    text-align: center;
+    position: relative;
+    width: 100%;
+    margin-top: 0;
+    box-shadow: 0px -4px 10px rgba(0, 0, 0, 0.1); /* Sombra sutil en la parte superior */
+}
+
+.footer .containerFooter {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer p {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.footer a {
+    color: #ffcb00;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+.footer .back-to-top {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-top: 20px;
+    display: inline-block;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.footer .back-to-top:hover {
+    color: #ffcb00;
+}
+
+.footer .social-icons {
+    margin-top: 20px;
+}
+
+.footer .social-icons a {
+    color: #fff;
+    font-size: 1.5rem;
+    margin: 0 15px;
+    transition: color 0.3s;
+}
+
+.footer .social-icons a:hover {
+    color: #ffcb00;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .footer .containerFooter p {
+        font-size: 0.9rem;
+    }
+
+    .footer .back-to-top {
+        font-size: 1.2rem;
+    }
+
+    .footer .social-icons a {
+        font-size: 1.2rem;
+        margin: 0 10px;
+    }
+}
+
+
+
+
+
+
