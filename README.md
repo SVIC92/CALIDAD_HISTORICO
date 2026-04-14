@@ -12,7 +12,7 @@ El proyecto está dividido en dos partes principales: un Backend robusto en Java
 - **Framework:** Spring Boot 3.4.0
 - **Seguridad:** Spring Security con JSON Web Tokens (JJWT)
 - **Persistencia:** Spring Data JPA
-- **Bases de Datos soportadas:** MySQL y PostgreSQL
+- **Base de Datos soportada:** PostgreSQL
 - **Gestor de dependencias:** Maven
 
 ### Frontend (React)
@@ -33,7 +33,7 @@ Asegúrate de tener instalado lo siguiente en tu entorno local antes de ejecutar
 - [Java Development Kit (JDK) 17](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 - [Node.js](https://nodejs.org/) (Versión 18 o superior) y npm/yarn
 - [Maven](https://maven.apache.org/)
-- Servidor de base de datos MySQL o PostgreSQL (según la configuración de tu `application.properties`).
+- Servidor de base de datos PostgreSQL.
 
 ---
 
