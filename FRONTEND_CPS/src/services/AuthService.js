@@ -6,8 +6,8 @@ const AuthService = {
         return respuesta.data;
     },
 
-    crearPrueba: async () => {
-        const respuesta = await axios.get('/auth/crear-prueba');
+    usuarioConectado: async () => {
+        const respuesta = await axios.get('/auth/me');
         return respuesta.data;
     },
 };

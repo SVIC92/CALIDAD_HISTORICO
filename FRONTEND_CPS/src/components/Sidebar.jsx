@@ -1,17 +1,71 @@
+import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
 import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
+import AuthService from '../services/AuthService';
 
 const drawerWidth = 240;
+
+const normalizeRole = (roleValue) => {
+  const raw = String(roleValue || '').trim().toUpperCase();
+  if (!raw) return '';
+  if (raw.startsWith('ROLE_')) return raw;
+
+  if (raw.includes('ADMIN')) return 'ROLE_ADMIN';
+  if (raw.includes('PROF')) return 'ROLE_PROFESOR';
+  if (raw.includes('ALUM')) return 'ROLE_ALUMNO';
+
+  return '';
+};
 
 const Sidebar = ({ open, variant }) => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const rol = localStorage.getItem('rol');
+  const rolGuardado = localStorage.getItem('rol');
   const nombreGuardado = localStorage.getItem('nombre') || '';
   const nombreToken = getDisplayNameFromToken(token);
-  const nombre = (nombreGuardado && !nombreGuardado.includes('@') ? nombreGuardado : nombreToken) || nombreGuardado || 'Usuario';
+  const [perfilUsuario, setPerfilUsuario] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const cargarUsuarioConectado = async () => {
+      try {
+        const perfil = await AuthService.usuarioConectado();
+        if (!active || !perfil) return;
+
+        setPerfilUsuario(perfil);
+
+        if (perfil?.nombre) {
+          localStorage.setItem('nombre', perfil.nombre);
+        }
+        if (perfil?.rol) {
+          const rolNormalizado = normalizeRole(perfil.rol);
+          if (rolNormalizado) {
+            localStorage.setItem('rol', rolNormalizado);
+          }
+        }
+      } catch {
+        // Si falla /auth/me, mantenemos fallback local/token.
+      }
+    };
+
+    if (token) {
+      cargarUsuarioConectado();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  const nombrePerfil = perfilUsuario?.nombre || '';
+  const nombre = nombrePerfil
+    || (nombreGuardado && !nombreGuardado.includes('@') ? nombreGuardado : '')
+    || nombreToken
+    || nombreGuardado
+    || 'Usuario';
 
   const rolLabelByCode = {
     ROLE_ADMIN: 'Administrador',
@@ -19,7 +73,9 @@ const Sidebar = ({ open, variant }) => {
     ROLE_ALUMNO: 'Alumno',
   };
 
-  const rolFinal = rol || getRoleFromToken(token);
+  const rolFinal = normalizeRole(perfilUsuario?.rol)
+    || normalizeRole(rolGuardado)
+    || normalizeRole(getRoleFromToken(token));
   const rolLabel = rolLabelByCode[rolFinal] || 'Usuario';
 
   const menuByRole = {
@@ -50,7 +106,7 @@ const Sidebar = ({ open, variant }) => {
     ],
   };
 
-  const menuItems = menuByRole[rol] || menuByRole.ROLE_ALUMNO;
+  const menuItems = menuByRole[rolFinal] || menuByRole.ROLE_ALUMNO;
 
   return (
     <Drawer

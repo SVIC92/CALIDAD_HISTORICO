@@ -1,11 +1,15 @@
 package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.seguridad.JwtUtil;
+import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,14 +53,30 @@ public class AuthControlador {
         
         return ResponseEntity.ok(respuesta);
     }
-    @GetMapping("/crear-prueba")
-    public ResponseEntity<String> crearUsuarioPrueba() {
-        try {
-            // Crea o actualiza el usuario admin de prueba.
-            usuarioServicio.crearOActualizarAdminPrueba("Admin Prueba", "admin@prueba.com", "123456");
-            return ResponseEntity.ok("Usuario admin de prueba creado/actualizado con exito en NeonDB");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al crear: " + e.getMessage());
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/me")
+    public ResponseEntity<?> perfilActual(Authentication authentication) {
+        Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
+        if (usuario == null) {
+            return ResponseEntity.status(404).body(Map.of("mensaje", "Usuario no encontrado"));
         }
+
+        String rol = usuario.getRol() != null ? usuario.getRol().name() : null;
+        if (rol == null && authentication != null && authentication.getAuthorities() != null) {
+            rol = authentication.getAuthorities()
+                    .stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .map(r -> r.startsWith("ROLE_") ? r.substring(5) : r)
+                    .orElse(null);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "id", usuario.getId(),
+                "nombre", usuario.getNombre(),
+                "email", usuario.getEmail(),
+                "rol", rol != null ? rol : "SIN_ROL"
+        ));
     }
 }
