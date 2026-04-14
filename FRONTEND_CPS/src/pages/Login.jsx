@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import api from '../API/axios';
+import AuthService from '../services/AuthService';
 import { 
     Container, 
     Box, 
@@ -13,21 +13,44 @@ import {
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Avatar from '@mui/material/Avatar';
+import { useLoadingScreen } from '../context/LoadingScreenContext';
+import { getDisplayNameFromToken } from '../utils/authIdentity';
 
 const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
     const [serverError, setServerError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const { startLoading, stopLoading } = useLoadingScreen();
+
+    const getRedirectByRole = (rol) => {
+        if (rol === 'ROLE_ADMIN') return '/dashboard/admin';
+        if (rol === 'ROLE_PROFESOR') return '/dashboard/profesor';
+        if (rol === 'ROLE_ALUMNO') return '/dashboard/alumno';
+        return '/dashboard';
+    };
 
     const onSubmit = async (data) => {
         try {
-            const response = await api.post('/auth/login', data);
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('rol', response.data.rol);
-            navigate('/cursos'); 
+            setServerError('');
+            setIsSubmitting(true);
+            startLoading();
+
+            const respuesta = await AuthService.login(data.email, data.password);
+            localStorage.setItem('token', respuesta.token);
+            localStorage.setItem('rol', respuesta.rol);
+            const nameFromToken = getDisplayNameFromToken(respuesta.token);
+            localStorage.setItem('nombre', respuesta.nombre || respuesta.username || nameFromToken || data.email || 'Usuario');
+            navigate(getRedirectByRole(respuesta.rol));
         } catch (err) {
             console.error('Error en login:', err);
-            setServerError('Credenciales incorrectas. Intenta de nuevo.');
+            const backendMessage = typeof err?.response?.data === 'string'
+                ? err.response.data
+                : err?.response?.data?.error;
+            setServerError(backendMessage || 'Credenciales incorrectas. Intenta de nuevo.');
+        } finally {
+            stopLoading();
+            setIsSubmitting(false);
         }
     };
 
@@ -95,9 +118,19 @@ const Login = () => {
                             type="submit"
                             fullWidth
                             variant="contained"
+                            disabled={isSubmitting}
                             sx={{ mt: 3, mb: 2, py: 1.5 }}
                         >
-                            Ingresar
+                            {isSubmitting ? 'Ingresando...' : 'Ingresar'}
+                        </Button>
+
+                        <Button
+                            type="button"
+                            fullWidth
+                            variant="text"
+                            onClick={() => navigate('/registro')}
+                        >
+                            Crear cuenta
                         </Button>
                     </Box>
                 </Paper>

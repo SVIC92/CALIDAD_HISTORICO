@@ -78,7 +78,7 @@ public class ReporteControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_PROFESOR')")
     @GetMapping("/listar/{id}")
     public ResponseEntity<List<Reporte>> listar(@PathVariable String id) {
 

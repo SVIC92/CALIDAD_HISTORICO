@@ -72,6 +72,28 @@ public class InscripcionControlador {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
     }
+
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @GetMapping("/aprobarProfesor/{id}")
+    public ResponseEntity<?> aprobarProfesor(@PathVariable String id) {
+        try {
+            inscripcionServicio.aprobarInscripcionProfesor(id);
+            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion de profesor aprobada y asignada al curso"));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @GetMapping("/rechazarProfesor/{id}")
+    public ResponseEntity<?> rechazarProfesor(@PathVariable String id) {
+        try {
+            inscripcionServicio.rechazarInscripcionProfesor(id);
+            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion de profesor rechazada correctamente"));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
     
     
 }

@@ -11,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
@@ -54,6 +55,13 @@ public class Usuario {
     private List<Reporte> reportes;
 
     public Usuario() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.fechaCreacion == null) {
+            this.fechaCreacion = new Date();
+        }
     }
 
     public Usuario(String id, String nombre, String email, String password, Date fechaCreacion, Rol rol, List<Inscripcion> inscripciones, List<Reporte> reportes) {

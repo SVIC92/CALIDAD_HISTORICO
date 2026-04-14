@@ -1,6 +1,7 @@
 package com.GestionInscripcionCursos.seguridad;
 
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
+import com.GestionInscripcionCursos.servicios.PresenciaUsuarioServicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +25,9 @@ public class JwtFiltro extends OncePerRequestFilter {
 
     @Autowired
     private UsuarioServicio usuarioServicio;
+
+    @Autowired
+    private PresenciaUsuarioServicio presenciaUsuarioServicio;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -53,6 +57,7 @@ public class JwtFiltro extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                presenciaUsuarioServicio.registrarActividad(username, userDetails.getAuthorities());
             }
         }
         filterChain.doFilter(request, response);

@@ -1,154 +1,105 @@
-import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import './App.css'
+import { useEffect, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import DashboardLayout from './layouts/DashboardLayout';
+import RutasProtegidas from './components/RutasProtegidas';
 import Login from './pages/Login'
-import { obtenerCursos } from './services/CursoService'
+import Registro from './pages/Registro';
+import DashboardAdmin from './pages/DashboardAdmin';
+import DashboardProfesor from './pages/DashboardProfesor';
+import DashboardAlumno from './pages/DashboardAlumno';
+import CursosHub from './pages/CursosHub';
+import CursosListado from './pages/CursosListado';
+import CursosDictadosProfesor from './pages/CursosDictadosProfesor';
+import Actividades from './pages/Actividades';
+import Inscripciones from './pages/Inscripciones';
+import Reportes from './pages/Reportes';
+import Configuracion from './pages/Configuracion';
+import EstudIA from './pages/EstudIA';
+import ListadoUsuarios from './pages/ListadoUsuarios';
+import UsuarioHub from './pages/UsuarioHub';
+import UsuariosConectados from './pages/UsuariosConectados';
+import ModuloPlaceholder from './pages/ModuloPlaceholder';
+import NoAutorizado from './pages/NoAutorizado';
+import { useLoadingScreen } from './context/LoadingScreenContext';
 
-function CursosPage() {
-  const [count, setCount] = useState(0)
-  const [cursos, setCursos] = useState([])
+const DashboardRedirect = () => {
+  const rol = localStorage.getItem('rol');
+
+  if (rol === 'ROLE_ADMIN') return <Navigate to="/dashboard/admin" replace />;
+  if (rol === 'ROLE_PROFESOR') return <Navigate to="/dashboard/profesor" replace />;
+  if (rol === 'ROLE_ALUMNO') return <Navigate to="/dashboard/alumno" replace />;
+
+  return <Navigate to="/" replace />;
+};
+
+const RouteChangeLoader = () => {
+  const location = useLocation();
+  const { startLoading, stopLoading } = useLoadingScreen();
+  const firstRenderRef = useRef(true);
 
   useEffect(() => {
-    const cargarCursos = async () => {
-      try {
-        const data = await obtenerCursos()
-        setCursos(data)
-      } catch (error) {
-        console.error('Error al obtener cursos:', error)
-      }
+    if (firstRenderRef.current) {
+      firstRenderRef.current = false;
+      return;
     }
 
-    cargarCursos()
-  }, [])
+    startLoading();
+    const timeoutId = window.setTimeout(() => {
+      stopLoading();
+    }, 350);
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <h1>Vite + React</h1>
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-        <div>
-          <h2>Cursos</h2>
-          {cursos.length === 0 ? (
-            <p>No hay cursos para mostrar.</p>
-          ) : (
-            <ul>
-              {cursos.map((curso) => (
-                <li key={curso.id ?? curso.codigo ?? curso.nombre}>{curso.nombre}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [location.pathname, location.search, location.hash, startLoading, stopLoading]);
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon"alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
-}
+  return null;
+};
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/cursos" element={<CursosPage />} />
-    </Routes>
+    <>
+      <RouteChangeLoader />
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
+        <Route element={<RutasProtegidas />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardRedirect />} />
+            <Route path="/no-autorizado" element={<NoAutorizado />} />
+
+            <Route element={<RutasProtegidas allowedRoles={['ROLE_ADMIN']} />}>
+              <Route path="/dashboard/admin" element={<DashboardAdmin />} />
+              <Route path="/usuarios" element={<UsuarioHub />} />
+              <Route path="/usuarios/listado" element={<ListadoUsuarios />} />
+              <Route path="/usuarios/conectados" element={<UsuariosConectados />} />
+            </Route>
+
+            <Route element={<RutasProtegidas allowedRoles={['ROLE_PROFESOR']} />}>
+              <Route path="/dashboard/profesor" element={<DashboardProfesor />} />
+              <Route path="/cursos/dictados" element={<CursosDictadosProfesor />} />
+            </Route>
+
+            <Route element={<RutasProtegidas allowedRoles={['ROLE_ALUMNO']} />}>
+              <Route path="/dashboard/alumno" element={<DashboardAlumno />} />
+            </Route>
+
+            <Route element={<RutasProtegidas allowedRoles={['ROLE_ADMIN', 'ROLE_PROFESOR', 'ROLE_ALUMNO']} />}>
+            {/* Grupo de rutas de Cursos */}
+              <Route path="/cursos" element={<CursosHub />} />
+              <Route path="/cursos/listado" element={<CursosListado />} />
+              <Route path="/modulo/inscripciones" element={<Inscripciones />} />
+              <Route path="/modulo/actividades" element={<Actividades />} />
+              <Route path="/modulo/reportes" element={<Reportes />} />
+              <Route path="/modulo/estudia" element={<EstudIA />} />
+              <Route path="/modulo/configuracion" element={<Configuracion />} />
+              <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />
+            </Route>
+            {/* <Route path="/cursos/inscripcion" element={<div>Próximamente: Inscripciones</div>} /> */}
+          </Route>
+        </Route>
+      </Routes>
+    </>
   )
 }
 

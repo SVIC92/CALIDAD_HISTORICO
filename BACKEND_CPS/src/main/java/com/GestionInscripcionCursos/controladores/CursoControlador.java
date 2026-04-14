@@ -5,6 +5,7 @@ import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.CursoServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,10 +41,16 @@ public class CursoControlador {
     @PostMapping("/registro")
     public ResponseEntity<?> registro(
             @RequestParam String nombre,
-            @RequestParam String descripcion) {
+            @RequestParam String descripcion,
+            @RequestParam Integer capacidadMaxima,
+            @RequestParam Integer creditos,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaTermino,
+            @RequestParam(required = false) String profesorAsignado,
+            @RequestParam(required = false) String profesorId) {
 
         try {
-            cursoServicio.crearCurso(nombre, descripcion);
+            String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
+            cursoServicio.crearCurso(nombre, descripcion, capacidadMaxima, creditos, fechaTermino, profesorReferencia);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("mensaje", "Curso registrado correctamente"));
         } catch (MyException ex) {
@@ -56,6 +64,16 @@ public class CursoControlador {
         return ResponseEntity.ok(cursoServicio.listarCursos());
     }
 
+    @GetMapping("/lista/activos")
+    public ResponseEntity<List<Curso>> listarActivos() {
+        return ResponseEntity.ok(cursoServicio.listarCursosActivos());
+    }
+
+    @GetMapping("/lista/caducados")
+    public ResponseEntity<List<Curso>> listarCaducados() {
+        return ResponseEntity.ok(cursoServicio.listarCursosCaducados());
+    }
+
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @GetMapping("/modificar/{id}")
     public ResponseEntity<Curso> modificar(@PathVariable String id) {
@@ -66,10 +84,16 @@ public class CursoControlador {
     public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion) {
+            @RequestParam String descripcion,
+            @RequestParam Integer capacidadMaxima,
+            @RequestParam Integer creditos,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaTermino,
+            @RequestParam(required = false) String profesorAsignado,
+            @RequestParam(required = false) String profesorId) {
 
         try {
-            cursoServicio.modificarCurso(id, nombre, descripcion);
+            String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
+            cursoServicio.modificarCurso(id, nombre, descripcion, capacidadMaxima, creditos, fechaTermino, profesorReferencia);
             return ResponseEntity.ok(cursoServicio.buscarPorId(id));
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));

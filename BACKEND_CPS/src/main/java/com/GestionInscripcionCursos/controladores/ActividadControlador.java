@@ -7,6 +7,7 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.ActividadServicio;
 import com.GestionInscripcionCursos.servicios.CursoServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,10 +48,11 @@ public class ActividadControlador {
     public ResponseEntity<?> registro(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion) {
+            @RequestParam String descripcion,
+            @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) Date fechaVencimiento) {
 
         try {
-            actividadServicio.crearActividad(nombre, descripcion, id);
+            actividadServicio.crearActividad(nombre, descripcion, fechaVencimiento, id);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("mensaje", "Actividad registrada correctamente"));
         } catch (MyException ex) {
@@ -56,7 +60,7 @@ public class ActividadControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR', 'ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR', 'ALUMNO')")
     @GetMapping("/listar/{id}")
     public ResponseEntity<?> listar(@PathVariable String id) {
 
@@ -83,10 +87,11 @@ public class ActividadControlador {
     public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
-            @RequestParam String descripcion) {
+            @RequestParam String descripcion,
+            @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) Date fechaVencimiento) {
 
         try {
-            actividadServicio.modificarActividad(id, nombre, descripcion);
+            actividadServicio.modificarActividad(id, nombre, descripcion, fechaVencimiento);
             return ResponseEntity.ok(actividadServicio.buscarPorId(id));
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));

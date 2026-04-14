@@ -10,6 +10,9 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,15 +28,15 @@ public class ActividadServicio {
     private CursoRepositorio cursoRepositorio;
 
     @Transactional
-    public void crearActividad(String nombre, String descripcion, String idCurso) throws MyException {
+    public void crearActividad(String nombre, String descripcion, Date fechaVencimiento, String idCurso) throws MyException {
 
-        validarActividad(nombre, descripcion);
+        validarActividad(nombre, descripcion, fechaVencimiento);
 
         Optional<Curso> respuesta = cursoRepositorio.findById(idCurso);
 
         Curso curso = respuesta.get();
 
-        Actividad actividad = new Actividad(nombre, descripcion, curso);
+        Actividad actividad = new Actividad(nombre, descripcion, fechaVencimiento, curso);
 
         actividadRepositorio.save(actividad);
     }
@@ -43,9 +46,9 @@ public class ActividadServicio {
     }
 
     @Transactional
-    public void modificarActividad(String id, String nombre, String descripcion) throws MyException {
+    public void modificarActividad(String id, String nombre, String descripcion, Date fechaVencimiento) throws MyException {
 
-        validarActividad(nombre, descripcion);
+        validarActividad(nombre, descripcion, fechaVencimiento);
 
 
         Optional<Actividad> respuesta = actividadRepositorio.findById(id);
@@ -57,6 +60,8 @@ public class ActividadServicio {
             actividad.setNombre(nombre);
 
             actividad.setDescripcion(descripcion);
+
+            actividad.setFechaVencimiento(fechaVencimiento);
 
             actividadRepositorio.save(actividad);
 
@@ -76,14 +81,24 @@ public class ActividadServicio {
         return actividadRepositorio.buscarPorId(id);
     }
 
-    private void validarActividad(String nombre, String descripcion) throws MyException {
+    private void validarActividad(String nombre, String descripcion, Date fechaVencimiento) throws MyException {
 
-        if (nombre.isEmpty() || nombre == null) {
+        if (nombre == null || nombre.isEmpty()) {
             throw new MyException("El nombre no puede ser nulo o estar vacio");
         }
 
-        if (descripcion.isEmpty() || descripcion == null) {
+        if (descripcion == null || descripcion.isEmpty()) {
             throw new MyException("La descripcion no puede ser nulo o estar vacio");
+        }
+
+        if (fechaVencimiento == null) {
+            throw new MyException("La fecha de vencimiento es obligatoria");
+        }
+
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime vencimiento = fechaVencimiento.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        if (vencimiento.isBefore(ahora)) {
+            throw new MyException("La fecha y hora de vencimiento no puede ser anterior a la fecha y hora de creacion");
         }
     }
 

@@ -1,10 +1,11 @@
 package com.GestionInscripcionCursos.servicios;
 
+import com.GestionInscripcionCursos.dto.ProfesorResumenDto;
+import com.GestionInscripcionCursos.dto.UsuarioResumenDto;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.enumeraciones.Rol;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
-import jakarta.servlet.http.HttpSession;
 
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
@@ -21,8 +22,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class UsuarioServicio implements UserDetailsService {
@@ -138,6 +137,21 @@ public class UsuarioServicio implements UserDetailsService {
     
     public Usuario buscarEmail(String id) {
         return usuarioRepositorio.buscarPorEmail(id);
+    }
+
+    public List<ProfesorResumenDto> listarProfesores() {
+        return usuarioRepositorio.buscarPorRol(Rol.PROFESOR)
+                .stream()
+                .map(u -> new ProfesorResumenDto(u.getId(), u.getNombre(), u.getEmail()))
+                .toList();
+    }
+
+    public List<UsuarioResumenDto> listarUsuarios() {
+        return usuarioRepositorio.findAll()
+                .stream()
+                .sorted((a, b) -> a.getNombre().compareToIgnoreCase(b.getNombre()))
+                .map(u -> new UsuarioResumenDto(u.getId(), u.getNombre(), u.getEmail(), u.getRol().name()))
+                .toList();
     }
 
     
