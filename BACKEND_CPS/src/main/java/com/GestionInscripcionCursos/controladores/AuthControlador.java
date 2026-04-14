@@ -52,9 +52,9 @@ public class AuthControlador {
     @GetMapping("/crear-prueba")
     public ResponseEntity<String> crearUsuarioPrueba() {
         try {
-            // Usa tu propio servicio para registrar un admin con clave 123456
-            usuarioServicio.registrar("Admin Prueba", "admin@prueba.com", "123456", "123456");
-            return ResponseEntity.ok("Usuario creado con éxito en NeonDB");
+            // Crea o actualiza el usuario admin de prueba.
+            usuarioServicio.crearOActualizarAdminPrueba("Admin Prueba", "admin@prueba.com", "123456");
+            return ResponseEntity.ok("Usuario admin de prueba creado/actualizado con exito en NeonDB");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al crear: " + e.getMessage());
         }

@@ -1,53 +1,108 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../API/axios'; 
+import { useForm } from 'react-hook-form';
+import api from '../API/axios';
+import { 
+    Container, 
+    Box, 
+    Typography, 
+    TextField, 
+    Button, 
+    Paper, 
+    Alert 
+} from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import Avatar from '@mui/material/Avatar';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const navigate = useNavigate(); // Hook para cambiar de página
+    const { register, handleSubmit, formState: { errors } } = useForm();
+    const [serverError, setServerError] = useState('');
+    const navigate = useNavigate();
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
+    const onSubmit = async (data) => {
         try {
-            // 1. Mandamos las credenciales a Spring Boot
-            const response = await api.post('/auth/login', { email, password });
-
-            // 2. Si es exitoso, guardamos el token y el rol en el navegador
+            const response = await api.post('/auth/login', data);
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('rol', response.data.rol);
-
-            // 3. Redirigimos al usuario a la página principal (ej. panel de cursos)
-            navigate('/curso');
+            navigate('/cursos'); 
         } catch (err) {
             console.error('Error en login:', err);
-            setError('Credenciales incorrectas. Intenta de nuevo.');
+            setServerError('Credenciales incorrectas. Intenta de nuevo.');
         }
     };
 
     return (
-        <div style={{ padding: '50px', maxWidth: '400px', margin: '0 auto' }}>
-            <h2>Iniciar Sesión</h2>
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <input
-                    type="email"
-                    placeholder="Correo electrónico"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="Contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-                <button type="submit">Ingresar</button>
-            </form>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-        </div>
+        <Container component="main" maxWidth="xs">
+            {/* Box actúa como un div flexible que centra el contenido */}
+            <Box
+                sx={{
+                    marginTop: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+            >
+                {/* Paper le da el aspecto de tarjeta con sombra */}
+                <Paper elevation={3} sx={{ padding: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2 }}>
+                    
+                    <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+                        <LockOutlinedIcon />
+                    </Avatar>
+                    
+                    <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
+                        Iniciar Sesión
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Portal de Gestión de Cursos
+                    </Typography>
+
+                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1, width: '100%' }}>
+                        
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="email"
+                            label="Correo electrónico"
+                            autoComplete="email"
+                            autoFocus
+                            {...register("email", { required: "El correo es obligatorio" })}
+                            error={!!errors.email} // MUI cambia a color rojo si hay error
+                            helperText={errors.email ? errors.email.message : ""} // Muestra el mensaje de react-hook-form
+                        />
+
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            label="Contraseña"
+                            type="password"
+                            id="password"
+                            autoComplete="current-password"
+                            {...register("password", { required: "La contraseña es obligatoria" })}
+                            error={!!errors.password}
+                            helperText={errors.password ? errors.password.message : ""}
+                        />
+
+                        {serverError && (
+                            <Alert severity="error" sx={{ mt: 2 }}>
+                                {serverError}
+                            </Alert>
+                        )}
+
+                        <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            sx={{ mt: 3, mb: 2, py: 1.5 }}
+                        >
+                            Ingresar
+                        </Button>
+                    </Box>
+                </Paper>
+            </Box>
+        </Container>
     );
 };
 

@@ -30,6 +30,8 @@ public class UsuarioServicio implements UserDetailsService {
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
 
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     @Transactional
     public void registrar(String nombre, String email, String password, String password2) throws MyException {
 
@@ -41,12 +43,37 @@ public class UsuarioServicio implements UserDetailsService {
 
         usuario.setEmail(email);
 
-        usuario.setPassword(new BCryptPasswordEncoder().encode(password));
+        usuario.setPassword(passwordEncoder.encode(password));
 
         usuario.setFechaCreacion(new Date());
 
         usuario.setRol(Rol.ALUMNO);
 
+        usuarioRepositorio.save(usuario);
+    }
+
+    @Transactional
+    public void crearOActualizarAdminPrueba(String nombre, String email, String password) throws MyException {
+        if (nombre == null || nombre.isBlank()) {
+            throw new MyException("El nombre no puede ser nulo o estar vacio");
+        }
+        if (email == null || email.isBlank()) {
+            throw new MyException("El email no puede ser nulo o estar vacio");
+        }
+        if (password == null || password.length() <= 5) {
+            throw new MyException("La contrasena debe tener mas de 5 digitos");
+        }
+
+        Usuario usuario = usuarioRepositorio.buscarPorEmail(email);
+        if (usuario == null) {
+            usuario = new Usuario();
+            usuario.setFechaCreacion(new Date());
+            usuario.setEmail(email);
+        }
+
+        usuario.setNombre(nombre);
+        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setRol(Rol.ADMIN);
         usuarioRepositorio.save(usuario);
     }
 
