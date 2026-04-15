@@ -33,8 +33,8 @@ public class SeguridadWeb {
     @Autowired
     private JwtFiltro jwtFiltro; // Inyectamos nuestro nuevo filtro
 
-    @Value("${app.cors.allowed-origins}")
-    private String corsAllowedOrigins;
+    @Value("${app.cors.allowed-origin-patterns}")
+    private String corsAllowedOriginPatterns;
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -71,12 +71,12 @@ public class SeguridadWeb {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+        List<String> originPatterns = Arrays.stream(corsAllowedOriginPatterns.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toList());
 
-        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOriginPatterns(originPatterns);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));

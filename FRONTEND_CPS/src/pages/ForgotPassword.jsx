@@ -53,6 +53,13 @@ const ForgotPassword = () => {
       const response = await AuthService.solicitarRecuperacion(emailValue);
       setSuccessMsg(response?.mensaje || 'Si el correo existe, recibirás instrucciones para reestablecer tu contraseña.');
     } catch (error) {
+      if (!error?.response) {
+        setErrorMsg(
+          'No se pudo conectar con el backend. Verifica CORS para tu dominio de Vercel y que la API esté activa en Render.'
+        );
+        return;
+      }
+
       const backendMessage = getBackendMessage(error);
       setErrorMsg(backendMessage || 'No se pudo procesar la solicitud.');
     } finally {
