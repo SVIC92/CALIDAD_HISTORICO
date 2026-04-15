@@ -139,6 +139,11 @@ public class UsuarioServicio implements UserDetailsService {
         return usuarioRepositorio.buscarPorEmail(id);
     }
 
+    @Transactional
+    public Usuario guardar(Usuario usuario) {
+        return usuarioRepositorio.save(usuario);
+    }
+
     public List<ProfesorResumenDto> listarProfesores() {
         return usuarioRepositorio.buscarPorRol(Rol.PROFESOR)
                 .stream()

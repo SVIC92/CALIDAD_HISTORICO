@@ -19,6 +19,8 @@ import { getDisplayNameFromToken } from '../utils/authIdentity';
 const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
     const [serverError, setServerError] = useState('');
+    const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const { startLoading, stopLoading } = useLoadingScreen();
@@ -33,10 +35,11 @@ const Login = () => {
     const onSubmit = async (data) => {
         try {
             setServerError('');
+            setTwoFactorRequired(false);
             setIsSubmitting(true);
             startLoading();
 
-            const respuesta = await AuthService.login(data.email, data.password);
+            const respuesta = await AuthService.login(data.email, data.password, otpCode);
             localStorage.setItem('token', respuesta.token);
             localStorage.setItem('rol', respuesta.rol);
             const nameFromToken = getDisplayNameFromToken(respuesta.token);
@@ -44,10 +47,16 @@ const Login = () => {
             navigate(getRedirectByRole(respuesta.rol));
         } catch (err) {
             console.error('Error en login:', err);
-            const backendMessage = typeof err?.response?.data === 'string'
-                ? err.response.data
-                : err?.response?.data?.error;
-            setServerError(backendMessage || 'Credenciales incorrectas. Intenta de nuevo.');
+            const body = err?.response?.data;
+            if (body?.twoFactorRequired) {
+                setTwoFactorRequired(true);
+                setServerError(body?.mensaje || 'Debes ingresar el código de autenticación (2FA).');
+            } else {
+                const backendMessage = typeof body === 'string'
+                    ? body
+                    : body?.error || body?.mensaje;
+                setServerError(backendMessage || 'Credenciales incorrectas. Intenta de nuevo.');
+            }
         } finally {
             stopLoading();
             setIsSubmitting(false);
@@ -107,6 +116,18 @@ const Login = () => {
                             error={!!errors.password}
                             helperText={errors.password ? errors.password.message : ""}
                         />
+
+                        {twoFactorRequired && (
+                            <TextField
+                                margin="normal"
+                                required
+                                fullWidth
+                                label="Código de autenticación (2FA)"
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value)}
+                                inputProps={{ maxLength: 8 }}
+                            />
+                        )}
 
                         {serverError && (
                             <Alert severity="error" sx={{ mt: 2 }}>

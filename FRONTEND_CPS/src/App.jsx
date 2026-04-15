@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Registro from './pages/Registro';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PerfilUsuario from './pages/PerfilUsuario';
 import DashboardAdmin from './pages/DashboardAdmin';
 import DashboardProfesor from './pages/DashboardProfesor';
 import DashboardAlumno from './pages/DashboardAlumno';
@@ -71,6 +72,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/no-autorizado" element={<NoAutorizado />} />
+            <Route path="/perfil-usuario" element={<PerfilUsuario />} />
 
             <Route element={<RutasProtegidas allowedRoles={['ROLE_ADMIN']} />}>
               <Route path="/dashboard/admin" element={<DashboardAdmin />} />

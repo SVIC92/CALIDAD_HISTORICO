@@ -131,7 +131,11 @@ const Sidebar = ({ open, variant }) => {
           gap: 1,
         }}
       >
-        <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
+        <Avatar
+          sx={{ width: 56, height: 56, bgcolor: 'primary.main', cursor: 'pointer' }}
+          onClick={() => navigate('/perfil-usuario')}
+          title="Ir a perfil"
+        >
           <AccountCircle sx={{ fontSize: 36 }} />
         </Avatar>
         <Typography variant="subtitle1" sx={{ fontWeight: 700, maxWidth: '100%' }} noWrap title={nombre}>
