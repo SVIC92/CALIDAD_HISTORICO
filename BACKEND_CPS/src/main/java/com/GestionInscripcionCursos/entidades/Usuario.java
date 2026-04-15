@@ -39,8 +39,8 @@ public class Usuario {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     protected String password;
 
-    @Column(name = "two_factor_enabled", nullable = false)
-    private boolean twoFactorEnabled = false;
+    @Column(name = "two_factor_enabled")
+    private Boolean twoFactorEnabled;
 
     @Column(name = "two_factor_secret")
     @JsonIgnore
@@ -147,7 +147,7 @@ public class Usuario {
     }
 
     public boolean isTwoFactorEnabled() {
-        return twoFactorEnabled;
+        return Boolean.TRUE.equals(twoFactorEnabled);
     }
 
     public void setTwoFactorEnabled(boolean twoFactorEnabled) {
