@@ -132,6 +132,16 @@ const Login = () => {
                         >
                             Crear cuenta
                         </Button>
+
+                        <Button
+                            type="button"
+                            fullWidth
+                            variant="text"
+                            onClick={() => navigate('/forgot-password')}
+                            sx={{ mt: 0.5 }}
+                        >
+                            ¿Olvidaste tu contraseña?
+                        </Button>
                     </Box>
                 </Paper>
             </Box>

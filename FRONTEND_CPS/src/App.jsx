@@ -4,6 +4,8 @@ import DashboardLayout from './layouts/DashboardLayout';
 import RutasProtegidas from './components/RutasProtegidas';
 import Login from './pages/Login'
 import Registro from './pages/Registro';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import DashboardAdmin from './pages/DashboardAdmin';
 import DashboardProfesor from './pages/DashboardProfesor';
 import DashboardAlumno from './pages/DashboardAlumno';
@@ -63,6 +65,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<RutasProtegidas />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardRedirect />} />

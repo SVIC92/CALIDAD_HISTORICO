@@ -1,7 +1,11 @@
 package com.GestionInscripcionCursos.controladores;
 
+import com.GestionInscripcionCursos.dto.RecuperacionPasswordRequestDto;
+import com.GestionInscripcionCursos.dto.ResetPasswordRequestDto;
+import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.seguridad.JwtUtil;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.servicios.RecuperacionPasswordServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +34,9 @@ public class AuthControlador {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private RecuperacionPasswordServicio recuperacionPasswordServicio;
+
     @PostMapping("/login")
     public ResponseEntity<?> crearTokenAutenticacion(@RequestBody Map<String, String> credenciales) throws Exception {
         try {
@@ -52,6 +59,33 @@ public class AuthControlador {
         respuesta.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
         
         return ResponseEntity.ok(respuesta);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> solicitarRecuperacion(@RequestBody RecuperacionPasswordRequestDto request) {
+        try {
+            recuperacionPasswordServicio.solicitarRecuperacion(request != null ? request.getEmail() : null);
+            return ResponseEntity.ok(Map.of(
+                    "mensaje",
+                    "Si el correo existe en el sistema, recibiras un enlace para reestablecer tu contraseña"
+            ));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+        try {
+            recuperacionPasswordServicio.reestablecerPassword(
+                    request.getToken(),
+                    request.getPassword(),
+                    request.getPassword2()
+            );
+            return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente"));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @PreAuthorize("isAuthenticated()")
