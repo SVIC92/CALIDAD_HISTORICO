@@ -17,6 +17,11 @@ const IaService = {
     const respuesta = await axios.get('/ia/historial/ultimo');
     return respuesta.data;
   },
+
+  generarRubrica: async (payload) => {
+    const respuesta = await axios.post('/ia/rubricas/generar', payload);
+    return respuesta.data;
+  },
 };
 
 export default IaService;

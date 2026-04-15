@@ -3,6 +3,8 @@ package com.GestionInscripcionCursos.controladores;
 import com.GestionInscripcionCursos.dto.IaChatRequestDto;
 import com.GestionInscripcionCursos.dto.IaChatResponseDto;
 import com.GestionInscripcionCursos.dto.IaHistorialDto;
+import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
+import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
 import com.GestionInscripcionCursos.servicios.IaServicio;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -48,5 +50,14 @@ public class IaControlador {
         return iaServicio.obtenerUltimoHistorial(auth.getName())
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.ok(Map.of("mensaje", "No hay historial disponible")));
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
+    @PostMapping("/rubricas/generar")
+    public ResponseEntity<RubricaGeneradaDto> generarRubrica(
+            @RequestBody RubricaGeneracionRequestDto request,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(iaServicio.generarRubrica(auth.getName(), request));
     }
 }
