@@ -1,8 +1,14 @@
 import axios from "axios";
 
 const ensureApiBasePath = (url) => {
-  const clean = String(url || "").trim().replace(/\/+$/, "");
+  let clean = String(url || "").trim().replace(/\/+$/, "");
   if (!clean) return "https://calidad-historico.onrender.com/api";
+
+  // Avoid accidental relative URLs in production when protocol is omitted.
+  if (!/^https?:\/\//i.test(clean)) {
+    clean = `https://${clean}`;
+  }
+
   return clean.endsWith("/api") ? clean : `${clean}/api`;
 };
 
