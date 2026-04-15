@@ -1,7 +1,15 @@
 import axios from "axios";
 
+const ensureApiBasePath = (url) => {
+  const clean = String(url || "").trim().replace(/\/+$/, "");
+  if (!clean) return "https://calidad-historico.onrender.com/api";
+  return clean.endsWith("/api") ? clean : `${clean}/api`;
+};
+
+const resolvedBaseUrl = ensureApiBasePath(import.meta.env.VITE_API_BASE_URL);
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: resolvedBaseUrl,
 });
 api.interceptors.request.use(
   (config) => {
