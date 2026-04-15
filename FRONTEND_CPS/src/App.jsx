@@ -18,6 +18,8 @@ import Inscripciones from './pages/Inscripciones';
 import Reportes from './pages/Reportes';
 import Configuracion from './pages/Configuracion';
 import EstudIA from './pages/EstudIA';
+import IAHub from './pages/IAHub';
+import RubricaIA from './pages/RubricaIA';
 import ListadoUsuarios from './pages/ListadoUsuarios';
 import UsuarioHub from './pages/UsuarioHub';
 import UsuariosConectados from './pages/UsuariosConectados';
@@ -97,7 +99,10 @@ function App() {
               <Route path="/modulo/inscripciones" element={<Inscripciones />} />
               <Route path="/modulo/actividades" element={<Actividades />} />
               <Route path="/modulo/reportes" element={<Reportes />} />
-              <Route path="/modulo/estudia" element={<EstudIA />} />
+              <Route path="/modulo/ia" element={<IAHub />} />
+              <Route path="/modulo/ia/chat" element={<EstudIA />} />
+              <Route path="/modulo/ia/rubricas" element={<RubricaIA />} />
+              <Route path="/modulo/estudia" element={<Navigate to="/modulo/ia" replace />} />
               <Route path="/modulo/configuracion" element={<Configuracion />} />
               <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />
             </Route>
