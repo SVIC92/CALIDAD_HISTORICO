@@ -1,24 +1,46 @@
 import axios from '../API/axios';
 
+const postAuthWithFallback = async (path, body) => {
+    try {
+        const response = await axios.post(`/auth/${path}`, body);
+        return response.data;
+    } catch (error) {
+        if (error?.response?.status === 404) {
+            const fallback = await axios.post(`/${path}`, body);
+            return fallback.data;
+        }
+        throw error;
+    }
+};
+
+const getAuthWithFallback = async (path) => {
+    try {
+        const response = await axios.get(`/auth/${path}`);
+        return response.data;
+    } catch (error) {
+        if (error?.response?.status === 404) {
+            const fallback = await axios.get(`/${path}`);
+            return fallback.data;
+        }
+        throw error;
+    }
+};
+
 const AuthService = {
     login: async (email, password) => {
-        const respuesta = await axios.post('/auth/login', { email, password });
-        return respuesta.data;
+        return postAuthWithFallback('login', { email, password });
     },
 
     solicitarRecuperacion: async (email) => {
-        const respuesta = await axios.post('/auth/forgot-password', { email });
-        return respuesta.data;
+        return postAuthWithFallback('forgot-password', { email });
     },
 
     reestablecerPassword: async ({ token, password, password2 }) => {
-        const respuesta = await axios.post('/auth/reset-password', { token, password, password2 });
-        return respuesta.data;
+        return postAuthWithFallback('reset-password', { token, password, password2 });
     },
 
     usuarioConectado: async () => {
-        const respuesta = await axios.get('/auth/me');
-        return respuesta.data;
+        return getAuthWithFallback('me');
     },
 };
 
