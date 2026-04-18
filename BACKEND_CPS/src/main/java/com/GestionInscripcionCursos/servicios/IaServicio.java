@@ -17,6 +17,7 @@ import com.GestionInscripcionCursos.entidades.Silabo;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import com.GestionInscripcionCursos.repositorios.IaHistorialRepositorio;
+import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.SilaboRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +53,7 @@ public class IaServicio {
     private final UsuarioServicio usuarioServicio;
     private final IaHistorialRepositorio iaHistorialRepositorio;
     private final CursoRepositorio cursoRepositorio;
+    private final InscripcionRepositorio inscripcionRepositorio;
     private final SilaboRepositorio silaboRepositorio;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -62,6 +64,7 @@ public class IaServicio {
             UsuarioServicio usuarioServicio,
             IaHistorialRepositorio iaHistorialRepositorio,
             CursoRepositorio cursoRepositorio,
+            InscripcionRepositorio inscripcionRepositorio,
             SilaboRepositorio silaboRepositorio,
             ObjectMapper objectMapper,
             @Value("${groq.api.key:}") String groqApiKey,
@@ -72,12 +75,13 @@ public class IaServicio {
         this.usuarioServicio = usuarioServicio;
         this.iaHistorialRepositorio = iaHistorialRepositorio;
         this.cursoRepositorio = cursoRepositorio;
+        this.inscripcionRepositorio = inscripcionRepositorio;
         this.silaboRepositorio = silaboRepositorio;
         this.objectMapper = objectMapper;
         this.groqApiKey = groqApiKey;
         this.modeloPorDefecto = modeloPorDefecto;
         this.geminiApiKey = geminiApiKey;
-        this.geminiModelo = geminiModelo;
+        this.geminiModelo = normalizarModeloGemini(geminiModelo);
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -95,10 +99,10 @@ public class IaServicio {
 
         if (groqApiKey == null || groqApiKey.isBlank()) {
             LOGGER.warn("GROQ_API_KEY no configurada. Se respondera con fallback local para rol {}", rol);
-            respuesta = construirRespuestaFallback(rol, mensaje);
+            respuesta = construirRespuestaFallback(rol, mensaje, usuario);
             modeloRespuesta = "fallback-local";
         } else {
-            String promptSistema = construirPromptSistema(rol);
+            String promptSistema = construirPromptSistema(rol, usuario);
             respuesta = llamarGroq(promptSistema, mensaje);
             modeloRespuesta = modeloPorDefecto;
         }
@@ -234,7 +238,7 @@ public class IaServicio {
         // Estructura específica para Gemini
         Map<String, Object> payload = Map.of(
                 "systemInstruction", Map.of(
-                        "parts", Map.of("text", promptSistema)
+                "parts", List.of(Map.of("text", promptSistema))
                 ),
                 "contents", List.of(
                         Map.of("parts", List.of(Map.of("text", mensajeUsuario)))
@@ -257,7 +261,8 @@ public class IaServicio {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         
         if (response.statusCode() >= 400) {
-            throw new IllegalStateException("Gemini devolvió error: " + response.body());
+            throw new IllegalStateException("Gemini devolvio error HTTP " + response.statusCode()
+                    + " (modelo=" + geminiModelo + "): " + response.body());
         }
 
         JsonNode root = objectMapper.readTree(response.body());
@@ -339,7 +344,7 @@ public class IaServicio {
             return silaboGenerado;
             
         } catch (Exception ex) {
-            throw new IllegalStateException("Error al generar el sílabo con IA", ex);
+            throw new IllegalStateException("Error al generar el silabo con IA: " + extraerMensajeRaiz(ex), ex);
         }
     }
 
@@ -416,7 +421,7 @@ public class IaServicio {
         );
 
         Map<String, Object> payload = Map.of(
-                "systemInstruction", Map.of("parts", Map.of("text", promptSistema)),
+            "systemInstruction", Map.of("parts", List.of(Map.of("text", promptSistema))),
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", mensajeUsuario)))),
                 "generationConfig", Map.of(
                         "temperature", 0.3, 
@@ -436,7 +441,8 @@ public class IaServicio {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         
         if (response.statusCode() >= 400) {
-            throw new IllegalStateException("Gemini devolvió error: " + response.body());
+            throw new IllegalStateException("Gemini devolvio error HTTP " + response.statusCode()
+                    + " (modelo=" + geminiModelo + "): " + response.body());
         }
 
         JsonNode root = objectMapper.readTree(response.body());
@@ -456,6 +462,28 @@ public class IaServicio {
         }
 
         return texto;
+    }
+
+    private String normalizarModeloGemini(String modelo) {
+        String modeloNormalizado = valorPorDefecto(modelo, "gemini-1.5-flash").trim();
+        if (modeloNormalizado.startsWith("models/")) {
+            return modeloNormalizado.substring("models/".length());
+        }
+        return modeloNormalizado;
+    }
+
+    private String extraerMensajeRaiz(Throwable throwable) {
+        if (throwable == null) {
+            return "Sin detalle";
+        }
+        Throwable actual = throwable;
+        while (actual.getCause() != null) {
+            actual = actual.getCause();
+        }
+        if (actual.getMessage() == null || actual.getMessage().isBlank()) {
+            return actual.getClass().getSimpleName();
+        }
+        return actual.getMessage();
     }
 
     private SilaboGeneradoDto construirSilaboFallback(
@@ -510,17 +538,27 @@ public class IaServicio {
         );
     }
 
-    private String construirPromptSistema(String rol) {
+        private String construirPromptSistema(String rol, Usuario usuario) {
+        String contextoDatos = construirContextoDatosUsuario(rol, usuario);
         String base = "Eres un asistente del sistema de Gestion de Inscripcion de Cursos. "
                 + "Responde de forma clara y breve en espanol. "
-                + "No inventes datos de base de datos. Si no hay datos suficientes, dilo."
-                + "Siempre saludar e indicar el rol.";
+            + "No inventes datos de base de datos. Si no hay datos suficientes, dilo. "
+            + "Si preguntan por cursos o inscripciones, usa solo el contexto adjunto. "
+            + "Siempre saludar e indicar el rol.";
 
         return switch (rol) {
-            case "ADMIN" -> base + " Puedes sugerir acciones administrativas, gestion de usuarios, cursos y reportes.";
-            case "PROFESOR" -> base + " Solo puedes orientar sobre cursos, actividades, evaluacion y seguimiento academico.";
-            case "ALUMNO" -> base + " Solo puedes orientar sobre inscripciones, actividades, requisitos y progreso del alumno.";
-            default -> base + " Si el rol no es reconocido, limita la respuesta a orientacion general del sistema.";
+            case "ADMIN" -> base
+                + " Puedes sugerir acciones administrativas, gestion de usuarios, cursos y reportes.\n\n"
+                + contextoDatos;
+            case "PROFESOR" -> base
+                + " Solo puedes orientar sobre cursos, actividades, evaluacion y seguimiento academico.\n\n"
+                + contextoDatos;
+            case "ALUMNO" -> base
+                + " Solo puedes orientar sobre inscripciones, actividades, requisitos y progreso del alumno.\n\n"
+                + contextoDatos;
+            default -> base
+                + " Si el rol no es reconocido, limita la respuesta a orientacion general del sistema.\n\n"
+                + contextoDatos;
         };
     }
 
@@ -533,7 +571,8 @@ public class IaServicio {
         }
     }
 
-    private String construirRespuestaFallback(String rol, String mensaje) {
+    private String construirRespuestaFallback(String rol, String mensaje, Usuario usuario) {
+        String contextoDatos = construirContextoDatosUsuario(rol, usuario);
         String recomendacion;
         switch (rol) {
             case "ADMIN" -> recomendacion = "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
@@ -545,7 +584,87 @@ public class IaServicio {
         return "En este momento el asistente IA externo no esta disponible. "
                 + "Recibi tu consulta: '" + mensaje.trim() + "'. "
                 + recomendacion
-                + " Si deseas, intenta nuevamente en unos minutos.";
+                + " Si deseas, intenta nuevamente en unos minutos.\n\n"
+                + contextoDatos;
+    }
+
+    private String construirContextoDatosUsuario(String rol, Usuario usuario) {
+        if (usuario == null || usuario.getId() == null || usuario.getId().isBlank()) {
+            return "Contexto de datos: no se pudo resolver el usuario autenticado.";
+        }
+
+        String idUsuario = usuario.getId();
+
+        try {
+            switch (rol) {
+                case "ADMIN": {
+                    List<Curso> cursosActivos = cursoRepositorio.buscarCursosActivos(new Date());
+                    long totalInscripciones = inscripcionRepositorio.count();
+                    int pendientesAlumno = inscripcionRepositorio.listarPendientesAlumno().size();
+                    int pendientesProfesor = inscripcionRepositorio.listarPendientesProfesor().size();
+
+                    return "Contexto de datos para ADMIN:\n"
+                            + "- Cursos activos: " + cursosActivos.size() + "\n"
+                            + "- Total de inscripciones: " + totalInscripciones + "\n"
+                            + "- Inscripciones pendientes de alumnos: " + pendientesAlumno + "\n"
+                            + "- Inscripciones pendientes de profesores: " + pendientesProfesor + "\n"
+                            + "- Cursos activos (muestra): " + resumirCursos(cursosActivos, 6);
+                }
+                case "PROFESOR": {
+                    List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosProfesor(idUsuario);
+                    List<Curso> cursosDisponibles = cursoRepositorio.buscarCursosDisponiblesProfesor(idUsuario);
+
+                    return "Contexto de datos para PROFESOR:\n"
+                            + "- Cursos inscritos/aprobados: " + cursosInscritos.size() + "\n"
+                            + "- Cursos disponibles para inscribirse: " + cursosDisponibles.size() + "\n"
+                            + "- Inscritos (muestra): " + resumirCursos(cursosInscritos, 6) + "\n"
+                            + "- Disponibles (muestra): " + resumirCursos(cursosDisponibles, 6);
+                }
+                case "ALUMNO": {
+                    List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosAlumno(idUsuario);
+                    List<Curso> cursosDisponibles = cursoRepositorio.buscarCursosDisponiblesAlumno(idUsuario);
+
+                    return "Contexto de datos para ALUMNO:\n"
+                            + "- Cursos inscritos/aprobados: " + cursosInscritos.size() + "\n"
+                            + "- Cursos disponibles para inscribirse: " + cursosDisponibles.size() + "\n"
+                            + "- Inscritos (muestra): " + resumirCursos(cursosInscritos, 6) + "\n"
+                            + "- Disponibles (muestra): " + resumirCursos(cursosDisponibles, 6);
+                }
+                default:
+                    return "Contexto de datos: rol no reconocido; solo se puede brindar orientacion general.";
+            }
+        } catch (Exception ex) {
+            LOGGER.warn("No se pudo construir el contexto de datos para rol {}: {}", rol, ex.getMessage());
+            return "Contexto de datos: no disponible temporalmente por un error interno al consultar cursos/inscripciones.";
+        }
+    }
+
+    private String resumirCursos(List<Curso> cursos, int limite) {
+        if (cursos == null || cursos.isEmpty()) {
+            return "sin cursos";
+        }
+
+        List<String> resumen = new ArrayList<>();
+        int maximo = Math.min(limite, cursos.size());
+        for (int i = 0; i < maximo; i++) {
+            Curso curso = cursos.get(i);
+            if (curso == null) {
+                continue;
+            }
+
+            String nombre = valorPorDefecto(curso.getNombre(), "Curso");
+            String codigo = valorPorDefecto(curso.getCodigoCurso(), "sin-codigo");
+            resumen.add(nombre + " (" + codigo + ")");
+        }
+
+        if (resumen.isEmpty()) {
+            return "sin cursos";
+        }
+
+        if (cursos.size() > limite) {
+            return String.join(", ", resumen) + ", ...";
+        }
+        return String.join(", ", resumen);
     }
 
     private RubricaGeneradaDto parsearRubricaDesdeJson(
