@@ -14,6 +14,7 @@ import { ArrowBack, AutoStories } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IaService from '../services/IaService';
 import CursoService from '../services/CursoService';
+import CarreraService from '../services/CarreraService';
 
 const defaultForm = {
   nombreCurso: '',
@@ -22,6 +23,14 @@ const defaultForm = {
   creditos: 3,
   semanas: 16,
   descripcionBreve: '',
+};
+
+const resolveCarreraNombre = (carreraValue, nombreCarreraFallback = '') => {
+  if (typeof carreraValue === 'string') return carreraValue;
+  if (carreraValue && typeof carreraValue === 'object') {
+    return carreraValue?.nombre || carreraValue?.name || nombreCarreraFallback;
+  }
+  return nombreCarreraFallback;
 };
 
 const SilaboIA = () => {
@@ -33,6 +42,7 @@ const SilaboIA = () => {
   const [loading, setLoading] = useState(false);
   const [silabo, setSilabo] = useState(null);
   const [cursos, setCursos] = useState([]);
+  const [carreras, setCarreras] = useState([]);
   const [cursoId, setCursoId] = useState('');
   const [form, setForm] = useState(defaultForm);
 
@@ -66,7 +76,33 @@ const SilaboIA = () => {
       }
     };
 
+    const cargarCarreras = async () => {
+      try {
+        const data = await CarreraService.listar();
+        const normalizadas = Array.isArray(data)
+          ? data
+            .map((item) => ({
+              id: item?.id || item?._id || item?.codigo || item?.nombre,
+              nombre: item?.nombre || '',
+            }))
+            .filter((item) => item.nombre)
+          : [];
+
+        if (!active) return;
+
+        setCarreras(normalizadas);
+        setForm((prev) => ({
+          ...prev,
+          carrera: prev.carrera || normalizadas[0]?.nombre || '',
+        }));
+      } catch {
+        if (!active) return;
+        setCarreras([]);
+      }
+    };
+
     cargarCursos();
+    cargarCarreras();
 
     return () => {
       active = false;
@@ -82,7 +118,7 @@ const SilaboIA = () => {
     setForm((prev) => ({
       ...prev,
       nombreCurso: cursoSeleccionado?.nombre || prev.nombreCurso,
-      carrera: cursoSeleccionado?.carrera || cursoSeleccionado?.nombreCarrera || prev.carrera,
+      carrera: resolveCarreraNombre(cursoSeleccionado?.carrera, cursoSeleccionado?.nombreCarrera) || prev.carrera,
       ciclo: Number(cursoSeleccionado?.ciclo ?? prev.ciclo),
       creditos: Number(cursoSeleccionado?.creditos ?? prev.creditos),
       descripcionBreve: cursoSeleccionado?.descripcion || prev.descripcionBreve,
@@ -180,11 +216,19 @@ const SilaboIA = () => {
 
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
             <TextField
+              select
               label="Carrera"
               value={form.carrera}
               onChange={(e) => setForm((prev) => ({ ...prev, carrera: e.target.value }))}
+              helperText={carreras.length === 0 ? 'No hay carreras registradas.' : ''}
               fullWidth
-            />
+            >
+              {carreras.map((carrera) => (
+                <MenuItem key={carrera.id} value={carrera.nombre}>
+                  {carrera.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               type="number"
               label="Ciclo"
@@ -227,7 +271,10 @@ const SilaboIA = () => {
             <Button
               variant="outlined"
               onClick={() => {
-                setForm(defaultForm);
+                setForm((prev) => ({
+                  ...defaultForm,
+                  carrera: carreras[0]?.nombre || '',
+                }));
                 setSilabo(null);
                 setErrorMsg('');
               }}
