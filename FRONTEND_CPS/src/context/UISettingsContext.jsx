@@ -88,6 +88,7 @@ export const UISettingsProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useUISettings = () => {
   const context = useContext(UISettingsContext);
   if (!context) {

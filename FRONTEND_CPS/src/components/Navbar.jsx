@@ -18,7 +18,13 @@ const Navbar = ({ onToggleSidebar }) => {
 
   return (
     <>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: (theme) => theme.palette.mode === 'light' ? theme.palette.grey[800] : undefined
+        }}
+      >
         <Toolbar>
           <IconButton color="inherit" edge="start" onClick={onToggleSidebar} sx={{ mr: 2 }}>
             <MenuIcon />

@@ -236,7 +236,9 @@ public class AuthControlador {
                 "id", usuario.getId(),
                 "nombre", usuario.getNombre(),
                 "email", usuario.getEmail(),
-                "rol", rol != null ? rol : "SIN_ROL"
+            "rol", rol != null ? rol : "SIN_ROL",
+            "carrera", usuario.getCarrera() != null ? usuario.getCarrera().getNombre() : "",
+            "cicloActual", usuario.getCicloActual() != null ? usuario.getCicloActual() : 0
         ));
     }
 }

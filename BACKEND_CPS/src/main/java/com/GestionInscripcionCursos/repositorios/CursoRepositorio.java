@@ -1,6 +1,7 @@
 package com.GestionInscripcionCursos.repositorios;
 
 import com.GestionInscripcionCursos.entidades.Curso;
+import com.GestionInscripcionCursos.enumeraciones.EstadoCurso;
 import java.util.Date;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface CursoRepositorio extends JpaRepository<Curso, String> {
 
+    boolean existsByCodigoCursoIgnoreCase(String codigoCurso);
+
     @Query("SELECT c FROM Curso c")
     public List<Curso> buscarCursos();
 
@@ -20,17 +23,20 @@ public interface CursoRepositorio extends JpaRepository<Curso, String> {
     @Query("SELECT c FROM Curso c WHERE c.profesorAsignado IS NOT NULL AND LOWER(c.profesorAsignado.nombre) LIKE LOWER(CONCAT('%', :profesor, '%'))")
     public List<Curso> buscarPorProfesorAsignado(@Param("profesor") String profesor);
 
-    @Query("SELECT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'PROFESOR' OR u.id IS NULL)")
+    @Query("SELECT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE c.estado = 'ACTIVO' AND (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'PROFESOR' OR u.id IS NULL)")
     public List<Curso> buscarCursosDisponiblesProfesor(@Param("idUser") String idUser);
 
     @Query("SELECT c FROM Curso c JOIN c.inscripciones i JOIN i.usuario u WHERE i.usuario.id = :idUser AND i.estado = 'APROBADO' AND u.rol = 'PROFESOR'")
     public List<Curso> buscarCursosInscritosProfesor(@Param("idUser") String idUser);
 
-     @Query("SELECT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'ALUMNO' OR u.id IS NULL)")
+    @Query("SELECT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE c.estado = 'ACTIVO' AND (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'ALUMNO' OR u.id IS NULL)")
     public List<Curso> buscarCursosDisponiblesAlumno(@Param("idUser") String idUser);
 
     @Query("SELECT c FROM Curso c JOIN c.inscripciones i JOIN i.usuario u WHERE i.usuario.id = :idUser AND i.estado = 'APROBADO' AND u.rol = 'ALUMNO'")
     public List<Curso> buscarCursosInscritosAlumno(@Param("idUser") String idUser);
+
+    @Query("SELECT c FROM Curso c WHERE c.estado = :estado AND (c.fechaTermino IS NULL OR c.fechaTermino >= :hoy)")
+    public List<Curso> buscarCursosActivosPorEstado(@Param("hoy") Date hoy, @Param("estado") EstadoCurso estado);
 
     @Query("SELECT c FROM Curso c WHERE c.fechaTermino IS NULL OR c.fechaTermino >= :hoy")
     public List<Curso> buscarCursosActivos(@Param("hoy") Date hoy);

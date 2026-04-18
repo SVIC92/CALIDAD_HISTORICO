@@ -7,11 +7,20 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;
 
 @Entity
 @Table(name = "password_reset_token")
+@Getter
+@Setter
+@NoArgsConstructor
 public class PasswordResetToken {
 
     @Id
@@ -20,77 +29,31 @@ public class PasswordResetToken {
     private String id;
 
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "El token de recuperacion es obligatorio")
+    @Size(max = 255, message = "El token no debe superar 255 caracteres")
     private String token;
 
     @Column(nullable = false)
+    @NotNull(message = "La fecha de expiracion es obligatoria")
     private LocalDateTime expiresAt;
 
     @Column(nullable = false)
     private boolean used;
 
     @Column(nullable = false)
+    @NotNull(message = "La fecha de creacion es obligatoria")
     private LocalDateTime createdAt;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
+    @NotNull(message = "El usuario del token es obligatorio")
     private Usuario usuario;
-
-    public PasswordResetToken() {
-    }
 
     public PasswordResetToken(String token, LocalDateTime expiresAt, boolean used, LocalDateTime createdAt, Usuario usuario) {
         this.token = token;
         this.expiresAt = expiresAt;
         this.used = used;
         this.createdAt = createdAt;
-        this.usuario = usuario;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public boolean isUsed() {
-        return used;
-    }
-
-    public void setUsed(boolean used) {
-        this.used = used;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Usuario getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
     }
 }

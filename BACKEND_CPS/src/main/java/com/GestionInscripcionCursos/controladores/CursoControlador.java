@@ -1,10 +1,13 @@
 package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.entidades.Curso;
+import com.GestionInscripcionCursos.entidades.CursoPrerequisito;
+import com.GestionInscripcionCursos.entidades.HorarioSesion;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.CursoServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -41,16 +44,41 @@ public class CursoControlador {
     @PostMapping("/registro")
     public ResponseEntity<?> registro(
             @RequestParam String nombre,
+            @RequestParam(required = false) String codigoCurso,
             @RequestParam String descripcion,
             @RequestParam Integer capacidadMaxima,
             @RequestParam Integer creditos,
+            @RequestParam(required = false) Integer ciclo,
+            @RequestParam(required = false) String modalidad,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaInicio,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaTermino,
+            @RequestParam(required = false) Integer horasTeoricas,
+            @RequestParam(required = false) Integer horasPracticas,
+            @RequestParam(required = false) Integer horasLaboratorio,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String carrera,
             @RequestParam(required = false) String profesorAsignado,
             @RequestParam(required = false) String profesorId) {
 
         try {
             String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
-            cursoServicio.crearCurso(nombre, descripcion, capacidadMaxima, creditos, fechaTermino, profesorReferencia);
+            cursoServicio.crearCurso(
+                nombre,
+                codigoCurso,
+                descripcion,
+                capacidadMaxima,
+                creditos,
+                ciclo,
+                modalidad,
+                fechaInicio,
+                fechaTermino,
+                horasTeoricas,
+                horasPracticas,
+                horasLaboratorio,
+                estado,
+                profesorReferencia,
+                carrera
+            );
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("mensaje", "Curso registrado correctamente"));
         } catch (MyException ex) {
@@ -84,16 +112,42 @@ public class CursoControlador {
     public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
+            @RequestParam(required = false) String codigoCurso,
             @RequestParam String descripcion,
             @RequestParam Integer capacidadMaxima,
             @RequestParam Integer creditos,
+            @RequestParam(required = false) Integer ciclo,
+            @RequestParam(required = false) String modalidad,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaInicio,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaTermino,
+            @RequestParam(required = false) Integer horasTeoricas,
+            @RequestParam(required = false) Integer horasPracticas,
+            @RequestParam(required = false) Integer horasLaboratorio,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String carrera,
             @RequestParam(required = false) String profesorAsignado,
             @RequestParam(required = false) String profesorId) {
 
         try {
             String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
-            cursoServicio.modificarCurso(id, nombre, descripcion, capacidadMaxima, creditos, fechaTermino, profesorReferencia);
+            cursoServicio.modificarCurso(
+                    id,
+                    nombre,
+                    codigoCurso,
+                    descripcion,
+                    capacidadMaxima,
+                    creditos,
+                    ciclo,
+                    modalidad,
+                    fechaInicio,
+                    fechaTermino,
+                    horasTeoricas,
+                    horasPracticas,
+                    horasLaboratorio,
+                    estado,
+                    profesorReferencia,
+                    carrera
+            );
             return ResponseEntity.ok(cursoServicio.buscarPorId(id));
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
@@ -184,6 +238,50 @@ public class CursoControlador {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
 
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PostMapping("/{idCurso}/horarios/agregar")
+    public ResponseEntity<?> agregarHorario(
+            @PathVariable String idCurso,
+            @RequestParam String diaSemana,
+            @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime horaInicio,
+            @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime horaFin,
+            @RequestParam(required = false) String aula,
+            @RequestParam(required = false) String modalidad
+    ) {
+        try {
+            HorarioSesion horario = cursoServicio.agregarHorario(idCurso, diaSemana, horaInicio, horaFin, aula, modalidad);
+            return ResponseEntity.status(HttpStatus.CREATED).body(horario);
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/{idCurso}/horarios")
+    public ResponseEntity<List<HorarioSesion>> listarHorarios(@PathVariable String idCurso) {
+        return ResponseEntity.ok(cursoServicio.listarHorariosCurso(idCurso));
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PostMapping("/{idCurso}/prerequisitos/agregar")
+    public ResponseEntity<?> agregarPrerequisito(
+            @PathVariable String idCurso,
+            @RequestParam String idCursoPrerequisito,
+            @RequestParam(required = false) Boolean obligatorio,
+            @RequestParam(required = false) String observacion
+    ) {
+        try {
+            CursoPrerequisito prerequisito = cursoServicio.agregarPrerequisito(idCurso, idCursoPrerequisito, obligatorio, observacion);
+            return ResponseEntity.status(HttpStatus.CREATED).body(prerequisito);
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/{idCurso}/prerequisitos")
+    public ResponseEntity<List<CursoPrerequisito>> listarPrerequisitos(@PathVariable String idCurso) {
+        return ResponseEntity.ok(cursoServicio.listarPrerequisitosCurso(idCurso));
     }
 
 }

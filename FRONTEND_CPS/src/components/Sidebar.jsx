@@ -80,16 +80,16 @@ const Sidebar = ({ open, variant }) => {
 
   const menuByRole = {
     ROLE_ADMIN: [
-      { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard/admin' },
-      { text: 'IAHub', icon: <SmartToy />, path: '/modulo/ia' },
+      { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/admin' },
+      { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
       { text: 'Usuarios', icon: <People />, path: '/usuarios' },
       { text: 'Reportes', icon: <Assessment />, path: '/modulo/reportes' },
       { text: 'Configuración', icon: <Settings />, path: '/modulo/configuracion' },
     ],
     ROLE_PROFESOR: [
-      { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard/profesor' },
-      { text: 'IAHub', icon: <SmartToy />, path: '/modulo/ia' },
+      { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/profesor' },
+      { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
       { text: 'Mis Cursos', icon: <School />, path: '/cursos' },
       { text: 'Actividades', icon: <Book />, path: '/modulo/actividades' },
       { text: 'Inscripciones', icon: <AssignmentTurnedIn />, path: '/modulo/inscripciones' },
@@ -97,11 +97,11 @@ const Sidebar = ({ open, variant }) => {
       { text: 'Configuración', icon: <Settings />, path: '/modulo/configuracion' },
     ],
     ROLE_ALUMNO: [
-      { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard/alumno' },
+      { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/alumno' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
       { text: 'Mis Cursos Inscritos', icon: <AssignmentTurnedIn />, path: '/modulo/inscripciones' },
       { text: 'Mis Reportes', icon: <Assessment />, path: '/modulo/reportes' },
-      { text: 'IAHub', icon: <SmartToy />, path: '/modulo/ia' },
+      { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
       { text: 'Configuración', icon: <Settings />, path: '/modulo/configuracion' },
     ],
   };

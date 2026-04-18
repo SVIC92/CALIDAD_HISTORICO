@@ -35,17 +35,21 @@ public class PortalControlador {
     
     @PostMapping("/registro")
     public ResponseEntity<?> registro(@RequestParam String nombre, @RequestParam String email,
-            @RequestParam String password, @RequestParam String password2) {
+            @RequestParam String password, @RequestParam String password2,
+            @RequestParam(required = false) String carrera,
+            @RequestParam(required = false) Integer cicloActual) {
 
         try {
-            usuarioServicio.registrar(nombre, email, password, password2);
+            usuarioServicio.registrar(nombre, email, password, password2, carrera, cicloActual);
             Usuario usuario = usuarioServicio.buscarEmail(email);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of(
                             "id", usuario.getId(),
                             "nombre", usuario.getNombre(),
                             "email", usuario.getEmail(),
-                            "rol", usuario.getRol()));
+                            "rol", usuario.getRol(),
+                            "carrera", usuario.getCarrera() != null ? usuario.getCarrera().getNombre() : "",
+                            "cicloActual", usuario.getCicloActual() != null ? usuario.getCicloActual() : 0));
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }

@@ -6,6 +6,8 @@ import com.GestionInscripcionCursos.dto.CriterioRubricaDto;
 import com.GestionInscripcionCursos.dto.NivelRubricaDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
+import com.GestionInscripcionCursos.dto.SilaboGeneracionRequestDto;
+import com.GestionInscripcionCursos.dto.SilaboGeneradoDto;
 import com.GestionInscripcionCursos.entidades.IaHistorial;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.repositorios.IaHistorialRepositorio;
@@ -29,6 +31,10 @@ import org.springframework.stereotype.Service;
 public class IaServicio {
 
     private static final String URL_GROQ = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String URL_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+
+    private final String geminiApiKey;
+    private final String geminiModelo;
 
     private final UsuarioServicio usuarioServicio;
     private final IaHistorialRepositorio iaHistorialRepositorio;
@@ -42,13 +48,17 @@ public class IaServicio {
             IaHistorialRepositorio iaHistorialRepositorio,
             ObjectMapper objectMapper,
             @Value("${groq.api.key:}") String groqApiKey,
-            @Value("${groq.model:llama-3.1-8b-instant}") String modeloPorDefecto
+            @Value("${groq.model:llama-3.1-8b-instant}") String modeloPorDefecto,
+            @Value("${gemini.api.key:}") String geminiApiKey,
+            @Value("${gemini.model:gemini-1.5-flash}") String geminiModelo
     ) {
         this.usuarioServicio = usuarioServicio;
         this.iaHistorialRepositorio = iaHistorialRepositorio;
         this.objectMapper = objectMapper;
         this.groqApiKey = groqApiKey;
         this.modeloPorDefecto = modeloPorDefecto;
+        this.geminiApiKey = geminiApiKey;
+        this.geminiModelo = geminiModelo;
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -114,13 +124,16 @@ public class IaServicio {
         int cantidadNiveles = normalizarEntero(request.cantidadNiveles(), 4, 3, 5);
         int puntajeMaximo = normalizarEntero(request.puntajeMaximo(), 20, 10, 100);
 
-        if (groqApiKey == null || groqApiKey.isBlank()) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
             return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
         }
 
         try {
-            String jsonRubrica = llamarGroqParaRubrica(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
+            // Llamar a Gemini en lugar de Groq
+            String jsonRubrica = llamarGeminiParaRubrica(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
+            
             RubricaGeneradaDto rubrica = parsearRubricaDesdeJson(jsonRubrica, tema, nivel, asignatura, tipoTarea, puntajeMaximo);
+            
             if (rubrica == null || rubrica.criterios() == null || rubrica.criterios().isEmpty()) {
                 return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
             }
@@ -172,6 +185,168 @@ public class IaServicio {
         }
     }
 
+    private String llamarGeminiParaRubrica(String tema, String nivel, String asignatura, String tipoTarea,int cantidadCriterios, int cantidadNiveles, int puntajeMaximo) throws IOException, InterruptedException 
+    {
+        
+        String promptSistema = "Eres un experto en evaluacion educativa. Debes generar una rubrica completa y coherente.";
+        
+        String mensajeUsuario = "Genera una rubrica con estos datos: "
+                + "tema='" + tema + "', nivelEducativo='" + nivel + "', asignatura='" + asignatura + "', tipoTarea='" + tipoTarea + "'. "
+                + "Cantidad de criterios=" + cantidadCriterios + ", niveles por criterio=" + cantidadNiveles + ", puntaje maximo total=" + puntajeMaximo + ". "
+                + "Devuelve estrictamente este esquema JSON: "
+                + "{"
+                + "\"titulo\":\"...\"," 
+                + "\"descripcion\":\"...\"," 
+                + "\"tema\":\"...\"," 
+                + "\"nivelEducativo\":\"...\"," 
+                + "\"asignatura\":\"...\"," 
+                + "\"tipoTarea\":\"...\"," 
+                + "\"puntajeMaximo\":numero," 
+                + "\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":numero,\"niveles\":[{\"nombre\":\"...\",\"puntaje\":numero,\"descriptor\":\"...\"}]}]"
+                + "}. "
+                + "Asegura que la suma de pesos de criterios sea 100.";
+
+        // Estructura específica para Gemini
+        Map<String, Object> payload = Map.of(
+                "systemInstruction", Map.of(
+                        "parts", Map.of("text", promptSistema)
+                ),
+                "contents", List.of(
+                        Map.of("parts", List.of(Map.of("text", mensajeUsuario)))
+                ),
+                "generationConfig", Map.of(
+                        "temperature", 0.2,
+                        "responseMimeType", "application/json" // <-- ESTO ES CLAVE
+                )
+        );
+
+        String body = objectMapper.writeValueAsString(payload);
+        String urlConApiKey = String.format(URL_GEMINI_BASE, geminiModelo, geminiApiKey);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(urlConApiKey))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        if (response.statusCode() >= 400) {
+            throw new IllegalStateException("Gemini devolvió error: " + response.body());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode candidates = root.path("candidates");
+        
+        if (!candidates.isArray() || candidates.isEmpty()) {
+            throw new IllegalStateException("Respuesta de Gemini sin contenido útil");
+        }
+
+        // Navegar por la estructura de respuesta de Gemini
+        String textoJson = candidates.get(0)
+                .path("content")
+                .path("parts")
+                .get(0)
+                .path("text")
+                .asText();
+
+        if (textoJson == null || textoJson.isBlank()) {
+            throw new IllegalStateException("Respuesta de Gemini vacía");
+        }
+
+        // Ya no necesitas limpiar la respuesta con regex porque Gemini garantiza un JSON puro
+        return textoJson;
+    }
+
+    public SilaboGeneradoDto generarSilabo(SilaboGeneracionRequestDto request) {
+        if (request == null || request.nombreCurso() == null || request.nombreCurso().isBlank()) {
+            throw new IllegalArgumentException("El nombre del curso es obligatorio");
+        }
+
+        int semanas = normalizarEntero(request.semanas(), 16, 4, 20); // Por defecto 16 semanas
+
+        try {
+            String jsonSilabo = llamarGeminiParaSilabo(
+                    request.nombreCurso(), 
+                    request.carrera(), 
+                    request.ciclo(), 
+                    request.creditos(), 
+                    semanas, 
+                    request.descripcionBreve()
+            );
+            
+            // Usamos ObjectMapper para convertir el JSON puro de Gemini a nuestro DTO
+            return objectMapper.readValue(jsonSilabo, SilaboGeneradoDto.class);
+            
+        } catch (Exception ex) {
+            throw new IllegalStateException("Error al generar el sílabo con IA", ex);
+        }
+    }
+
+    private String llamarGeminiParaSilabo(
+            String curso, String carrera, int ciclo, int creditos, int semanas, String descripcion
+    ) throws IOException, InterruptedException {
+        
+        String promptSistema = "Eres un director académico experto en diseño curricular universitario. "
+                + "Tu objetivo es diseñar un sílabo estructurado, coherente y moderno.";
+
+        String esquemaJson = "{"
+                + "\"informacionGeneral\": {\"curso\":\"...\",\"carrera\":\"...\",\"ciclo\":0,\"creditos\":0},"
+                + "\"competenciasGenerales\": [\"...\"],"
+                + "\"competenciasEspecificas\": [\"...\"],"
+                + "\"sumilla\": \"Resumen del curso...\","
+                + "\"logroCurso\": \"Al finalizar el curso, el estudiante...\","
+                + "\"unidades\": [{"
+                + "  \"tituloUnidad\": \"Unidad I: ...\","
+                + "  \"logroUnidad\": \"Al finalizar la unidad...\","
+                + "  \"semanas\": [{"
+                + "    \"numeroSemana\": 1,"
+                + "    \"temas\": \"Saberes teóricos\","
+                + "    \"actividadesPracticas\": \"Práctica de laboratorio o campo\","
+                + "    \"evaluacion\": \"Ej: Evaluación Continua 1\""
+                + "  }]"
+                + "}],"
+                + "\"sistemaEvaluacion\": \"Descripción breve del sistema de calificación\""
+                + "}";
+
+        String mensajeUsuario = String.format(
+                "Genera un sílabo universitario para el curso '%s' de la carrera '%s', "
+                + "ciclo %d, de %d créditos. El curso debe durar exactamente %d semanas. "
+                + "Descripción general del curso: %s. "
+                + "Distribuye las %d semanas equitativamente en 3 o 4 Unidades de Aprendizaje. "
+                + "Debes devolver ESTRICTAMENTE la respuesta bajo este esquema JSON exacto: %s",
+                curso, valorPorDefecto(carrera, "Ingeniería"), ciclo, creditos, semanas, 
+                valorPorDefecto(descripcion, "Fundamentos teóricos y prácticos"), semanas, esquemaJson
+        );
+
+        Map<String, Object> payload = Map.of(
+                "systemInstruction", Map.of("parts", Map.of("text", promptSistema)),
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", mensajeUsuario)))),
+                "generationConfig", Map.of(
+                        "temperature", 0.3, 
+                        "responseMimeType", "application/json"
+                )
+        );
+
+        String body = objectMapper.writeValueAsString(payload);
+        String urlConApiKey = String.format(URL_GEMINI_BASE, geminiModelo, geminiApiKey); 
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(urlConApiKey))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        if (response.statusCode() >= 400) {
+            throw new IllegalStateException("Gemini devolvió error: " + response.body());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        return root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+    }
+
     private String construirPromptSistema(String rol) {
         String base = "Eres un asistente del sistema de Gestion de Inscripcion de Cursos. "
                 + "Responde de forma clara y breve en espanol. "
@@ -193,72 +368,6 @@ public class IaServicio {
         if (mensaje.length() > 4000) {
             throw new IllegalArgumentException("El mensaje excede el maximo permitido");
         }
-    }
-
-    private String llamarGroqParaRubrica(
-            String tema,
-            String nivel,
-            String asignatura,
-            String tipoTarea,
-            int cantidadCriterios,
-            int cantidadNiveles,
-            int puntajeMaximo
-    ) throws IOException, InterruptedException {
-        String promptSistema = "Eres un experto en evaluacion educativa. "
-                + "Debes responder SOLO en JSON valido sin markdown ni texto adicional. "
-                + "Genera una rubrica completa y coherente.";
-
-        String mensajeUsuario = "Genera una rubrica con estos datos: "
-                + "tema='" + tema + "', nivelEducativo='" + nivel + "', asignatura='" + asignatura + "', tipoTarea='" + tipoTarea + "'. "
-                + "Cantidad de criterios=" + cantidadCriterios + ", niveles por criterio=" + cantidadNiveles + ", puntaje maximo total=" + puntajeMaximo + ". "
-                + "Devuelve estrictamente este esquema JSON: "
-                + "{"
-                + "\"titulo\":\"...\"," 
-                + "\"descripcion\":\"...\"," 
-                + "\"tema\":\"...\"," 
-                + "\"nivelEducativo\":\"...\"," 
-                + "\"asignatura\":\"...\"," 
-                + "\"tipoTarea\":\"...\"," 
-                + "\"puntajeMaximo\":numero," 
-                + "\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":numero,\"niveles\":[{\"nombre\":\"...\",\"puntaje\":numero,\"descriptor\":\"...\"}]}]"
-                + "}. "
-                + "Asegura que la suma de pesos de criterios sea 100.";
-
-        Map<String, Object> payload = Map.of(
-                "model", modeloPorDefecto,
-                "temperature", 0.2,
-                "messages", new Object[]{
-                        Map.of("role", "system", "content", promptSistema),
-                        Map.of("role", "user", "content", mensajeUsuario)
-                }
-        );
-
-        String body = objectMapper.writeValueAsString(payload);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(URL_GROQ))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + groqApiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 400) {
-            throw new IllegalStateException("Groq devolvio error: " + response.body());
-        }
-
-        JsonNode root = objectMapper.readTree(response.body());
-        JsonNode choices = root.path("choices");
-        if (!choices.isArray() || choices.isEmpty()) {
-            throw new IllegalStateException("Respuesta de Groq sin contenido util");
-        }
-
-        String texto = choices.get(0).path("message").path("content").asText();
-        if (texto == null || texto.isBlank()) {
-            throw new IllegalStateException("Respuesta de Groq vacia");
-        }
-
-        return limpiarRespuestaJson(texto);
     }
 
     private RubricaGeneradaDto parsearRubricaDesdeJson(
@@ -366,20 +475,6 @@ public class IaServicio {
                 "fallback-local",
                 Instant.now()
         );
-    }
-
-    private String limpiarRespuestaJson(String texto) {
-        String limpio = texto.trim();
-        if (limpio.startsWith("```")) {
-            limpio = limpio.replaceAll("^```json", "").replaceAll("^```", "");
-            limpio = limpio.replaceAll("```$", "").trim();
-        }
-        int inicio = limpio.indexOf('{');
-        int fin = limpio.lastIndexOf('}');
-        if (inicio >= 0 && fin > inicio) {
-            return limpio.substring(inicio, fin + 1);
-        }
-        return limpio;
     }
 
     private String valorPorDefecto(String valor, String fallback) {

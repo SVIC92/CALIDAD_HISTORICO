@@ -29,7 +29,7 @@ const IAHub = () => {
           Volver
         </Button>
         <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          IAHub
+          IA
         </Typography>
       </Stack>
 

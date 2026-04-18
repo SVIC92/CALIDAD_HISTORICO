@@ -27,6 +27,9 @@ public interface InscripcionRepositorio extends JpaRepository<Inscripcion,String
 
     @Query("SELECT COUNT(i) FROM Inscripcion i JOIN i.usuario u WHERE i.curso.id = :idCurso AND i.estado = 'APROBADO' AND u.rol = 'ALUMNO'")
     public Long contarAlumnosAprobadosPorCurso(@Param("idCurso") String idCurso);
+
+    @Query("SELECT COUNT(i) > 0 FROM Inscripcion i WHERE i.usuario.id = :idUser AND i.curso.id = :idCurso AND i.estado = 'APROBADO'")
+    public Boolean existeInscripcionAprobada(@Param("idUser") String idUser, @Param("idCurso") String idCurso);
     
 
     

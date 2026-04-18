@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -10,7 +11,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Security, QrCode2, VerifiedUser } from '@mui/icons-material';
+import { ArrowBack, Security, QrCode2, VerifiedUser, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
 
@@ -163,10 +164,15 @@ const PerfilUsuario = () => {
         {isLoading ? (
           <Typography color="text.secondary">Cargando datos...</Typography>
         ) : (
-          <Stack spacing={1}>
-            <Typography><strong>Nombre:</strong> {perfil?.nombre || '-'}</Typography>
-            <Typography><strong>Email:</strong> {perfil?.email || '-'}</Typography>
-            <Typography><strong>Rol:</strong> {perfil?.rol || '-'}</Typography>
+          <Stack direction="row" spacing={3} alignItems="center">
+            <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main' }}>
+              <Person sx={{ fontSize: 50 }} />
+            </Avatar>
+            <Stack spacing={1}>
+              <Typography><strong>Nombre:</strong> {perfil?.nombre || '-'}</Typography>
+              <Typography><strong>Email:</strong> {perfil?.email || '-'}</Typography>
+              <Typography><strong>Rol:</strong> {perfil?.rol || '-'}</Typography>
+            </Stack>
           </Stack>
         )}
       </Paper>

@@ -49,12 +49,17 @@ const RouteChangeLoader = () => {
     }
 
     startLoading();
+    let isStopped = false;
     const timeoutId = window.setTimeout(() => {
       stopLoading();
+      isStopped = true;
     }, 350);
 
     return () => {
       window.clearTimeout(timeoutId);
+      if (!isStopped) {
+        stopLoading();
+      }
     };
   }, [location.pathname, location.search, location.hash, startLoading, stopLoading]);
 

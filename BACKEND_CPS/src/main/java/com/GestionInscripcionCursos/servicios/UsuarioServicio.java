@@ -2,9 +2,11 @@ package com.GestionInscripcionCursos.servicios;
 
 import com.GestionInscripcionCursos.dto.ProfesorResumenDto;
 import com.GestionInscripcionCursos.dto.UsuarioResumenDto;
+import com.GestionInscripcionCursos.entidades.Carrera;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.enumeraciones.Rol;
 import com.GestionInscripcionCursos.excepciones.MyException;
+import com.GestionInscripcionCursos.repositorios.CarreraRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
 
 import jakarta.transaction.Transactional;
@@ -29,14 +31,24 @@ public class UsuarioServicio implements UserDetailsService {
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
 
+    @Autowired
+    private CarreraRepositorio carreraRepositorio;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional
     public void registrar(String nombre, String email, String password, String password2) throws MyException {
+        registrar(nombre, email, password, password2, null, null);
+    }
+
+    @Transactional
+    public void registrar(String nombre, String email, String password, String password2, String carreraReferencia, Integer cicloActual) throws MyException {
 
         validar(nombre, email, password, password2);
 
         Usuario usuario = new Usuario();
+
+        Carrera carrera = resolverCarreraSiExiste(carreraReferencia);
 
         usuario.setNombre(nombre);
 
@@ -48,7 +60,26 @@ public class UsuarioServicio implements UserDetailsService {
 
         usuario.setRol(Rol.ALUMNO);
 
+        usuario.setCarrera(carrera);
+
+        if (cicloActual != null) {
+            if (cicloActual <= 0 || cicloActual > 14) {
+                throw new MyException("El ciclo actual debe estar entre 1 y 14");
+            }
+            usuario.setCicloActual(cicloActual);
+        }
+
         usuarioRepositorio.save(usuario);
+    }
+
+    private Carrera resolverCarreraSiExiste(String carreraReferencia) {
+        if (carreraReferencia == null || carreraReferencia.isBlank()) {
+            return null;
+        }
+
+        return carreraRepositorio.findById(carreraReferencia)
+                .orElseGet(() -> carreraRepositorio.findByNombreIgnoreCase(carreraReferencia)
+                .orElse(null));
     }
 
     @Transactional

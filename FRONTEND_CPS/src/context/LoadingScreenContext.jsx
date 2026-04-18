@@ -46,6 +46,7 @@ export const LoadingScreenProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLoadingScreen = () => {
   const context = useContext(LoadingScreenContext);
   if (!context) {

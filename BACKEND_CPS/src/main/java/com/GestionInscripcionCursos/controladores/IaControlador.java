@@ -2,9 +2,10 @@ package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.dto.IaChatRequestDto;
 import com.GestionInscripcionCursos.dto.IaChatResponseDto;
-import com.GestionInscripcionCursos.dto.IaHistorialDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
+import com.GestionInscripcionCursos.dto.SilaboGeneracionRequestDto;
+import com.GestionInscripcionCursos.dto.SilaboGeneradoDto;
 import com.GestionInscripcionCursos.servicios.IaServicio;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -59,5 +60,12 @@ public class IaControlador {
             Authentication auth
     ) {
         return ResponseEntity.ok(iaServicio.generarRubrica(auth.getName(), request));
+    }
+    @PostMapping("/silabo/generar")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
+    public ResponseEntity<SilaboGeneradoDto> generarSilabo(
+            @RequestBody SilaboGeneracionRequestDto request) {
+        SilaboGeneradoDto silabo = iaServicio.generarSilabo(request);
+        return ResponseEntity.ok(silabo);
     }
 }

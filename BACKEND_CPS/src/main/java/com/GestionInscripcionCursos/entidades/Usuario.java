@@ -10,17 +10,31 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.Date;
 import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;
 
 @Entity
 @Table(name = "usuario")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Usuario {
 
     @Id
@@ -30,13 +44,20 @@ public class Usuario {
     protected String id;
 
     @Column(name = "nombre_usuario", nullable = false)
+    @NotBlank(message = "El nombre de usuario es obligatorio")
+    @Size(max = 120, message = "El nombre de usuario no debe superar 120 caracteres")
     protected String nombre;
 
     @Column(name = "email", nullable = false, unique = true)
+    @NotBlank(message = "El email es obligatorio")
+    @Email(message = "El email debe tener formato valido")
+    @Size(max = 255, message = "El email no debe superar 255 caracteres")
     protected String email;
     
     @Column(name = "password", nullable = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @NotBlank(message = "La contrasena es obligatoria")
+    @Size(min = 6, max = 255, message = "La contrasena debe tener entre 6 y 255 caracteres")
     protected String password;
 
     @Column(name = "two_factor_enabled")
@@ -47,10 +68,21 @@ public class Usuario {
     private String twoFactorSecret;
 
     @Temporal(TemporalType.DATE)
+    @NotNull(message = "La fecha de creacion es obligatoria")
     private Date fechaCreacion;
 
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "El rol del usuario es obligatorio")
     protected Rol rol;
+
+    @ManyToOne
+    @JoinColumn(name = "id_carrera")
+    private Carrera carrera;
+
+    @Column(name = "ciclo_actual")
+    @Min(value = 1, message = "El ciclo actual debe ser mayor o igual a 1")
+    @Max(value = 14, message = "El ciclo actual no debe superar 14")
+    private Integer cicloActual;
     
     
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -60,9 +92,6 @@ public class Usuario {
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Reporte> reportes;
-
-    public Usuario() {
-    }
 
     @PrePersist
     protected void onCreate() {
@@ -79,70 +108,6 @@ public class Usuario {
         this.fechaCreacion = fechaCreacion;
         this.rol = rol;
         this.inscripciones = inscripciones;
-        this.reportes = reportes;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Date getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(Date fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
-
-    public Rol getRol() {
-        return rol;
-    }
-
-    public void setRol(Rol rol) {
-        this.rol = rol;
-    }
-
-    public List<Inscripcion> getInscripciones() {
-        return inscripciones;
-    }
-
-    public void setInscripciones(List<Inscripcion> inscripciones) {
-        this.inscripciones = inscripciones;
-    }
-
-    public List<Reporte> getReportes() {
-        return reportes;
-    }
-
-    public void setReportes(List<Reporte> reportes) {
         this.reportes = reportes;
     }
 
