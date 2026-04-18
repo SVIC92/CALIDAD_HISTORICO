@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
@@ -6,6 +6,7 @@ import {
     Box,
     Typography,
     TextField,
+    MenuItem,
     Button,
     Paper,
     Alert,
@@ -13,6 +14,7 @@ import {
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
 import PortalService from '../services/PortalService';
+import CarreraService from '../services/CarreraService';
 import { useLoadingScreen } from '../context/LoadingScreenContext';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
 
@@ -27,10 +29,37 @@ const Registro = () => {
     const [serverError, setServerError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [carreras, setCarreras] = useState([]);
+    const [cargandoCarreras, setCargandoCarreras] = useState(true);
     const navigate = useNavigate();
     const { startLoading, stopLoading } = useLoadingScreen();
 
     const passwordValue = watch('password');
+
+    useEffect(() => {
+        const cargarCarreras = async () => {
+            try {
+                setCargandoCarreras(true);
+                const data = await CarreraService.listar();
+                const normalizadas = Array.isArray(data)
+                    ? data
+                        .filter((item) => item?.nombre)
+                        .map((item) => ({
+                            id: item.id,
+                            nombre: String(item.nombre).trim(),
+                        }))
+                    : [];
+                setCarreras(normalizadas);
+            } catch (err) {
+                setCarreras([]);
+                setServerError(extractBackendValidationMessage(err, 'No se pudieron cargar las carreras.'));
+            } finally {
+                setCargandoCarreras(false);
+            }
+        };
+
+        cargarCarreras();
+    }, []);
 
     const onSubmit = async (data) => {
         try {
@@ -45,7 +74,7 @@ const Registro = () => {
                 password: data.password,
                 password2: data.password2,
                 carrera: data.carrera,
-                cicloActual: data.cicloActual,
+                cicloActual: 1,
             });
 
             setSuccessMessage('Usuario registrado correctamente. Ahora puedes iniciar sesión.');
@@ -140,36 +169,40 @@ const Registro = () => {
 
                         <TextField
                             margin="normal"
+                            required
                             fullWidth
-                            label="Carrera (opcional)"
+                            select
+                            label="Carrera"
+                            defaultValue=""
                             {...register('carrera', {
-                                maxLength: {
-                                    value: 120,
-                                    message: 'La carrera no debe superar 120 caracteres',
-                                },
-                            })}
-                            error={!!errors.carrera}
-                            helperText={errors.carrera ? errors.carrera.message : ''}
-                        />
-
-                        <TextField
-                            margin="normal"
-                            fullWidth
-                            label="Ciclo actual (opcional)"
-                            type="number"
-                            {...register('cicloActual', {
+                                required: 'La carrera es obligatoria',
                                 validate: (value) => {
-                                    if (value === '' || value === null || value === undefined) return true;
-                                    const n = Number(value);
-                                    if (!Number.isInteger(n)) return 'El ciclo debe ser un número entero';
-                                    if (n < 1 || n > 14) return 'El ciclo debe estar entre 1 y 14';
-                                    return true;
-                                },
+                                    if (!value) return 'La carrera es obligatoria';
+                                    const existe = carreras.some((c) => c.nombre === value);
+                                    return existe || 'Selecciona una carrera válida';
+                                }
                             })}
-                            error={!!errors.cicloActual}
-                            helperText={errors.cicloActual ? errors.cicloActual.message : ''}
-                            slotProps={{ htmlInput: { min: 1, max: 14 } }}
-                        />
+                            disabled={cargandoCarreras || isSubmitting}
+                            error={!!errors.carrera}
+                            helperText={
+                                errors.carrera
+                                    ? errors.carrera.message
+                                    : cargandoCarreras
+                                        ? 'Cargando carreras...'
+                                        : carreras.length === 0
+                                            ? 'No hay carreras disponibles'
+                                            : ''
+                            }
+                        >
+                            <MenuItem value="" disabled>
+                                Selecciona una carrera
+                            </MenuItem>
+                            {carreras.map((carrera) => (
+                                <MenuItem key={carrera.id || carrera.nombre} value={carrera.nombre}>
+                                    {carrera.nombre}
+                                </MenuItem>
+                            ))}
+                        </TextField>
 
                         <TextField
                             margin="normal"
