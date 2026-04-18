@@ -63,6 +63,9 @@ public class Usuario {
     @Column(name = "two_factor_enabled")
     private Boolean twoFactorEnabled;
 
+    @Column(name = "activo")
+    private Boolean activo;
+
     @Column(name = "two_factor_secret")
     @JsonIgnore
     private String twoFactorSecret;
@@ -98,6 +101,9 @@ public class Usuario {
         if (this.fechaCreacion == null) {
             this.fechaCreacion = new Date();
         }
+        if (this.activo == null) {
+            this.activo = true;
+        }
     }
 
     public Usuario(String id, String nombre, String email, String password, Date fechaCreacion, Rol rol, List<Inscripcion> inscripciones, List<Reporte> reportes) {
@@ -125,6 +131,15 @@ public class Usuario {
 
     public void setTwoFactorSecret(String twoFactorSecret) {
         this.twoFactorSecret = twoFactorSecret;
+    }
+
+    public boolean isActivo() {
+        // Compatibilidad con usuarios antiguos: null se interpreta como activo.
+        return !Boolean.FALSE.equals(activo);
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
     
     
