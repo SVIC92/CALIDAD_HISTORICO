@@ -20,6 +20,7 @@ import Configuracion from './pages/Configuracion';
 import EstudIA from './pages/EstudIA';
 import IAHub from './pages/IAHub';
 import RubricaIA from './pages/RubricaIA';
+import SilaboIA from './pages/SilaboIA';
 import ListadoUsuarios from './pages/ListadoUsuarios';
 import UsuarioHub from './pages/UsuarioHub';
 import UsuariosConectados from './pages/UsuariosConectados';
@@ -107,6 +108,7 @@ function App() {
               <Route path="/modulo/ia" element={<IAHub />} />
               <Route path="/modulo/ia/chat" element={<EstudIA />} />
               <Route path="/modulo/ia/rubricas" element={<RubricaIA />} />
+              <Route path="/modulo/ia/silabo" element={<SilaboIA />} />
               <Route path="/modulo/estudia" element={<Navigate to="/modulo/ia" replace />} />
               <Route path="/modulo/configuracion" element={<Configuracion />} />
               <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />

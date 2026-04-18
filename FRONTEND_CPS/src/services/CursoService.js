@@ -13,14 +13,25 @@ const CursoService = {
 
         const profesorId = payload.profesorId?.trim?.() || payload.profesorId;
         const profesorAsignado = payload.profesorAsignado?.trim?.() || payload.profesorAsignado;
+        const codigoCurso = payload.codigoCurso?.trim?.() || payload.codigoCurso;
+        const carrera = payload.carrera?.trim?.() || payload.carrera;
 
         const respuesta = await axios.post('/curso/registro', null, {
             params: {
                 nombre: payload.nombre,
+                codigoCurso: codigoCurso || undefined,
                 descripcion: payload.descripcion,
                 capacidadMaxima: payload.capacidadMaxima,
                 creditos: payload.creditos,
+                ciclo: payload.ciclo,
+                modalidad: payload.modalidad,
+                fechaInicio: payload.fechaInicio,
                 fechaTermino: payload.fechaTermino,
+                horasTeoricas: payload.horasTeoricas,
+                horasPracticas: payload.horasPracticas,
+                horasLaboratorio: payload.horasLaboratorio,
+                estado: payload.estado,
+                carrera: carrera || undefined,
                 profesorAsignado: profesorAsignado || undefined,
                 profesorId: profesorId || undefined,
             },
@@ -60,14 +71,25 @@ const CursoService = {
 
         const profesorId = payload.profesorId?.trim?.() || payload.profesorId;
         const profesorAsignado = payload.profesorAsignado?.trim?.() || payload.profesorAsignado;
+        const codigoCurso = payload.codigoCurso?.trim?.() || payload.codigoCurso;
+        const carrera = payload.carrera?.trim?.() || payload.carrera;
 
         const respuesta = await axios.post(`/curso/modificar/${id}`, null, {
             params: {
                 nombre: payload.nombre,
+                codigoCurso: codigoCurso || undefined,
                 descripcion: payload.descripcion,
                 capacidadMaxima: payload.capacidadMaxima,
                 creditos: payload.creditos,
+                ciclo: payload.ciclo,
+                modalidad: payload.modalidad,
+                fechaInicio: payload.fechaInicio,
                 fechaTermino: payload.fechaTermino,
+                horasTeoricas: payload.horasTeoricas,
+                horasPracticas: payload.horasPracticas,
+                horasLaboratorio: payload.horasLaboratorio,
+                estado: payload.estado,
+                carrera: carrera || undefined,
                 profesorAsignado: profesorAsignado || undefined,
                 profesorId: profesorId || undefined,
             },

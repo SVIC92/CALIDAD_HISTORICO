@@ -14,6 +14,7 @@ import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import Avatar from '@mui/material/Avatar';
 import PortalService from '../services/PortalService';
 import { useLoadingScreen } from '../context/LoadingScreenContext';
+import { extractBackendValidationMessage } from '../utils/backendValidation';
 
 const Registro = () => {
     const {
@@ -43,6 +44,8 @@ const Registro = () => {
                 email: data.email,
                 password: data.password,
                 password2: data.password2,
+                carrera: data.carrera,
+                cicloActual: data.cicloActual,
             });
 
             setSuccessMessage('Usuario registrado correctamente. Ahora puedes iniciar sesión.');
@@ -52,10 +55,7 @@ const Registro = () => {
             }, 1200);
         } catch (err) {
             console.error('Error en registro:', err);
-            const backendMessage = typeof err?.response?.data === 'string'
-                ? err.response.data
-                : err?.response?.data?.error;
-            setServerError(backendMessage || 'No se pudo registrar el usuario.');
+            setServerError(extractBackendValidationMessage(err, 'No se pudo registrar el usuario.'));
         } finally {
             stopLoading();
             setIsSubmitting(false);
@@ -108,6 +108,10 @@ const Registro = () => {
                                     value: 3,
                                     message: 'El nombre debe tener al menos 3 caracteres',
                                 },
+                                maxLength: {
+                                    value: 120,
+                                    message: 'El nombre no debe superar 120 caracteres',
+                                },
                             })}
                             error={!!errors.nombre}
                             helperText={errors.nombre ? errors.nombre.message : ''}
@@ -125,9 +129,46 @@ const Registro = () => {
                                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                                     message: 'Ingresa un correo válido',
                                 },
+                                maxLength: {
+                                    value: 255,
+                                    message: 'El correo no debe superar 255 caracteres',
+                                },
                             })}
                             error={!!errors.email}
                             helperText={errors.email ? errors.email.message : ''}
+                        />
+
+                        <TextField
+                            margin="normal"
+                            fullWidth
+                            label="Carrera (opcional)"
+                            {...register('carrera', {
+                                maxLength: {
+                                    value: 120,
+                                    message: 'La carrera no debe superar 120 caracteres',
+                                },
+                            })}
+                            error={!!errors.carrera}
+                            helperText={errors.carrera ? errors.carrera.message : ''}
+                        />
+
+                        <TextField
+                            margin="normal"
+                            fullWidth
+                            label="Ciclo actual (opcional)"
+                            type="number"
+                            {...register('cicloActual', {
+                                validate: (value) => {
+                                    if (value === '' || value === null || value === undefined) return true;
+                                    const n = Number(value);
+                                    if (!Number.isInteger(n)) return 'El ciclo debe ser un número entero';
+                                    if (n < 1 || n > 14) return 'El ciclo debe estar entre 1 y 14';
+                                    return true;
+                                },
+                            })}
+                            error={!!errors.cicloActual}
+                            helperText={errors.cicloActual ? errors.cicloActual.message : ''}
+                            slotProps={{ htmlInput: { min: 1, max: 14 } }}
                         />
 
                         <TextField
@@ -145,7 +186,7 @@ const Registro = () => {
                                 },
                             })}
                             error={!!errors.password}
-                            helperText={errors.password ? errors.password.message : ''}
+                            helperText={errors.password ? errors.password.message : 'Mínimo 6 caracteres'}
                         />
 
                         <TextField

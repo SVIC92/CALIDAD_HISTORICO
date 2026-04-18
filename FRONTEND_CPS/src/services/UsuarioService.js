@@ -64,8 +64,6 @@ const UsuarioService = {
         const respuesta = await axios.post('/usuarios/ping');
         return respuesta.data;
     },
-
-    getConectadosStreamUrl: () => `${axios.defaults.baseURL}/usuarios/conectados/stream`,
 };
 
 export default UsuarioService;

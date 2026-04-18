@@ -84,11 +84,13 @@ const Inscripciones = () => {
       }
 
       if (rol === 'ROLE_PROFESOR') {
-        const realizadasData = await InscripcionService.listaRealizadasAlumno();
+        const [pendientesData, realizadasData] = await Promise.all([
+          InscripcionService.listaPendientesAlumno(),
+          InscripcionService.listaRealizadasAlumno(),
+        ]);
 
-        setPendientes([]);
+        setPendientes((pendientesData || []).map(normalizeInscripcion));
         setRealizadas((realizadasData || []).map(normalizeInscripcion));
-        setTab('realizadas');
         return;
       }
 
@@ -122,7 +124,9 @@ const Inscripciones = () => {
   }, [loadInscripciones]);
 
   useEffect(() => {
-    if (rol === 'ROLE_PROFESOR') {
+    if (rol === 'ROLE_PROFESOR' || rol === 'ROLE_ADMIN') {
+      setTab('pendientes');
+    } else {
       setTab('realizadas');
     }
     setCursoFilter('');
@@ -179,7 +183,7 @@ const Inscripciones = () => {
           { id: 'fechaCreacion', label: 'Fecha' },
         ];
 
-  const pendingActions = rol !== 'ROLE_ADMIN'
+  const pendingActions = (rol !== 'ROLE_ADMIN' && rol !== 'ROLE_PROFESOR')
     ? undefined
     : [
         {
@@ -247,7 +251,7 @@ const Inscripciones = () => {
       </Stack>
 
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        {rol === 'ROLE_ADMIN' && (
+        {(rol === 'ROLE_ADMIN' || rol === 'ROLE_PROFESOR') && (
           <Chip label={`Pendientes: ${pendientes.length}`} color="warning" variant="outlined" />
         )}
         <Chip
@@ -293,7 +297,7 @@ const Inscripciones = () => {
         </Alert>
       )}
 
-      {rol === 'ROLE_ADMIN' && (
+      {(rol === 'ROLE_ADMIN' || rol === 'ROLE_PROFESOR') && (
         <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 2 }}>
           <Tab label="Pendientes" value="pendientes" />
           <Tab label="Realizadas" value="realizadas" />

@@ -18,6 +18,7 @@ import DataTable from '../components/DataTable';
 import CursoService from '../services/CursoService';
 import ActividadService from '../services/ActividadService';
 import ReporteService from '../services/ReporteService';
+import { extractBackendValidationMessage } from '../utils/backendValidation';
 
 const getUserEmailFromToken = () => {
   try {
@@ -202,8 +203,7 @@ const Reportes = () => {
             setReportes([]);
             return;
           }
-          const backendMessage = detailError?.response?.data?.error || detailError?.response?.data;
-          setErrorMsg(backendMessage || 'No se pudieron cargar los reportes de esta actividad.');
+          setErrorMsg(extractBackendValidationMessage(detailError, 'No se pudieron cargar los reportes de esta actividad.'));
           setReportes([]);
           return;
         }
@@ -222,11 +222,10 @@ const Reportes = () => {
       setReportes(rawList.map((item) => normalizeReporte(item, rol)));
     } catch (error) {
       const status = error?.response?.status;
-      const backendMessage = error?.response?.data?.error || error?.response?.data;
       if (status === 403) {
         setErrorMsg('No tienes permisos para listar reportes en esta actividad.');
       } else {
-        setErrorMsg(backendMessage || 'No se pudieron cargar los reportes.');
+        setErrorMsg(extractBackendValidationMessage(error, 'No se pudieron cargar los reportes.'));
       }
       setReportes([]);
     } finally {
@@ -294,6 +293,11 @@ const Reportes = () => {
       return;
     }
 
+    if (texto.length > 8000) {
+      setErrorMsg('La respuesta no debe superar 8000 caracteres.');
+      return;
+    }
+
     try {
       setIsSavingRespuesta(true);
       setErrorMsg('');
@@ -303,8 +307,7 @@ const Reportes = () => {
       setSuccessMsg('Reporte enviado correctamente.');
       await loadReportes(selectedActividadId);
     } catch (error) {
-      const backendMessage = error?.response?.data?.error || error?.response?.data;
-      setErrorMsg(backendMessage || 'No se pudo enviar el reporte.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo enviar el reporte.'));
     } finally {
       setIsSavingRespuesta(false);
     }
@@ -331,6 +334,11 @@ const Reportes = () => {
       return;
     }
 
+    if (String(comentario || '').length > 1000) {
+      setErrorMsg('El comentario no debe superar 1000 caracteres.');
+      return;
+    }
+
     try {
       setIsSavingCalificacion(true);
       setErrorMsg('');
@@ -343,8 +351,7 @@ const Reportes = () => {
       setSuccessMsg('Reporte calificado correctamente.');
       await loadReportes(selectedActividadId);
     } catch (error) {
-      const backendMessage = error?.response?.data?.error || error?.response?.data;
-      setErrorMsg(backendMessage || 'No se pudo calificar el reporte.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo calificar el reporte.'));
     } finally {
       setIsSavingCalificacion(false);
     }
@@ -460,6 +467,7 @@ const Reportes = () => {
             required
             multiline
             minRows={4}
+            slotProps={{ htmlInput: { maxLength: 8000 } }}
           />
         </DialogContent>
         <DialogActions>
@@ -491,6 +499,7 @@ const Reportes = () => {
             fullWidth
             multiline
             minRows={3}
+            slotProps={{ htmlInput: { maxLength: 1000 } }}
           />
         </DialogContent>
         <DialogActions>

@@ -1,5 +1,5 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { ArrowBack, AutoAwesome, Chat, Grading } from '@mui/icons-material';
+import { ArrowBack, AutoAwesome, AutoStories, Chat, Grading } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const IAHub = () => {
@@ -20,6 +20,13 @@ const IAHub = () => {
       action: () => navigate('/modulo/ia/rubricas'),
       buttonLabel: 'Ir al Generador',
     },
+    {
+      title: 'Generador de Sílabo',
+      description: 'Construye sílabos completos con IA y estructura por unidades y semanas.',
+      icon: <AutoStories color="primary" />,
+      action: () => navigate('/modulo/ia/silabo'),
+      buttonLabel: 'Ir al Sílabo',
+    },
   ];
 
   return (
@@ -39,7 +46,7 @@ const IAHub = () => {
           <Typography variant="h6">Centro de herramientas IA</Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary">
-          Selecciona un submódulo para conversar con la IA o generar rúbricas automáticamente.
+          Selecciona un submódulo para conversar con la IA o generar rúbricas y sílabos automáticamente.
         </Typography>
       </Paper>
 

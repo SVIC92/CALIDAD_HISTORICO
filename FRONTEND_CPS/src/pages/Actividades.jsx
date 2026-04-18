@@ -17,6 +17,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import ActividadService from '../services/ActividadService';
 import CursoService from '../services/CursoService';
+import { extractBackendValidationMessage } from '../utils/backendValidation';
 
 const getUserEmailFromToken = () => {
   try {
@@ -150,8 +151,7 @@ const Actividades = () => {
       setActividades(actividadesData);
     } catch (error) {
       console.error('Error al obtener actividades', error);
-      const backendMessage = error?.response?.data?.error || error?.response?.data;
-      setErrorMsg(backendMessage || 'No se pudieron cargar las actividades.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudieron cargar las actividades.'));
       setActividades([]);
     }
   }, []);
@@ -222,6 +222,16 @@ const Actividades = () => {
       return;
     }
 
+    if (nombre.length > 120) {
+      setErrorMsg('El nombre de la actividad no debe superar 120 caracteres.');
+      return;
+    }
+
+    if (descripcion.length > 1000) {
+      setErrorMsg('La descripción no debe superar 1000 caracteres.');
+      return;
+    }
+
     if (!fechaVencimiento) {
       setErrorMsg('La fecha y hora de vencimiento es obligatoria.');
       return;
@@ -259,8 +269,7 @@ const Actividades = () => {
       await fetchActividades(selectedCursoId);
     } catch (error) {
       console.error('Error al guardar actividad', error);
-      const backendMessage = error?.response?.data?.error || error?.response?.data;
-      setErrorMsg(backendMessage || 'No se pudo guardar la actividad.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo guardar la actividad.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -377,6 +386,7 @@ const Actividades = () => {
               onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
               fullWidth
               required
+              slotProps={{ htmlInput: { maxLength: 120 } }}
             />
             <TextField
               margin="dense"
@@ -387,6 +397,7 @@ const Actividades = () => {
               required
               multiline
               minRows={3}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
             />
             <TextField
               margin="dense"

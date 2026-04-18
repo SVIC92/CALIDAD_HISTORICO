@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  Alert,
   Box,
   Typography,
   Button,
@@ -16,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import CursoService from '../services/CursoService';
 import ProfesorService from '../services/ProfesorService';
+import { extractBackendValidationMessage } from '../utils/backendValidation';
 
 const CursosListado = () => {
   const [cursos, setCursos] = useState([]);
@@ -27,14 +29,25 @@ const CursosListado = () => {
   const [adminEstadoFilter, setAdminEstadoFilter] = useState('todos');
   const [formData, setFormData] = useState({
     nombre: '',
+    codigoCurso: '',
     descripcion: '',
+    ciclo: 1,
+    modalidad: 'PRESENCIAL',
     capacidadMaxima: '',
     creditos: '',
+    fechaInicio: '',
     fechaTermino: '',
+    horasTeoricas: 1,
+    horasPracticas: 0,
+    horasLaboratorio: 0,
+    estado: 'ACTIVO',
+    carrera: '',
     profesorId: '',
     profesorAsignado: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
   const rol = localStorage.getItem('rol');
   const canManageCursos = rol === 'ROLE_ADMIN';
@@ -176,10 +189,19 @@ const CursosListado = () => {
   const resetForm = () => {
     setFormData({
       nombre: '',
+      codigoCurso: '',
       descripcion: '',
+      ciclo: 1,
+      modalidad: 'PRESENCIAL',
       capacidadMaxima: '',
       creditos: '',
+      fechaInicio: todayDateInputValue(),
       fechaTermino: '',
+      horasTeoricas: 1,
+      horasPracticas: 0,
+      horasLaboratorio: 0,
+      estado: 'ACTIVO',
+      carrera: '',
       profesorId: '',
       profesorAsignado: '',
     });
@@ -189,6 +211,8 @@ const CursosListado = () => {
 
   const handleOpenCreate = () => {
     if (!canManageCursos) return;
+    setErrorMsg('');
+    setSuccessMsg('');
     resetForm();
     setOpenModal(true);
   };
@@ -199,18 +223,29 @@ const CursosListado = () => {
     const profesorData = normalizeProfesorData(curso);
 
     if (!cursoId) {
-      alert('No se pudo identificar el curso a editar.');
+      setErrorMsg('No se pudo identificar el curso a editar.');
       return;
     }
 
     setIsEditMode(true);
+    setErrorMsg('');
+    setSuccessMsg('');
     setSelectedCursoId(cursoId);
     setFormData({
       nombre: curso.nombre || '',
+      codigoCurso: curso.codigoCurso || '',
       descripcion: curso.descripcion || '',
+      ciclo: curso.ciclo ?? 1,
+      modalidad: curso.modalidad || 'PRESENCIAL',
       capacidadMaxima: curso.capacidadMaxima ?? '',
       creditos: curso.creditos ?? '',
+      fechaInicio: toDateInputValue(curso.fechaInicio),
       fechaTermino: toDateInputValue(curso.fechaTermino),
+      horasTeoricas: curso.horasTeoricas ?? 0,
+      horasPracticas: curso.horasPracticas ?? 0,
+      horasLaboratorio: curso.horasLaboratorio ?? 0,
+      estado: curso.estado || 'ACTIVO',
+      carrera: curso?.carrera?.id || curso?.carrera?.nombre || '',
       profesorId: profesorData.profesorId,
       profesorAsignado: profesorData.profesorAsignado,
     });
@@ -221,6 +256,7 @@ const CursosListado = () => {
     if (isSubmitting) {
       return;
     }
+    setErrorMsg('');
     setOpenModal(false);
     resetForm();
   };
@@ -245,48 +281,103 @@ const CursosListado = () => {
     if (!canManageCursos) return;
 
     const nombre = formData.nombre.trim();
+    const codigoCurso = formData.codigoCurso.trim();
     const descripcion = formData.descripcion.trim();
+    const carrera = formData.carrera.trim();
     const profesorAsignado = formData.profesorAsignado.trim();
     const profesorId = formData.profesorId.trim();
+    const ciclo = Number(formData.ciclo);
+    const modalidad = String(formData.modalidad || 'PRESENCIAL').toUpperCase();
+    const fechaInicio = formData.fechaInicio || todayDateInputValue();
     const fechaTermino = formData.fechaTermino;
     const capacidadMaxima = Number(formData.capacidadMaxima);
     const creditos = Number(formData.creditos);
+    const horasTeoricas = Number(formData.horasTeoricas || 0);
+    const horasPracticas = Number(formData.horasPracticas || 0);
+    const horasLaboratorio = Number(formData.horasLaboratorio || 0);
 
     if (!nombre || !descripcion) {
-      alert('Nombre y descripción son obligatorios.');
+      setErrorMsg('Nombre y descripción son obligatorios.');
       return;
     }
 
-    if (!Number.isInteger(capacidadMaxima) || capacidadMaxima <= 0) {
-      alert('La capacidad máxima debe ser un número entero mayor a 0.');
+    if (nombre.length > 150) {
+      setErrorMsg('El nombre no debe superar 150 caracteres.');
       return;
     }
 
-    if (!Number.isInteger(creditos) || creditos <= 0) {
-      alert('Los créditos deben ser un número entero mayor a 0.');
+    if (codigoCurso && codigoCurso.length > 30) {
+      setErrorMsg('El código no debe superar 30 caracteres.');
       return;
     }
 
-    if (!fechaTermino) {
-      alert('La fecha de término es obligatoria.');
+    if (descripcion.length > 1000) {
+      setErrorMsg('La descripción no debe superar 1000 caracteres.');
       return;
     }
 
-    const today = todayDateInputValue();
-    if (fechaTermino < today) {
-      alert('La fecha de término no puede ser anterior a la fecha actual.');
+    if (!Number.isInteger(ciclo) || ciclo < 1 || ciclo > 14) {
+      setErrorMsg('El ciclo debe estar entre 1 y 14.');
+      return;
+    }
+
+    if (!Number.isInteger(capacidadMaxima) || capacidadMaxima <= 0 || capacidadMaxima > 40) {
+      setErrorMsg('La capacidad máxima debe estar entre 1 y 40.');
+      return;
+    }
+
+    if (!Number.isInteger(creditos) || creditos <= 0 || creditos > 8) {
+      setErrorMsg('Los créditos deben estar entre 1 y 8.');
+      return;
+    }
+
+    if (!Number.isInteger(horasTeoricas) || horasTeoricas < 0 || horasTeoricas > 20
+      || !Number.isInteger(horasPracticas) || horasPracticas < 0 || horasPracticas > 20
+      || !Number.isInteger(horasLaboratorio) || horasLaboratorio < 0 || horasLaboratorio > 20) {
+      setErrorMsg('Las horas (teóricas, prácticas y laboratorio) deben estar entre 0 y 20.');
+      return;
+    }
+
+    if ((horasTeoricas + horasPracticas + horasLaboratorio) <= 0) {
+      setErrorMsg('Debes registrar al menos una hora académica entre HT, HP o HL.');
+      return;
+    }
+
+    if (!fechaInicio || !fechaTermino) {
+      setErrorMsg('La fecha de inicio y la fecha de término son obligatorias.');
+      return;
+    }
+
+    if (fechaTermino < fechaInicio) {
+      setErrorMsg('La fecha de término no puede ser anterior a la fecha de inicio.');
+      return;
+    }
+
+    if (!carrera) {
+      setErrorMsg('La carrera es obligatoria.');
       return;
     }
 
     try {
       setIsSubmitting(true);
+      setErrorMsg('');
+      setSuccessMsg('');
 
       const payload = {
         nombre,
+        codigoCurso: codigoCurso || undefined,
         descripcion,
+        ciclo,
+        modalidad,
         capacidadMaxima,
         creditos,
+        fechaInicio,
         fechaTermino,
+        horasTeoricas,
+        horasPracticas,
+        horasLaboratorio,
+        estado: formData.estado,
+        carrera,
         profesorId: profesorId || undefined,
         profesorAsignado: profesorAsignado || undefined,
       };
@@ -298,10 +389,11 @@ const CursosListado = () => {
       }
 
       await fetchCursos();
+      setSuccessMsg(isEditMode ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar curso', error);
-      alert('No se pudo guardar el curso.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo guardar el curso.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -313,7 +405,7 @@ const CursosListado = () => {
     const cursoId = getCursoId(curso);
 
     if (!cursoId) {
-      alert('No se pudo identificar el curso a eliminar.');
+      setErrorMsg('No se pudo identificar el curso a eliminar.');
       return;
     }
 
@@ -323,11 +415,14 @@ const CursosListado = () => {
     }
 
     try {
+      setErrorMsg('');
+      setSuccessMsg('');
       await CursoService.eliminar(cursoId);
       await fetchCursos();
+      setSuccessMsg('Curso eliminado correctamente.');
     } catch (error) {
       console.error('Error al eliminar curso', error);
-      alert('No se pudo eliminar el curso.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar el curso.'));
     }
   };
 
@@ -336,7 +431,7 @@ const CursosListado = () => {
 
     const cursoId = getCursoId(curso);
     if (!cursoId) {
-      alert('No se pudo identificar el curso para inscripción.');
+      setErrorMsg('No se pudo identificar el curso para inscripción.');
       return;
     }
 
@@ -344,12 +439,14 @@ const CursosListado = () => {
     if (!confirmar) return;
 
     try {
+      setErrorMsg('');
+      setSuccessMsg('');
       await CursoService.inscribirCurso(cursoId);
       await fetchCursos();
-      alert('Inscripción registrada correctamente.');
+      setSuccessMsg('Inscripción registrada correctamente.');
     } catch (error) {
       console.error('Error al inscribirse en curso', error);
-      alert('No se pudo completar la inscripción.');
+      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo completar la inscripción.'));
     }
   };
 
@@ -444,6 +541,18 @@ const CursosListado = () => {
         }}
       />
 
+      {errorMsg && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMsg}
+        </Alert>
+      )}
+
+      {successMsg && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMsg}
+        </Alert>
+      )}
+
       {canManageCursos && (
         <TextField
           select
@@ -477,6 +586,18 @@ const CursosListado = () => {
               onChange={handleChangeForm}
               fullWidth
               required
+              slotProps={{ htmlInput: { maxLength: 150 } }}
+              helperText="Máximo 150 caracteres"
+            />
+            <TextField
+              margin="dense"
+              label="Código de curso"
+              name="codigoCurso"
+              value={formData.codigoCurso}
+              onChange={handleChangeForm}
+              fullWidth
+              slotProps={{ htmlInput: { maxLength: 30 } }}
+              helperText="Opcional, máximo 30 caracteres"
             />
             <TextField
               margin="dense"
@@ -488,6 +609,70 @@ const CursosListado = () => {
               required
               multiline
               minRows={3}
+              slotProps={{ htmlInput: { maxLength: 1000 } }}
+              helperText="Máximo 1000 caracteres"
+            />
+            <TextField
+              margin="dense"
+              label="Carrera"
+              name="carrera"
+              value={formData.carrera}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              helperText="ID o nombre de carrera"
+            />
+            <TextField
+              margin="dense"
+              label="Ciclo"
+              name="ciclo"
+              type="number"
+              value={formData.ciclo}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              slotProps={{ htmlInput: { min: 1, max: 14 } }}
+              helperText="Rango permitido: 1 a 14"
+            />
+            <TextField
+              margin="dense"
+              label="Modalidad"
+              name="modalidad"
+              value={formData.modalidad}
+              onChange={handleChangeForm}
+              fullWidth
+              select
+            >
+              <MenuItem value="PRESENCIAL">PRESENCIAL</MenuItem>
+              <MenuItem value="VIRTUAL">VIRTUAL</MenuItem>
+              <MenuItem value="HIBRIDO">HIBRIDO</MenuItem>
+            </TextField>
+            <TextField
+              margin="dense"
+              label="Estado"
+              name="estado"
+              value={formData.estado}
+              onChange={handleChangeForm}
+              fullWidth
+              select
+            >
+              <MenuItem value="ACTIVO">ACTIVO</MenuItem>
+              <MenuItem value="INACTIVO">INACTIVO</MenuItem>
+              <MenuItem value="CERRADO">CERRADO</MenuItem>
+            </TextField>
+            <TextField
+              margin="dense"
+              label="Fecha de inicio"
+              name="fechaInicio"
+              type="date"
+              value={formData.fechaInicio}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { max: formData.fechaTermino || undefined },
+              }}
             />
             <TextField
               margin="dense"
@@ -498,6 +683,8 @@ const CursosListado = () => {
               onChange={handleChangeForm}
               fullWidth
               required
+              slotProps={{ htmlInput: { min: 1, max: 40 } }}
+              helperText="Rango permitido: 1 a 40"
             />
             <TextField
               margin="dense"
@@ -508,6 +695,44 @@ const CursosListado = () => {
               onChange={handleChangeForm}
               fullWidth
               required
+              slotProps={{ htmlInput: { min: 1, max: 8 } }}
+              helperText="Rango permitido: 1 a 8"
+            />
+            <TextField
+              margin="dense"
+              label="Horas teóricas"
+              name="horasTeoricas"
+              type="number"
+              value={formData.horasTeoricas}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              slotProps={{ htmlInput: { min: 0, max: 20 } }}
+              helperText="Rango permitido: 0 a 20"
+            />
+            <TextField
+              margin="dense"
+              label="Horas prácticas"
+              name="horasPracticas"
+              type="number"
+              value={formData.horasPracticas}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              slotProps={{ htmlInput: { min: 0, max: 20 } }}
+              helperText="Rango permitido: 0 a 20"
+            />
+            <TextField
+              margin="dense"
+              label="Horas laboratorio"
+              name="horasLaboratorio"
+              type="number"
+              value={formData.horasLaboratorio}
+              onChange={handleChangeForm}
+              fullWidth
+              required
+              slotProps={{ htmlInput: { min: 0, max: 20 } }}
+              helperText="Rango permitido: 0 a 20"
             />
             <TextField
               margin="dense"
@@ -520,8 +745,9 @@ const CursosListado = () => {
               required
               slotProps={{
                 inputLabel: { shrink: true },
-                htmlInput: { min: todayDateInputValue() },
+                htmlInput: { min: formData.fechaInicio || todayDateInputValue() },
               }}
+              helperText="Debe ser mayor o igual a la fecha de inicio"
             />
             {profesores.length > 0 ? (
               <TextField

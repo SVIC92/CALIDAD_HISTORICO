@@ -60,43 +60,6 @@ const UsuariosConectados = () => {
     return () => window.clearInterval(intervalId);
   }, [cargar, endpointDisponible]);
 
-  useEffect(() => {
-    if (!endpointDisponible) return undefined;
-
-    const token = localStorage.getItem('token');
-    if (!token) return undefined;
-
-    const streamUrl = `${UsuarioService.getConectadosStreamUrl()}?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(streamUrl);
-
-    const onMessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        const data = Array.isArray(payload) ? payload : [];
-        const normalizados = data.map(normalizeConectado);
-        setUsuarios(normalizados);
-        setErrorMsg('');
-      } catch {
-        // Ignorar paquetes mal formados sin romper el stream.
-      }
-    };
-
-    const onUsuariosConectados = (event) => {
-      onMessage(event);
-    };
-
-    eventSource.addEventListener('usuarios-conectados', onUsuariosConectados);
-    eventSource.onmessage = onMessage;
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
-
-    return () => {
-      eventSource.removeEventListener('usuarios-conectados', onUsuariosConectados);
-      eventSource.close();
-    };
-  }, [endpointDisponible]);
-
   const columns = [
     { id: 'nombre', label: 'Nombre' },
     { id: 'email', label: 'Email' },

@@ -22,6 +22,11 @@ const IaService = {
     const respuesta = await axios.post('/ia/rubricas/generar', payload);
     return respuesta.data;
   },
+
+  generarSilabo: async (payload) => {
+    const respuesta = await axios.post('/ia/silabo/generar', payload);
+    return respuesta.data;
+  },
 };
 
 export default IaService;
