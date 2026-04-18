@@ -6,8 +6,11 @@ import com.GestionInscripcionCursos.dto.CriterioRubricaDto;
 import com.GestionInscripcionCursos.dto.NivelRubricaDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
+import com.GestionInscripcionCursos.dto.InformacionGeneralDto;
+import com.GestionInscripcionCursos.dto.SemanaSilaboDto;
 import com.GestionInscripcionCursos.dto.SilaboGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.SilaboGeneradoDto;
+import com.GestionInscripcionCursos.dto.UnidadSilaboDto;
 import com.GestionInscripcionCursos.entidades.Curso;
 import com.GestionInscripcionCursos.entidades.IaHistorial;
 import com.GestionInscripcionCursos.entidades.Silabo;
@@ -82,28 +85,34 @@ public class IaServicio {
     public IaChatResponseDto chatearSegunRol(String email, String rol, String mensaje) {
         validarEntrada(mensaje);
 
-        if (groqApiKey == null || groqApiKey.isBlank()) {
-            throw new IllegalStateException("No se encontro la API key de Groq. Configura GROQ_API_KEY.");
-        }
-
         Usuario usuario = usuarioServicio.buscarEmail(email);
         if (usuario == null) {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
 
-        String promptSistema = construirPromptSistema(rol);
-        String respuesta = llamarGroq(promptSistema, mensaje);
+        String respuesta;
+        String modeloRespuesta;
+
+        if (groqApiKey == null || groqApiKey.isBlank()) {
+            LOGGER.warn("GROQ_API_KEY no configurada. Se respondera con fallback local para rol {}", rol);
+            respuesta = construirRespuestaFallback(rol, mensaje);
+            modeloRespuesta = "fallback-local";
+        } else {
+            String promptSistema = construirPromptSistema(rol);
+            respuesta = llamarGroq(promptSistema, mensaje);
+            modeloRespuesta = modeloPorDefecto;
+        }
 
         IaHistorial historial = iaHistorialRepositorio.findByUsuario(usuario).orElseGet(IaHistorial::new);
         historial.setUsuario(usuario);
         historial.setUltimoMensaje(mensaje);
         historial.setUltimaRespuesta(respuesta);
         historial.setRol(rol);
-        historial.setModelo(modeloPorDefecto);
+        historial.setModelo(modeloRespuesta);
         historial.setFechaActualizacion(Instant.now());
         iaHistorialRepositorio.save(historial);
 
-        return new IaChatResponseDto(respuesta, rol, modeloPorDefecto, Instant.now());
+        return new IaChatResponseDto(respuesta, rol, modeloRespuesta, Instant.now());
     }
 
     public Optional<IaHistorialDto> obtenerUltimoHistorial(String email) {
@@ -281,10 +290,6 @@ public class IaServicio {
             throw new IllegalArgumentException("Debes enviar nombreCurso o cursoId para generar el sílabo");
         }
 
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            throw new IllegalStateException("No se encontro la API key de Gemini. Configura GEMINI_API_KEY.");
-        }
-
         String nombreCurso = request.nombreCurso();
         if ((nombreCurso == null || nombreCurso.isBlank()) && request.cursoId() != null && !request.cursoId().isBlank()) {
             nombreCurso = cursoRepositorio.findById(request.cursoId())
@@ -293,13 +298,33 @@ public class IaServicio {
         }
 
         int semanas = normalizarEntero(request.semanas(), 16, 4, 20); // Por defecto 16 semanas
+        int ciclo = request.ciclo() <= 0 ? 1 : request.ciclo();
+        int creditos = request.creditos() <= 0 ? 4 : request.creditos();
+
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            LOGGER.warn("GEMINI_API_KEY no configurada. Se generara sílabo en fallback local");
+            SilaboGeneradoDto silaboFallback = construirSilaboFallback(
+                    nombreCurso,
+                    request.carrera(),
+                    ciclo,
+                    creditos,
+                    semanas,
+                    request.descripcionBreve()
+            );
+            try {
+                guardarSilaboGenerado(request, silaboFallback);
+            } catch (Exception persistEx) {
+                LOGGER.warn("No se pudo persistir el sílabo fallback: {}", persistEx.getMessage());
+            }
+            return silaboFallback;
+        }
 
         try {
             String jsonSilabo = llamarGeminiParaSilabo(
                     nombreCurso,
                     request.carrera(), 
-                    request.ciclo(), 
-                    request.creditos(), 
+                    ciclo,
+                    creditos,
                     semanas, 
                     request.descripcionBreve()
             );
@@ -415,7 +440,74 @@ public class IaServicio {
         }
 
         JsonNode root = objectMapper.readTree(response.body());
-        return root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+        JsonNode candidates = root.path("candidates");
+        if (!candidates.isArray() || candidates.isEmpty()) {
+            throw new IllegalStateException("Respuesta de Gemini sin contenido util para sílabo");
+        }
+
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (!parts.isArray() || parts.isEmpty()) {
+            throw new IllegalStateException("Respuesta de Gemini sin partes de contenido para sílabo");
+        }
+
+        String texto = parts.get(0).path("text").asText();
+        if (texto == null || texto.isBlank()) {
+            throw new IllegalStateException("Respuesta de Gemini vacia para sílabo");
+        }
+
+        return texto;
+    }
+
+    private SilaboGeneradoDto construirSilaboFallback(
+            String curso,
+            String carrera,
+            int ciclo,
+            int creditos,
+            int semanas,
+            String descripcion
+    ) {
+        String carreraValor = valorPorDefecto(carrera, "Ingenieria");
+        String descripcionValor = valorPorDefecto(descripcion, "Curso orientado al desarrollo progresivo de competencias teorico-practicas.");
+        int cantidadUnidades = semanas >= 12 ? 4 : 3;
+
+        List<UnidadSilaboDto> unidades = new ArrayList<>();
+        for (int unidadIndex = 0; unidadIndex < cantidadUnidades; unidadIndex++) {
+            List<SemanaSilaboDto> semanasUnidad = new ArrayList<>();
+            for (int numeroSemana = unidadIndex + 1; numeroSemana <= semanas; numeroSemana += cantidadUnidades) {
+                semanasUnidad.add(new SemanaSilaboDto(
+                        numeroSemana,
+                        "Desarrollo de contenidos clave de la Unidad " + (unidadIndex + 1),
+                        "Practicas aplicadas, analisis de casos y trabajo colaborativo",
+                        (numeroSemana % 4 == 0)
+                                ? "Evaluacion continua " + (numeroSemana / 4)
+                                : "Seguimiento formativo"
+                ));
+            }
+
+            unidades.add(new UnidadSilaboDto(
+                    "Unidad " + (unidadIndex + 1),
+                    "Al finalizar la unidad, el estudiante aplica conceptos y herramientas de forma pertinente.",
+                    semanasUnidad
+            ));
+        }
+
+        return new SilaboGeneradoDto(
+                new InformacionGeneralDto(curso, carreraValor, ciclo, creditos),
+                List.of(
+                        "Analiza fundamentos y principios de la disciplina",
+                        "Resuelve problemas usando criterios tecnicos y eticos",
+                        "Comunica resultados de forma clara y estructurada"
+                ),
+                List.of(
+                        "Aplica procedimientos propios del curso en contextos reales",
+                        "Integra teoria y practica para tomar decisiones academicas",
+                        "Construye productos o evidencias con estandares de calidad"
+                ),
+                descripcionValor,
+                "Al finalizar el curso, el estudiante demuestra dominio conceptual y practico en los ejes del curso.",
+                unidades,
+                "La calificacion integra evaluaciones diagnosticas, formativas y sumativas durante el periodo academico."
+        );
     }
 
     private String construirPromptSistema(String rol) {
@@ -439,6 +531,21 @@ public class IaServicio {
         if (mensaje.length() > 4000) {
             throw new IllegalArgumentException("El mensaje excede el maximo permitido");
         }
+    }
+
+    private String construirRespuestaFallback(String rol, String mensaje) {
+        String recomendacion;
+        switch (rol) {
+            case "ADMIN" -> recomendacion = "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
+            case "PROFESOR" -> recomendacion = "Puedes revisar cursos, actividades, evaluacion y seguimiento academico del aula.";
+            case "ALUMNO" -> recomendacion = "Puedes revisar tus inscripciones, actividades pendientes, requisitos y progreso academico.";
+            default -> recomendacion = "Puedes revisar las opciones disponibles dentro del sistema segun tu perfil.";
+        }
+
+        return "En este momento el asistente IA externo no esta disponible. "
+                + "Recibi tu consulta: '" + mensaje.trim() + "'. "
+                + recomendacion
+                + " Si deseas, intenta nuevamente en unos minutos.";
     }
 
     private RubricaGeneradaDto parsearRubricaDesdeJson(
