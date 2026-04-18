@@ -67,7 +67,13 @@ public class PortalControlador {
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         } catch (DataIntegrityViolationException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Error de integridad en base de datos al registrar usuario. Verifica email único y datos obligatorios."));
+            String detalle = ex.getMostSpecificCause() != null
+                    ? ex.getMostSpecificCause().getMessage()
+                    : ex.getMessage();
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Error de integridad en base de datos al registrar usuario. Verifica email único y datos obligatorios.",
+                    "detalle", detalle
+            ));
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error interno al registrar usuario", "detalle", ex.getMessage()));

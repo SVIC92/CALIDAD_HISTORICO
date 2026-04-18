@@ -13,6 +13,7 @@ import DashboardAlumno from './pages/DashboardAlumno';
 import CursosHub from './pages/CursosHub';
 import CursosListado from './pages/CursosListado';
 import CursosDictadosProfesor from './pages/CursosDictadosProfesor';
+import Carreras from './pages/Carreras';
 import Actividades from './pages/Actividades';
 import Inscripciones from './pages/Inscripciones';
 import Reportes from './pages/Reportes';
@@ -87,6 +88,7 @@ function App() {
               <Route path="/usuarios" element={<UsuarioHub />} />
               <Route path="/usuarios/listado" element={<ListadoUsuarios />} />
               <Route path="/usuarios/conectados" element={<UsuariosConectados />} />
+              <Route path="/carreras" element={<Carreras />} />
             </Route>
 
             <Route element={<RutasProtegidas allowedRoles={['ROLE_PROFESOR']} />}>

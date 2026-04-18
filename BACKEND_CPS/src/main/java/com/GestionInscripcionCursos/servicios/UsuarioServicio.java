@@ -44,6 +44,11 @@ public class UsuarioServicio implements UserDetailsService {
     @Transactional
     public void registrar(String nombre, String email, String password, String password2, String carreraReferencia, Integer cicloActual) throws MyException {
 
+        nombre = nombre == null ? null : nombre.trim();
+        email = email == null ? null : email.trim().toLowerCase();
+        password = password == null ? null : password.trim();
+        password2 = password2 == null ? null : password2.trim();
+
         validar(nombre, email, password, password2);
 
         Usuario usuario = new Usuario();
@@ -62,11 +67,15 @@ public class UsuarioServicio implements UserDetailsService {
 
         usuario.setCarrera(carrera);
 
+        usuario.setTwoFactorEnabled(false);
+
         if (cicloActual != null) {
             if (cicloActual <= 0 || cicloActual > 14) {
                 throw new MyException("El ciclo actual debe estar entre 1 y 14");
             }
             usuario.setCicloActual(cicloActual);
+        } else {
+            usuario.setCicloActual(1);
         }
 
         usuarioRepositorio.save(usuario);

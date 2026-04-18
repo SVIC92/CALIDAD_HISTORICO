@@ -17,6 +17,12 @@ const submodulosPorRol = {
       path: '/modulo/inscripciones',
     },
     {
+      title: 'Carreras',
+      description: 'Registrar, editar y eliminar carreras académicas del sistema.',
+      icon: <School sx={{ fontSize: 50, color: 'info.main' }} />,
+      path: '/carreras',
+    },
+    {
       title: 'Reportes por Curso',
       description: 'Generar estadísticas de asistencia y rendimiento por módulo.',
       icon: <Assessment sx={{ fontSize: 50, color: 'success.main' }} />,

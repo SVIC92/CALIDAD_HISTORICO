@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
-import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle } from '@mui/icons-material';
+import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
 import AuthService from '../services/AuthService';
@@ -83,6 +83,7 @@ const Sidebar = ({ open, variant }) => {
       { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/admin' },
       { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
+      { text: 'Carreras', icon: <Apartment />, path: '/carreras' },
       { text: 'Usuarios', icon: <People />, path: '/usuarios' },
       { text: 'Reportes', icon: <Assessment />, path: '/modulo/reportes' },
       { text: 'Configuración', icon: <Settings />, path: '/modulo/configuracion' },
