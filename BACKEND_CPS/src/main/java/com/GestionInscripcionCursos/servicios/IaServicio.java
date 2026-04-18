@@ -8,9 +8,13 @@ import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
 import com.GestionInscripcionCursos.dto.SilaboGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.SilaboGeneradoDto;
+import com.GestionInscripcionCursos.entidades.Curso;
 import com.GestionInscripcionCursos.entidades.IaHistorial;
+import com.GestionInscripcionCursos.entidades.Silabo;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import com.GestionInscripcionCursos.repositorios.IaHistorialRepositorio;
+import com.GestionInscripcionCursos.repositorios.SilaboRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -21,14 +25,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class IaServicio {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(IaServicio.class);
 
     private static final String URL_GROQ = "https://api.groq.com/openai/v1/chat/completions";
     private static final String URL_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
@@ -38,6 +48,8 @@ public class IaServicio {
 
     private final UsuarioServicio usuarioServicio;
     private final IaHistorialRepositorio iaHistorialRepositorio;
+    private final CursoRepositorio cursoRepositorio;
+    private final SilaboRepositorio silaboRepositorio;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final String groqApiKey;
@@ -46,6 +58,8 @@ public class IaServicio {
     public IaServicio(
             UsuarioServicio usuarioServicio,
             IaHistorialRepositorio iaHistorialRepositorio,
+            CursoRepositorio cursoRepositorio,
+            SilaboRepositorio silaboRepositorio,
             ObjectMapper objectMapper,
             @Value("${groq.api.key:}") String groqApiKey,
             @Value("${groq.model:llama-3.1-8b-instant}") String modeloPorDefecto,
@@ -54,6 +68,8 @@ public class IaServicio {
     ) {
         this.usuarioServicio = usuarioServicio;
         this.iaHistorialRepositorio = iaHistorialRepositorio;
+        this.cursoRepositorio = cursoRepositorio;
+        this.silaboRepositorio = silaboRepositorio;
         this.objectMapper = objectMapper;
         this.groqApiKey = groqApiKey;
         this.modeloPorDefecto = modeloPorDefecto;
@@ -258,16 +274,29 @@ public class IaServicio {
         return textoJson;
     }
 
+    @Transactional
     public SilaboGeneradoDto generarSilabo(SilaboGeneracionRequestDto request) {
-        if (request == null || request.nombreCurso() == null || request.nombreCurso().isBlank()) {
-            throw new IllegalArgumentException("El nombre del curso es obligatorio");
+        if (request == null || ((request.nombreCurso() == null || request.nombreCurso().isBlank())
+                && (request.cursoId() == null || request.cursoId().isBlank()))) {
+            throw new IllegalArgumentException("Debes enviar nombreCurso o cursoId para generar el sílabo");
+        }
+
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IllegalStateException("No se encontro la API key de Gemini. Configura GEMINI_API_KEY.");
+        }
+
+        String nombreCurso = request.nombreCurso();
+        if ((nombreCurso == null || nombreCurso.isBlank()) && request.cursoId() != null && !request.cursoId().isBlank()) {
+            nombreCurso = cursoRepositorio.findById(request.cursoId())
+                    .map(Curso::getNombre)
+                    .orElse("Curso sin nombre");
         }
 
         int semanas = normalizarEntero(request.semanas(), 16, 4, 20); // Por defecto 16 semanas
 
         try {
             String jsonSilabo = llamarGeminiParaSilabo(
-                    request.nombreCurso(), 
+                    nombreCurso,
                     request.carrera(), 
                     request.ciclo(), 
                     request.creditos(), 
@@ -276,11 +305,53 @@ public class IaServicio {
             );
             
             // Usamos ObjectMapper para convertir el JSON puro de Gemini a nuestro DTO
-            return objectMapper.readValue(jsonSilabo, SilaboGeneradoDto.class);
+            SilaboGeneradoDto silaboGenerado = objectMapper.readValue(jsonSilabo, SilaboGeneradoDto.class);
+            try {
+                guardarSilaboGenerado(request, silaboGenerado);
+            } catch (Exception persistEx) {
+                LOGGER.warn("No se pudo persistir el sílabo generado por IA: {}", persistEx.getMessage());
+            }
+            return silaboGenerado;
             
         } catch (Exception ex) {
             throw new IllegalStateException("Error al generar el sílabo con IA", ex);
         }
+    }
+
+    private void guardarSilaboGenerado(SilaboGeneracionRequestDto request, SilaboGeneradoDto silaboGenerado) {
+        Curso curso = resolverCursoParaSilabo(request);
+        Silabo silabo = silaboRepositorio.findByCursoId(curso.getId()).orElseGet(Silabo::new);
+
+        silabo.setCurso(curso);
+        silabo.setSumilla(silaboGenerado.sumilla());
+        silabo.setLogroCurso(silaboGenerado.logroCurso());
+        silabo.setSistemaEvaluacion(silaboGenerado.sistemaEvaluacion());
+        silabo.setVersion("IA-" + geminiModelo + "-" + Instant.now().toString());
+        silabo.setFechaAprobacion(new Date());
+
+        try {
+            silabo.setCompetenciasGenerales(objectMapper.writeValueAsString(silaboGenerado.competenciasGenerales()));
+            silabo.setCompetenciasEspecificas(objectMapper.writeValueAsString(silaboGenerado.competenciasEspecificas()));
+            silabo.setContenidoSemanal(objectMapper.writeValueAsString(silaboGenerado.unidades()));
+        } catch (IOException ex) {
+            throw new IllegalStateException("No se pudo serializar el contenido del sílabo para guardar en base de datos", ex);
+        }
+
+        silaboRepositorio.save(silabo);
+    }
+
+    private Curso resolverCursoParaSilabo(SilaboGeneracionRequestDto request) {
+        if (request.cursoId() != null && !request.cursoId().isBlank()) {
+            return cursoRepositorio.findById(request.cursoId())
+                    .orElseThrow(() -> new IllegalArgumentException("No se encontró el curso para guardar el sílabo (cursoId inválido)"));
+        }
+
+        if (request.nombreCurso() == null || request.nombreCurso().isBlank()) {
+            throw new IllegalArgumentException("No se puede asociar el sílabo: envia cursoId o nombreCurso válido");
+        }
+
+        return cursoRepositorio.findFirstByNombreIgnoreCase(request.nombreCurso().trim())
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró un curso con ese nombre para guardar el sílabo. Envia cursoId en la solicitud."));
     }
 
     private String llamarGeminiParaSilabo(
@@ -412,7 +483,7 @@ public class IaServicio {
             }
         }
 
-        return new RubricaGeneradaDto(
+        RubricaGeneradaDto rubrica = new RubricaGeneradaDto(
                 titulo,
                 descripcion,
                 tema,
@@ -425,6 +496,8 @@ public class IaServicio {
                 modeloPorDefecto,
                 Instant.now()
         );
+
+            return normalizarRubricaSinRepeticiones(rubrica);
     }
 
     private RubricaGeneradaDto construirRubricaFallback(
@@ -462,7 +535,7 @@ public class IaServicio {
             ));
         }
 
-        return new RubricaGeneradaDto(
+        RubricaGeneradaDto rubrica = new RubricaGeneradaDto(
                 "Rubrica generica para " + tema,
                 "Rubrica generada en modo fallback, editable para personalizacion.",
                 tema,
@@ -475,6 +548,114 @@ public class IaServicio {
                 "fallback-local",
                 Instant.now()
         );
+
+        return normalizarRubricaSinRepeticiones(rubrica);
+    }
+
+    private RubricaGeneradaDto normalizarRubricaSinRepeticiones(RubricaGeneradaDto rubrica) {
+        if (rubrica == null || rubrica.criterios() == null || rubrica.criterios().isEmpty()) {
+            return rubrica;
+        }
+
+        Map<String, CriterioRubricaDto> unicosPorNombre = new LinkedHashMap<>();
+
+        for (CriterioRubricaDto criterio : rubrica.criterios()) {
+            if (criterio == null) {
+                continue;
+            }
+
+            String nombreBase = valorPorDefecto(criterio.nombre(), "Criterio").trim();
+            String llave = nombreBase.toLowerCase();
+
+            if (!unicosPorNombre.containsKey(llave)) {
+                unicosPorNombre.put(llave, new CriterioRubricaDto(
+                        nombreBase,
+                        valorPorDefecto(criterio.descripcion(), "Evaluacion del criterio"),
+                        criterio.peso() == null ? 0 : criterio.peso(),
+                        normalizarNivelesSinRepeticiones(criterio.niveles())
+                ));
+            }
+        }
+
+        List<CriterioRubricaDto> criteriosNormalizados = new ArrayList<>(unicosPorNombre.values());
+
+        int cantidad = criteriosNormalizados.size();
+        if (cantidad == 0) {
+            return rubrica;
+        }
+
+        int pesoBase = 100 / cantidad;
+        int resto = 100 % cantidad;
+
+        List<CriterioRubricaDto> criteriosConPesoRebalanceado = new ArrayList<>();
+        for (int i = 0; i < criteriosNormalizados.size(); i++) {
+            CriterioRubricaDto c = criteriosNormalizados.get(i);
+            int peso = pesoBase + (i < resto ? 1 : 0);
+            criteriosConPesoRebalanceado.add(new CriterioRubricaDto(
+                    c.nombre(),
+                    c.descripcion(),
+                    peso,
+                    c.niveles()
+            ));
+        }
+
+        return new RubricaGeneradaDto(
+                rubrica.titulo(),
+                rubrica.descripcion(),
+                rubrica.tema(),
+                rubrica.nivelEducativo(),
+                rubrica.asignatura(),
+                rubrica.tipoTarea(),
+                rubrica.puntajeMaximo(),
+                criteriosConPesoRebalanceado,
+                rubrica.generadaPorIa(),
+                rubrica.modelo(),
+                rubrica.fechaGeneracion()
+        );
+    }
+
+    private List<NivelRubricaDto> normalizarNivelesSinRepeticiones(List<NivelRubricaDto> niveles) {
+        if (niveles == null || niveles.isEmpty()) {
+            return niveles;
+        }
+
+        Map<String, NivelRubricaDto> unicosPorNombre = new LinkedHashMap<>();
+        int fallbackIndex = 1;
+
+        for (NivelRubricaDto nivel : niveles) {
+            if (nivel == null) {
+                continue;
+            }
+
+            String nombreBase = valorPorDefecto(nivel.nombre(), "Nivel " + fallbackIndex).trim();
+            String llave = nombreBase.toLowerCase();
+            if (unicosPorNombre.containsKey(llave)) {
+                fallbackIndex++;
+                continue;
+            }
+
+            String descriptor = valorPorDefecto(nivel.descriptor(), "Descripcion del nivel").trim();
+            int puntaje = nivel.puntaje() == null ? 0 : nivel.puntaje();
+
+            unicosPorNombre.put(llave, new NivelRubricaDto(nombreBase, puntaje, descriptor));
+            fallbackIndex++;
+        }
+
+        List<NivelRubricaDto> normalizados = new ArrayList<>(unicosPorNombre.values());
+
+        for (int i = 0; i < normalizados.size(); i++) {
+            NivelRubricaDto actual = normalizados.get(i);
+            String nombre = actual.nombre();
+            String descriptor = actual.descriptor();
+
+            if (descriptor != null && descriptor.equalsIgnoreCase("Descripcion del nivel")) {
+                descriptor = "Desempeno esperado para " + nombre + ".";
+            }
+
+            normalizados.set(i, new NivelRubricaDto(nombre, actual.puntaje(), descriptor));
+        }
+
+        return normalizados;
     }
 
     private String valorPorDefecto(String valor, String fallback) {

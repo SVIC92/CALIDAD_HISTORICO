@@ -21,15 +21,13 @@ const PortalService = {
             ? undefined
             : Number(payload.cicloActual);
 
-        const respuesta = await axios.post('/portal/registro', null, {
-            params: {
-                nombre: payload.nombre,
-                email: payload.email,
-                password: payload.password,
-                password2: payload.password2,
-                carrera: carrera || undefined,
-                cicloActual: Number.isNaN(cicloActual) ? undefined : cicloActual,
-            },
+        const respuesta = await axios.post('/portal/registro', {
+            nombre: payload.nombre,
+            email: payload.email,
+            password: payload.password,
+            password2: payload.password2,
+            carrera: carrera || undefined,
+            cicloActual: Number.isNaN(cicloActual) ? undefined : cicloActual,
         });
         return respuesta.data;
     },

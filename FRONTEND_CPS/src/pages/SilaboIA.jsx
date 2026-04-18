@@ -102,6 +102,7 @@ const SilaboIA = () => {
       setErrorMsg('');
 
       const payload = {
+        cursoId: cursoId || undefined,
         nombreCurso: form.nombreCurso.trim(),
         carrera: form.carrera.trim(),
         ciclo: Number(form.ciclo),

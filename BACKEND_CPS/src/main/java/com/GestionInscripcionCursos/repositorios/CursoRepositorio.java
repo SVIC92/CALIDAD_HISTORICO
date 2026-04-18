@@ -14,6 +14,8 @@ public interface CursoRepositorio extends JpaRepository<Curso, String> {
 
     boolean existsByCodigoCursoIgnoreCase(String codigoCurso);
 
+    java.util.Optional<Curso> findFirstByNombreIgnoreCase(String nombre);
+
     @Query("SELECT c FROM Curso c")
     public List<Curso> buscarCursos();
 

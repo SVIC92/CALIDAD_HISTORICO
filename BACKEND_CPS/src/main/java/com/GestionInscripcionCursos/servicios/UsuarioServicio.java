@@ -109,11 +109,11 @@ public class UsuarioServicio implements UserDetailsService {
 
     private void validar(String nombre, String email, String password, String password2) throws MyException {
 
-        if (nombre.isEmpty() || nombre == null) {
+        if (nombre == null || nombre.isBlank()) {
             throw new MyException("El nombre no puede ser nulo o estar vacío");
         }
 
-        if (email.isEmpty() || email == null) {
+        if (email == null || email.isBlank()) {
             throw new MyException("El email no puede ser nulo o estar vacío");
         }
         
@@ -129,8 +129,12 @@ public class UsuarioServicio implements UserDetailsService {
             throw new MyException("El email está en uso");
         }
 
-        if (password.isEmpty() || password == null || password.length() <= 5) {
+        if (password == null || password.isBlank() || password.length() <= 5) {
             throw new MyException("La contraseña no puede estar vacía, y debe tener más de 5 dígitos");
+        }
+
+        if (password2 == null || password2.isBlank()) {
+            throw new MyException("Debes confirmar la contraseña");
         }
 
         if (!password.equals(password2)) {

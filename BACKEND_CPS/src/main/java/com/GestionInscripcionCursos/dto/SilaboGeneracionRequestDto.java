@@ -1,6 +1,7 @@
 package com.GestionInscripcionCursos.dto;
 
 public record SilaboGeneracionRequestDto(
+        String cursoId,
         String nombreCurso,
         String carrera,
         int ciclo,
