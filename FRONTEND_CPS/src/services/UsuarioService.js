@@ -1,34 +1,6 @@
 import axios from '../API/axios';
 
-const userCandidates = [
-    '/usuario/listado',
-    '/usuario/listadoUsuarios',
-    '/admin/usuarios',
-    '/usuario/lista',
-    '/usuarios/lista',
-    '/admin/listaUsuarios',
-];
-
-const userCreateCandidates = [
-    '/usuario/registro',
-    '/usuarios/registro',
-    '/admin/usuario/registro',
-    '/admin/usuarios/registro',
-];
-
-const userUpdateCandidates = [
-    '/usuario/modificar',
-    '/usuarios/modificar',
-    '/admin/usuario/modificar',
-    '/admin/usuarios/modificar',
-];
-
-const userDeleteCandidates = [
-    '/usuario/eliminar',
-    '/usuarios/eliminar',
-    '/admin/usuario/eliminar',
-    '/admin/usuarios/eliminar',
-];
+const ADMIN_USERS_ENDPOINT = '/admin/usuarios';
 
 const connectedUserCandidates = [
     '/usuarios/conectados',
@@ -39,6 +11,15 @@ const connectedUserCandidates = [
 ];
 
 let connectedUsersEndpointCache = null; // string | false | null
+
+const buildAdminUsuarioPayload = (payload = {}) => ({
+    nombre: payload?.nombre,
+    email: payload?.email,
+    password: payload?.password,
+    rol: payload?.rol,
+    carrera: payload?.carrera ?? null,
+    cicloActual: payload?.cicloActual ?? null,
+});
 
 const requestWithFallback = async (candidates, requestBuilder, notFoundErrorMessage) => {
     for (const endpoint of candidates) {
@@ -57,53 +38,38 @@ const requestWithFallback = async (candidates, requestBuilder, notFoundErrorMess
 
 const UsuarioService = {
     listar: async () => {
-        return requestWithFallback(
-            userCandidates,
-            (endpoint) => axios.get(endpoint),
-            'No se encontro un endpoint de listado de usuarios en el backend.'
-        );
+        const respuesta = await axios.get(ADMIN_USERS_ENDPOINT);
+        return respuesta.data;
     },
 
     registro: async (payload) => {
-        return requestWithFallback(
-            userCreateCandidates,
-            (endpoint) => axios.post(endpoint, null, {
-                params: {
-                    nombre: payload?.nombre,
-                    email: payload?.email,
-                    password: payload?.password,
-                    password2: payload?.password2,
-                    rol: payload?.rol,
-                    activo: payload?.activo,
-                },
-            }),
-            'No se encontro un endpoint de registro de usuarios en el backend.'
-        );
+        const respuesta = await axios.post(ADMIN_USERS_ENDPOINT, buildAdminUsuarioPayload(payload));
+
+        // Si el backend crea activo por defecto y el frontend solicita inactivo, lo desactivamos luego.
+        if (payload?.activo === false && respuesta?.data?.id) {
+            await axios.patch(`${ADMIN_USERS_ENDPOINT}/${respuesta.data.id}/desactivar`);
+        }
+
+        return respuesta.data;
     },
 
     modificar: async (id, payload) => {
-        return requestWithFallback(
-            userUpdateCandidates,
-            (baseEndpoint) => axios.post(`${baseEndpoint}/${id}`, null, {
-                params: {
-                    nombre: payload?.nombre || undefined,
-                    email: payload?.email || undefined,
-                    password: payload?.password || undefined,
-                    password2: payload?.password2 || undefined,
-                    rol: payload?.rol || undefined,
-                    activo: payload?.activo,
-                },
-            }),
-            'No se encontro un endpoint de modificacion de usuarios en el backend.'
+        const respuesta = await axios.put(
+            `${ADMIN_USERS_ENDPOINT}/${id}`,
+            buildAdminUsuarioPayload(payload)
         );
+
+        if (typeof payload?.activo === 'boolean') {
+            const estadoPath = payload.activo ? 'activar' : 'desactivar';
+            await axios.patch(`${ADMIN_USERS_ENDPOINT}/${id}/${estadoPath}`);
+        }
+
+        return respuesta.data;
     },
 
     eliminar: async (id) => {
-        return requestWithFallback(
-            userDeleteCandidates,
-            (baseEndpoint) => axios.get(`${baseEndpoint}/${id}`),
-            'No se encontro un endpoint de eliminacion de usuarios en el backend.'
-        );
+        const respuesta = await axios.patch(`${ADMIN_USERS_ENDPOINT}/${id}/desactivar`);
+        return respuesta.data;
     },
 
     listarConectados: async () => {

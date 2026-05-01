@@ -4,6 +4,11 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 Currently, two official plugins are available:
 
+## Variables de entorno
+
+- Para Vercel o producción, usa `VITE_API_BASE_URL` apuntando al backend remoto.
+- Para desarrollo local, crea un archivo `.env.local` y define `VITE_LOCAL_API_BASE_URL` con tu backend local, por ejemplo `http://localhost:8080/api`.
+
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 

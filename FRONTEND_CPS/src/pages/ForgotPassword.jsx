@@ -55,7 +55,7 @@ const ForgotPassword = () => {
     } catch (error) {
       if (!error?.response) {
         setErrorMsg(
-          'No se pudo conectar con el backend. Verifica CORS para tu dominio de Vercel y que la API esté activa en Render.'
+          'No se pudo conectar con el backend. Verifica que la API esté activa y que la URL configurada sea correcta para tu entorno local o desplegado.'
         );
         return;
       }
