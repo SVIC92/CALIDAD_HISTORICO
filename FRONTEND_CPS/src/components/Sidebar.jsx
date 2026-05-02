@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
-import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment } from '@mui/icons-material';
+import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
 import AuthService from '../services/AuthService';
@@ -99,6 +99,7 @@ const Sidebar = ({ open, variant }) => {
     ],
     ROLE_ALUMNO: [
       { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/alumno' },
+      { text: 'Mi Horario', icon: <CalendarMonth />, path: '/modulo/mi-horario' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
       { text: 'Mis Cursos Inscritos', icon: <AssignmentTurnedIn />, path: '/modulo/inscripciones' },
       { text: 'Mis Reportes', icon: <Assessment />, path: '/modulo/reportes' },

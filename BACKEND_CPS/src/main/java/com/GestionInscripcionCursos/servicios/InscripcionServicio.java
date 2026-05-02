@@ -5,11 +5,13 @@
 package com.GestionInscripcionCursos.servicios;
 
 import com.GestionInscripcionCursos.entidades.Curso;
+import com.GestionInscripcionCursos.entidades.HorarioSesion;
 import com.GestionInscripcionCursos.entidades.Inscripcion;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.enumeraciones.Rol;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
+import com.GestionInscripcionCursos.repositorios.HorarioSesionRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -24,6 +26,9 @@ public class InscripcionServicio {
 
     @Autowired
     private CursoRepositorio cursoRepositorio;
+
+    @Autowired
+    private HorarioSesionRepositorio horarioSesionRepositorio;
 
     public List<Inscripcion> listaPendientesProfesor() {
         return inscripcionRepositorio.listarPendientesProfesor();
@@ -69,24 +74,26 @@ public class InscripcionServicio {
 
     @Transactional
     public void aprobarInscripcionProfesor(String id) throws MyException {
-        Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+    Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+    validarInscripcionProfesor(inscripcion);
 
-        validarInscripcionProfesor(inscripcion);
+    Usuario usuario = inscripcion.getUsuario();
+    Curso curso = inscripcion.getCurso();
 
-        inscripcion.setEstado("APROBADO");
-
-        Usuario usuario = inscripcion.getUsuario();
-        Curso curso = inscripcion.getCurso();
-
-        if (curso.getProfesorAsignado() != null
-                && !curso.getProfesorAsignado().getId().equals(usuario.getId())) {
-            throw new MyException("El curso ya tiene otro profesor asignado");
-        }
-
-        curso.setProfesorAsignado(usuario);
-        cursoRepositorio.save(curso);
-        inscripcionRepositorio.save(inscripcion);
+    // Valida si el curso ya tiene otro profesor (lógica original)
+    if (curso.getProfesorAsignado() != null
+            && !curso.getProfesorAsignado().getId().equals(usuario.getId())) {
+        throw new MyException("El curso ya tiene otro profesor asignado");
     }
+
+    // NUEVO: Validar que el profesor no tenga cruces de horario
+    validarCruceHorarios(usuario, curso);
+
+    inscripcion.setEstado("APROBADO");
+    curso.setProfesorAsignado(usuario);
+    cursoRepositorio.save(curso);
+    inscripcionRepositorio.save(inscripcion);
+}
 
     @Transactional
     public void rechazarInscripcionProfesor(String id) throws MyException {
@@ -110,4 +117,39 @@ public class InscripcionServicio {
         }
     }
 
+    private void validarCruceHorarios(Usuario profesor, Curso nuevoCurso) throws MyException {
+    // 1. Obtener los horarios del curso al que el profesor quiere ser asignado
+    List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
+    
+    // Si el curso no tiene horarios aún, no hay cruce posible
+    if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
+        return; 
+    }
+
+    // 2. Obtener los cursos donde el profesor ya está aprobado/asignado
+    List<Curso> cursosAprobados = cursoRepositorio.buscarCursosInscritosProfesor(profesor.getId());
+
+    // 3. Comparar los horarios para buscar solapamientos
+    for (Curso cursoExistente : cursosAprobados) {
+        List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
+
+        for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
+            for (HorarioSesion horarioExistente : horariosExistente) {
+                
+                // Si coinciden en el mismo día de la semana
+                if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
+                    
+                    // Lógica de solapamiento de tiempo: (InicioA < FinB) && (FinA > InicioB)
+                    if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
+                        horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
+                        
+                        throw new MyException("Cruce de horarios detectado. El profesor ya dicta el curso '" 
+                            + cursoExistente.getNombre() + "' los días " + horarioExistente.getDiaSemana() 
+                            + " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin());
+                    }
+                }
+            }
+        }
+    }
+    }
 }

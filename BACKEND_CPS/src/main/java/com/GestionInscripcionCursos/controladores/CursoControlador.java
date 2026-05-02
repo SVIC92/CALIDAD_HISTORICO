@@ -284,4 +284,15 @@ public class CursoControlador {
         return ResponseEntity.ok(cursoServicio.listarPrerequisitosCurso(idCurso));
     }
 
+    @GetMapping("/horarios/profesor/{profesorId}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    public ResponseEntity<List<HorarioSesion>> listarHorariosProfesor(@PathVariable String profesorId) {
+        return ResponseEntity.ok(cursoServicio.listarHorariosPorProfesor(profesorId));
+    }
+    @GetMapping("/horarios/alumno")
+    @PreAuthorize("hasRole('ROLE_ALUMNO')")
+    public ResponseEntity<List<HorarioSesion>> listarMisHorarios(Authentication authentication) {
+        Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
+        return ResponseEntity.ok(cursoServicio.listarHorariosPorAlumno(usuario.getId()));
+    }
 }

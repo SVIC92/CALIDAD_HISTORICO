@@ -12,7 +12,7 @@ import {
   DialogActions,
   MenuItem,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, ArrowBack, HowToReg } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, ArrowBack, HowToReg, CalendarMonth, DateRange} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import CursoService from '../services/CursoService';
@@ -45,6 +45,7 @@ const CursosListado = () => {
     profesorId: '',
     profesorAsignado: '',
   });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -52,6 +53,15 @@ const CursosListado = () => {
   const rol = localStorage.getItem('rol');
   const canManageCursos = rol === 'ROLE_ADMIN';
   const canSelfEnroll = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ALUMNO';
+  const [openHorarioModal, setOpenHorarioModal] = useState(false);
+  const [horariosCurso, setHorariosCurso] = useState([]);
+  const [horarioFormData, setHorarioFormData] = useState({
+    diaSemana: 'Lunes',
+    horaInicio: '',
+    horaFin: '',
+    aula: '',
+    modalidad: 'PRESENCIAL'
+  });
 
   const toDateInputValue = (value) => {
     if (!value) return '';
@@ -245,7 +255,7 @@ const CursosListado = () => {
       horasPracticas: curso.horasPracticas ?? 0,
       horasLaboratorio: curso.horasLaboratorio ?? 0,
       estado: curso.estado || 'ACTIVO',
-      carrera: curso?.carrera?.id || curso?.carrera?.nombre || '',
+      carrera: curso?.carrera?.nombre || '',
       profesorId: profesorData.profesorId,
       profesorAsignado: profesorData.profesorAsignado,
     });
@@ -455,6 +465,46 @@ const CursosListado = () => {
     fetchProfesores();
   }, [fetchCursos, fetchProfesores]);
 
+  const handleOpenHorarios = async (curso) => {
+    const cursoId = getCursoId(curso);
+    setSelectedCursoId(cursoId);
+    try {
+      const horarios = await CursoService.listarHorarios(cursoId);
+      setHorariosCurso(Array.isArray(horarios) ? horarios : []);
+    } catch (error) {
+      console.error("Error al cargar horarios:", error);
+      setHorariosCurso([]);
+    }
+    setHorarioFormData({
+      diaSemana: 'Lunes', horaInicio: '', horaFin: '', aula: '', modalidad: 'PRESENCIAL'
+    });
+    setOpenHorarioModal(true);
+  };
+
+  const handleGuardarHorario = async () => {
+    if (!horarioFormData.horaInicio || !horarioFormData.horaFin) {
+      setErrorMsg("Las horas son obligatorias");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await CursoService.agregarHorario(selectedCursoId, horarioFormData);
+      // Recargar la lista de horarios
+      const horarios = await CursoService.listarHorarios(selectedCursoId);
+      setHorariosCurso(Array.isArray(horarios) ? horarios : []);
+      // Limpiar el formulario parcial
+      setHorarioFormData({
+        diaSemana: 'Lunes', horaInicio: '', horaFin: '', aula: '', modalidad: 'PRESENCIAL'
+      });
+      setSuccessMsg("Horario agregado correctamente");
+    } catch (error) {
+      setErrorMsg(extractBackendValidationMessage(error, "No se pudo agregar el horario"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
   // Definición de columnas para este módulo específico
   const columns = [
     { id: 'nombre', label: 'Nombre del Curso' },
@@ -469,6 +519,12 @@ const CursosListado = () => {
   // Definición de acciones con iconos
   const actions = canManageCursos
     ? [
+        {
+          label: 'Horarios',
+          icon: <CalendarMonth />,
+          color: 'secondary',
+          onClick: handleOpenHorarios,
+        },
         {
           label: 'Editar',
           icon: <Edit />,
@@ -505,7 +561,6 @@ const CursosListado = () => {
       estado: curso?.estado || '-',
     }))
     .filter((c) => (c.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()));
-
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -517,6 +572,17 @@ const CursosListado = () => {
           {rol === 'ROLE_PROFESOR' && 'Cursos Disponibles para Dictar'}
           {rol === 'ROLE_ALUMNO' && 'Cursos Disponibles'}
         </Typography>
+        {canManageCursos && (
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<CalendarMonth />}
+            onClick={() => navigate('/modulo/horarios-profesor')}
+            sx={{ mr: 2 }}
+          >
+            Ver Horarios por Profesor
+          </Button>
+        )}
         {canManageCursos && (
           <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>
             Nuevo Curso
@@ -784,6 +850,91 @@ const CursosListado = () => {
           </DialogActions>
         </Dialog>
       )}
+      {/* Modal para Gestión de Horarios */}
+      <Dialog open={openHorarioModal} onClose={() => setOpenHorarioModal(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Gestión de Horarios</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle1" sx={{ mt: 1, mb: 1, fontWeight: 'bold' }}>
+            Horarios Registrados
+          </Typography>
+          {horariosCurso.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              No hay horarios registrados.
+            </Typography>
+          ) : (
+            <Box sx={{ mb: 3 }}>
+              {horariosCurso.map((h, i) => (
+                <Typography key={i} variant="body2" sx={{ mb: 0.5 }}>
+                  • {h.diaSemana}: {h.horaInicio} - {h.horaFin} ({h.modalidad} | Aula: {h.aula || 'N/A'})
+                </Typography>
+              ))}
+            </Box>
+          )}
+
+          <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
+            Agregar Nuevo Horario
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              select
+              label="Día"
+              fullWidth
+              value={horarioFormData.diaSemana}
+              onChange={(e) => setHorarioFormData({ ...horarioFormData, diaSemana: e.target.value })}
+            >
+              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(dia => (
+                <MenuItem key={dia} value={dia}>{dia}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Modalidad"
+              select
+              fullWidth
+              value={horarioFormData.modalidad}
+              onChange={(e) => setHorarioFormData({ ...horarioFormData, modalidad: e.target.value })}
+            >
+              <MenuItem value="PRESENCIAL">Presencial</MenuItem>
+              <MenuItem value="VIRTUAL">Virtual</MenuItem>
+              <MenuItem value="HIBRIDO">Híbrido</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              label="Hora Inicio"
+              type="time"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 300 }}
+              value={horarioFormData.horaInicio}
+              onChange={(e) => setHorarioFormData({ ...horarioFormData, horaInicio: e.target.value })}
+            />
+            <TextField
+              label="Hora Fin"
+              type="time"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ step: 300 }}
+              value={horarioFormData.horaFin}
+              onChange={(e) => setHorarioFormData({ ...horarioFormData, horaFin: e.target.value })}
+            />
+          </Box>
+          <TextField
+            label="Aula (Opcional)"
+            fullWidth
+            value={horarioFormData.aula}
+            onChange={(e) => setHorarioFormData({ ...horarioFormData, aula: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenHorarioModal(false)}>Cerrar</Button>
+          <Button onClick={handleGuardarHorario} variant="contained" disabled={isSubmitting}>
+            {isSubmitting ? 'Guardando...' : 'Agregar Horario'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };

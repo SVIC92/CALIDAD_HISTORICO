@@ -35,7 +35,6 @@ public class HorarioSesion {
 
     @ManyToOne
     @JoinColumn(name = "id_curso", nullable = false)
-    @JsonIgnore
     @NotNull(message = "El curso es obligatorio")
     private Curso curso;
 

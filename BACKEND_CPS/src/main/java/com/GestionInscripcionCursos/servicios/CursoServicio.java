@@ -454,13 +454,15 @@ public class CursoServicio {
 
     @Transactional
     public HorarioSesion agregarHorario(
-            String idCurso,
-            String diaSemana,
-            LocalTime horaInicio,
-            LocalTime horaFin,
-            String aula,
-            String modalidad
+        String idCurso,
+        String diaSemana,
+        LocalTime horaInicio,
+        LocalTime horaFin,
+        String aula,
+        String modalidad
     ) throws MyException {
+        
+        // 1. Validaciones existentes
         if (diaSemana == null || diaSemana.isBlank()) {
             throw new MyException("El dia de la semana es obligatorio");
         }
@@ -471,9 +473,25 @@ public class CursoServicio {
             throw new MyException("La hora de fin debe ser posterior a la hora de inicio");
         }
 
+        // 2. NUEVO: Validación de cruce de aula
+        // Solo validamos si el administrador/profesor escribió un aula (ignoramos si es virtual/vacío)
+        if (aula != null && !aula.isBlank()) {
+            List<HorarioSesion> sesionesEnMismaAula = horarioSesionRepositorio.buscarPorAulaYDia(aula.trim(), diaSemana.trim());
+            
+            for (HorarioSesion existente : sesionesEnMismaAula) {
+                // Condición de cruce de tiempo: (Inicio Nuevo < Fin Existente) Y (Fin Nuevo > Inicio Existente)
+                if (horaInicio.isBefore(existente.getHoraFin()) && horaFin.isAfter(existente.getHoraInicio())) {
+                    throw new MyException("El aula '" + aula.trim() + "' ya está ocupada el " + diaSemana + 
+                            " de " + existente.getHoraInicio() + " a " + existente.getHoraFin() + 
+                            " por el curso '" + existente.getCurso().getNombre() + "'.");
+                }
+            }
+        }
+
+        // 3. Lógica existente para guardar el horario
         Curso curso = cursoRepositorio.findById(idCurso)
                 .orElseThrow(() -> new MyException("Curso no encontrado"));
-
+                
         HorarioSesion horario = new HorarioSesion();
         horario.setCurso(curso);
         horario.setDiaSemana(diaSemana.trim());
@@ -481,7 +499,7 @@ public class CursoServicio {
         horario.setHoraFin(horaFin);
         horario.setAula(aula);
         horario.setModalidad(parsearModalidad(modalidad));
-
+        
         return horarioSesionRepositorio.save(horario);
     }
 
@@ -516,10 +534,8 @@ public class CursoServicio {
         relacion.setObservacion(observacion);
         return cursoPrerequisitoRepositorio.save(relacion);
     }
-
     @Transactional
     public void inscribirCurso(String idUser, String idCurso) throws MyException {
-
         Optional<Usuario> respuesta1 = usuarioRepositorio.findById(idUser);
         Usuario usuario = respuesta1.get();
 
@@ -531,30 +547,28 @@ public class CursoServicio {
         }
 
         Inscripcion inscripcion = inscripcionRepositorio.buscarInscripcionPorIdUserIdCurso(idUser, idCurso);
-
         String estadoObjetivo = Rol.ALUMNO.equals(usuario.getRol()) ? "APROBADO" : "PENDIENTE";
 
         if (Rol.ALUMNO.equals(usuario.getRol())) {
             validarCapacidadCurso(curso);
             validarPrerequisitosAlumno(idUser, idCurso);
+            
+            // --- NUEVA VALIDACIÓN DE HORARIOS AQUÍ ---
+            validarCruceHorariosAlumno(idUser, curso);
+            // -----------------------------------------
         }
 
         if (inscripcion != null) {
-
             if (inscripcion.getEstado().equals(estadoObjetivo)) {
                 throw new MyException("Ya tienes una inscripcion con estado " + estadoObjetivo + ".");
             }
-
             inscripcion.setEstado(estadoObjetivo);
             inscripcion.setFechaCreacion(new Date());
             inscripcionRepositorio.save(inscripcion);
         } else {
             Inscripcion inscripcionNuevo = new Inscripcion(new Date(), estadoObjetivo, usuario, curso);
-
             inscripcionRepositorio.save(inscripcionNuevo);
-
         }
-
     }
 
     private void validarCapacidadCurso(Curso curso) throws MyException {
@@ -585,5 +599,47 @@ public class CursoServicio {
                 throw new MyException("Debes aprobar el prerrequisito " + cursoRequerido.getCodigoCurso() + " - " + cursoRequerido.getNombre() + " antes de inscribirte.");
             }
         }
+    }
+    public List<HorarioSesion> listarHorariosPorProfesor(String profesorId) {
+        return horarioSesionRepositorio.buscarHorariosPorProfesor(profesorId);
+    }
+
+    private void validarCruceHorariosAlumno(String idUser, Curso nuevoCurso) throws MyException {
+        // 1. Obtener los horarios del curso al que el alumno se quiere matricular
+        List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
+        
+        if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
+            return; // Si el curso nuevo no tiene horarios, no hay cruce
+        }
+
+        // 2. Obtener los cursos donde el alumno ya está inscrito (y aprobado)
+        List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosAlumno(idUser);
+
+        // 3. Comparar horarios buscando solapamientos
+        for (Curso cursoExistente : cursosInscritos) {
+            List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
+
+            for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
+                for (HorarioSesion horarioExistente : horariosExistente) {
+                    
+                    // Si caen en el mismo día de la semana
+                    if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
+                        
+                        // Condición de cruce: (InicioA < FinB) y (FinA > InicioB)
+                        if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
+                            horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
+                            
+                            throw new MyException("Cruce de horarios detectado. El curso '" + nuevoCurso.getNombre() + 
+                                "' choca con tu curso ya inscrito '" + cursoExistente.getNombre() + 
+                                "' los días " + horarioExistente.getDiaSemana() + 
+                                " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin() + ".");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    public List<HorarioSesion> listarHorariosPorAlumno(String alumnoId) {
+        return horarioSesionRepositorio.buscarHorariosPorAlumno(alumnoId);
     }
 }

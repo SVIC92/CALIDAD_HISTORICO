@@ -1,29 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box,
-  Typography,
-  TextField,
-  InputAdornment,
-  Alert,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  MenuItem,
-  Stack,
+  Box, Typography, TextField, InputAdornment, Alert, Button,
+  Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Stack,
 } from '@mui/material';
-import { ArrowBack, Search, Add, Edit, Delete } from '@mui/icons-material';
+import { ArrowBack, Search, Add, Edit, Block, CheckCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import UsuarioService from '../services/UsuarioService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
+import axios from '../API/axios'; // Importamos la instancia de axios para los PATCH directos
 
 const normalizeUsuario = (usuario) => ({
   id: usuario.id || usuario._id || '-',
   nombre: usuario.nombre || '-',
   email: usuario.email || '-',
   rol: usuario.rol || '-',
+  // Ahora que el backend envía 'activo', React lo leerá correctamente
   activo: typeof usuario.activo === 'boolean' ? usuario.activo : true,
   activoTexto: (typeof usuario.activo === 'boolean' ? usuario.activo : true) ? 'SI' : 'NO',
   fechaCreacion: usuario.fechaCreacion || usuario.createdAt || '-',
@@ -52,11 +44,8 @@ const ListadoUsuarios = () => {
 
   const fetchUsuarios = async () => {
     try {
-      setErrorMsg('');
       const data = await UsuarioService.listar();
-      const normalized = Array.isArray(data)
-        ? data.map(normalizeUsuario)
-        : [];
+      const normalized = Array.isArray(data) ? data.map(normalizeUsuario) : [];
       setUsuarios(normalized);
     } catch (error) {
       console.error('Error al obtener usuarios', error);
@@ -103,23 +92,31 @@ const ListadoUsuarios = () => {
     setOpenModal(true);
   };
 
-  const handleDelete = async (row) => {
-    if (!row?.id || row.id === '-') {
-      setErrorMsg('No se pudo identificar el usuario a eliminar.');
+  const handleToggleStatus = async (row, activar) => {
+    // 1. Limpiamos AMBOS mensajes SIEMPRE al iniciar la acción
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    // 2. Verificamos si ya está en el estado deseado
+    if (row.activo === activar) {
+      setErrorMsg(`El usuario ya se encuentra ${activar ? 'activo' : 'inactivo'}.`);
       return;
     }
 
-    const confirmar = window.confirm(`¿Eliminar el usuario "${row.nombre}"?`);
+    const accionTexto = activar ? 'activar' : 'desactivar';
+    const confirmar = window.confirm(`¿Estás seguro de ${accionTexto} el usuario "${row.nombre}"?`);
     if (!confirmar) return;
 
     try {
-      setErrorMsg('');
-      setSuccessMsg('');
-      await UsuarioService.eliminar(row.id);
+      setIsSubmitting(true);
+      // Llamada segura y directa al endpoint PATCH de tu AdminControlador
+      await axios.patch(`/admin/usuarios/${row.id}/${accionTexto}`);
       await fetchUsuarios();
-      setSuccessMsg('Usuario eliminado correctamente.');
+      setSuccessMsg(`Usuario ${activar ? 'activado' : 'desactivado'} correctamente.`);
     } catch (error) {
-      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar el usuario.'));
+      setErrorMsg(extractBackendValidationMessage(error, `No se pudo ${accionTexto} el usuario.`));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,36 +126,14 @@ const ListadoUsuarios = () => {
     const password = formData.password.trim();
     const password2 = formData.password2.trim();
 
-    if (!nombre) {
-      setErrorMsg('El nombre es obligatorio.');
-      return;
-    }
-
-    if (!email) {
-      setErrorMsg('El email es obligatorio.');
-      return;
-    }
+    if (!nombre) { setErrorMsg('El nombre es obligatorio.'); return; }
+    if (!email) { setErrorMsg('El email es obligatorio.'); return; }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setErrorMsg('Ingresa un email valido.');
-      return;
-    }
-
-    if (!isEditMode && !password) {
-      setErrorMsg('La contraseña es obligatoria para registrar un usuario.');
-      return;
-    }
-
-    if (password && password.length < 6) {
-      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-
-    if ((password || password2) && password !== password2) {
-      setErrorMsg('Las contraseñas no coinciden.');
-      return;
-    }
+    if (!emailRegex.test(email)) { setErrorMsg('Ingresa un email valido.'); return; }
+    if (!isEditMode && !password) { setErrorMsg('La contraseña es obligatoria para registrar un usuario.'); return; }
+    if (password && password.length < 6) { setErrorMsg('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if ((password || password2) && password !== password2) { setErrorMsg('Las contraseñas no coinciden.'); return; }
 
     try {
       setIsSubmitting(true);
@@ -166,12 +141,8 @@ const ListadoUsuarios = () => {
       setSuccessMsg('');
 
       const payload = {
-        nombre,
-        email,
-        password: password || undefined,
-        password2: password2 || undefined,
-        rol: formData.rol,
-        activo: formData.activo,
+        nombre, email, password: password || undefined, password2: password2 || undefined,
+        rol: formData.rol, activo: formData.activo,
       };
 
       if (isEditMode) {
@@ -194,27 +165,14 @@ const ListadoUsuarios = () => {
     { id: 'nombre', label: 'Nombre' },
     { id: 'email', label: 'Email' },
     { id: 'rol', label: 'Rol', align: 'center' },
-    {
-      id: 'activoTexto',
-      label: 'Activo',
-      align: 'center',
-    },
+    { id: 'activoTexto', label: 'Activo', align: 'center' },
     { id: 'fechaCreacion', label: 'Fecha de Creación' },
   ];
 
   const actions = [
-    {
-      label: 'Editar',
-      icon: <Edit />,
-      color: 'primary',
-      onClick: openEdit,
-    },
-    {
-      label: 'Eliminar',
-      icon: <Delete />,
-      color: 'error',
-      onClick: handleDelete,
-    },
+    { label: 'Editar', icon: <Edit />, color: 'primary', onClick: openEdit },
+    { label: 'Activar', icon: <CheckCircle />, color: 'success', onClick: (row) => handleToggleStatus(row, true) },
+    { label: 'Desactivar', icon: <Block />, color: 'error', onClick: (row) => handleToggleStatus(row, false) },
   ];
 
   const filteredData = useMemo(() => {
@@ -238,17 +196,8 @@ const ListadoUsuarios = () => {
         </Button>
       </Box>
 
-      {errorMsg && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMsg}
-        </Alert>
-      )}
-
-      {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMsg}
-        </Alert>
-      )}
+      {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
+      {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
 
       <TextField
         fullWidth
@@ -257,74 +206,29 @@ const ListadoUsuarios = () => {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          },
+          input: { startAdornment: (<InputAdornment position="start"><Search /></InputAdornment>) },
         }}
       />
 
-      <DataTable
-        columns={columns}
-        data={filteredData}
-        actions={actions}
-        exportFileName="usuarios"
-      />
+      <DataTable columns={columns} data={filteredData} actions={actions} exportFileName="usuarios" />
 
       <Dialog open={openModal} onClose={closeModal} fullWidth maxWidth="sm">
         <DialogTitle>{isEditMode ? 'Editar Usuario' : 'Nuevo Usuario'}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <TextField
-              label="Nombre"
-              value={formData.nombre}
-              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="Email"
-              value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Rol"
-              value={formData.rol}
-              onChange={(e) => setFormData((prev) => ({ ...prev, rol: e.target.value }))}
-              fullWidth
-            >
+            <TextField label="Nombre" value={formData.nombre} onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))} fullWidth />
+            <TextField label="Email" value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} fullWidth />
+            <TextField select label="Rol" value={formData.rol} onChange={(e) => setFormData((prev) => ({ ...prev, rol: e.target.value }))} fullWidth >
               <MenuItem value="ROLE_ALUMNO">Alumno</MenuItem>
               <MenuItem value="ROLE_PROFESOR">Profesor</MenuItem>
               <MenuItem value="ROLE_ADMIN">Administrador</MenuItem>
             </TextField>
-            <TextField
-              select
-              label="Activo"
-              value={formData.activo ? 'true' : 'false'}
-              onChange={(e) => setFormData((prev) => ({ ...prev, activo: e.target.value === 'true' }))}
-              fullWidth
-            >
+            <TextField select label="Activo" value={formData.activo ? 'true' : 'false'} onChange={(e) => setFormData((prev) => ({ ...prev, activo: e.target.value === 'true' }))} fullWidth >
               <MenuItem value="true">SI</MenuItem>
               <MenuItem value="false">NO</MenuItem>
             </TextField>
-            <TextField
-              type="password"
-              label={isEditMode ? 'Contraseña (opcional)' : 'Contraseña'}
-              value={formData.password}
-              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              type="password"
-              label={isEditMode ? 'Repetir contraseña (opcional)' : 'Repetir contraseña'}
-              value={formData.password2}
-              onChange={(e) => setFormData((prev) => ({ ...prev, password2: e.target.value }))}
-              fullWidth
-            />
+            <TextField type="password" label={isEditMode ? 'Contraseña (opcional)' : 'Contraseña'} value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} fullWidth />
+            <TextField type="password" label={isEditMode ? 'Repetir contraseña (opcional)' : 'Repetir contraseña'} value={formData.password2} onChange={(e) => setFormData((prev) => ({ ...prev, password2: e.target.value }))} fullWidth />
           </Stack>
         </DialogContent>
         <DialogActions>

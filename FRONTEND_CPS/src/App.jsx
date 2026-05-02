@@ -27,6 +27,8 @@ import UsuarioHub from './pages/UsuarioHub';
 import UsuariosConectados from './pages/UsuariosConectados';
 import ModuloPlaceholder from './pages/ModuloPlaceholder';
 import NoAutorizado from './pages/NoAutorizado';
+import HorarioProfesor from './pages/HorarioProfesor';
+import HorarioAlumno from './pages/HorarioAlumno';
 import { useLoadingScreen } from './context/LoadingScreenContext';
 
 const DashboardRedirect = () => {
@@ -98,6 +100,7 @@ function App() {
 
             <Route element={<RutasProtegidas allowedRoles={['ROLE_ALUMNO']} />}>
               <Route path="/dashboard/alumno" element={<DashboardAlumno />} />
+              <Route path="/modulo/mi-horario" element={<HorarioAlumno />} />
             </Route>
 
             <Route element={<RutasProtegidas allowedRoles={['ROLE_ADMIN', 'ROLE_PROFESOR', 'ROLE_ALUMNO']} />}>
@@ -114,6 +117,7 @@ function App() {
               <Route path="/modulo/estudia" element={<Navigate to="/modulo/ia" replace />} />
               <Route path="/modulo/configuracion" element={<Configuracion />} />
               <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />
+              <Route path="/modulo/horarios-profesor" element={<HorarioProfesor />} />
             </Route>
             {/* <Route path="/cursos/inscripcion" element={<div>Próximamente: Inscripciones</div>} /> */}
           </Route>

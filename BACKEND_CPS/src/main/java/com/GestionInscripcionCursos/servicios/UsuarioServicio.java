@@ -204,7 +204,8 @@ public class UsuarioServicio implements UserDetailsService {
         return usuarioRepositorio.findAll()
                 .stream()
                 .sorted((a, b) -> a.getNombre().compareToIgnoreCase(b.getNombre()))
-                .map(u -> new UsuarioResumenDto(u.getId(), u.getNombre(), u.getEmail(), u.getRol().name()))
+                // AÑADIR u.getActivo() AL FINAL DEL MAP
+                .map(u -> new UsuarioResumenDto(u.getId(), u.getNombre(), u.getEmail(), u.getRol().name(), u.getActivo()))
                 .toList();
     }
 

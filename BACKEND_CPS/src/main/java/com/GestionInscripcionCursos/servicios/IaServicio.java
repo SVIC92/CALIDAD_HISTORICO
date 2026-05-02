@@ -80,6 +80,9 @@ public class IaServicio {
         this.cohereServicio = cohereServicio;
     }
 
+    // ==========================================
+    // CHAT EXCLUSIVO CON GROQ
+    // ==========================================
     @Transactional
     public IaChatResponseDto chatearSegunRol(String email, String rol, String mensaje) {
         validarEntrada(mensaje);
@@ -130,6 +133,9 @@ public class IaServicio {
                 ));
     }
 
+    // ==========================================
+    // RÚBRICAS EXCLUSIVAS CON COHERE
+    // ==========================================
     public RubricaGeneradaDto generarRubrica(String email, RubricaGeneracionRequestDto request) {
         try {
             Usuario usuario = usuarioServicio.buscarEmail(email);
@@ -149,7 +155,7 @@ public class IaServicio {
             int cantidadNiveles = normalizarEntero(request.cantidadNiveles(), 4, 3, 5);
             int puntajeMaximo = normalizarEntero(request.puntajeMaximo(), 20, 10, 100);
 
-            if (cohereServicio != null && cohereServicio.estaConfigurado()) {
+            if (cohereServicio.estaConfigurado()) {
                 try {
                     LOGGER.info("Intentando generar rúbrica con Cohere");
                     String esquema = "{\"titulo\":\"...\",\"descripcion\":\"...\",\"tema\":\"...\",\"nivelEducativo\":\"...\",\"asignatura\":\"...\",\"tipoTarea\":\"...\",\"puntajeMaximo\":0,\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":0,\"niveles\":[{\"nombre\":\"...\",\"puntaje\":0,\"descriptor\":\"...\"}]}]}";
@@ -162,34 +168,14 @@ public class IaServicio {
                     );
                     return generarRubricaConCohere(prompt);
                 } catch (Exception e) {
-                    LOGGER.warn("Error generando rúbrica con Cohere, intentando Groq: {}", extraerMensajeRaiz(e));
+                    LOGGER.warn("Error generando rúbrica con Cohere: {}. Usando fallback local.", extraerMensajeRaiz(e));
+                    return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
                 }
             } else {
-                LOGGER.info("CohereServicio no disponible, usando Groq o fallback");
-            }
-
-            if (groqApiKey == null || groqApiKey.isBlank()) {
-                LOGGER.info("Groq no configurado, usando fallback local para rúbrica");
+                LOGGER.info("CohereServicio no disponible o no configurado, usando fallback local para rúbrica");
                 return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
             }
 
-            try {
-                LOGGER.info("Intentando generar rúbrica con Groq");
-                String promptSistema = "Eres un experto en evaluacion educativa. Genera una rubrica completa y devuelve SOLO JSON bajo el esquema indicado.";
-                String esquema = "{\"titulo\":\"...\",\"descripcion\":\"...\",\"tema\":\"...\",\"nivelEducativo\":\"...\",\"asignatura\":\"...\",\"tipoTarea\":\"...\",\"puntajeMaximo\":0,\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":0,\"niveles\":[{\"nombre\":\"...\",\"puntaje\":0,\"descriptor\":\"...\"}]}]}";
-                String mensajeUsuario = "Genera una rubrica con: tema='" + tema + "', nivelEducativo='" + nivel + "', asignatura='" + asignatura + "', tipoTarea='" + tipoTarea + "', cantidadCriterios=" + cantidadCriterios + ", cantidadNiveles=" + cantidadNiveles + ", puntajeMaximo=" + puntajeMaximo + ". Devuelve estrictamente JSON siguiendo este esquema: " + esquema;
-
-                String respuesta = llamarGroq(promptSistema, mensajeUsuario);
-                RubricaGeneradaDto rubrica = parsearJsonIa(respuesta, RubricaGeneradaDto.class);
-                if (rubrica == null || rubrica.criterios() == null || rubrica.criterios().isEmpty()) {
-                    throw new IllegalStateException("Respuesta inválida de Groq");
-                }
-
-                return normalizarRubricaSinRepeticiones(rubrica);
-            } catch (Exception ex) {
-                LOGGER.warn("Error generando rubrica con Groq: {}", extraerMensajeRaiz(ex));
-                return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
-            }
         } catch (Exception ex) {
             LOGGER.error("Error fatal en generarRubrica: {}", extraerMensajeRaiz(ex));
             throw new IllegalStateException("Error al generar rúbrica: " + extraerMensajeRaiz(ex), ex);
@@ -201,11 +187,14 @@ public class IaServicio {
             String respuesta = cohereServicio.generarTexto(prompt);
             return parsearJsonIa(respuesta, RubricaGeneradaDto.class);
         } catch (Exception e) {
-            LOGGER.warn("Error generando rúbrica con Cohere: {}", extraerMensajeRaiz(e));
-            throw new IllegalStateException("No se pudo generar la rúbrica con Cohere", e);
+            LOGGER.warn("Error parseando respuesta de Cohere: {}", extraerMensajeRaiz(e));
+            throw new IllegalStateException("No se pudo generar o parsear la rúbrica con Cohere", e);
         }
     }
 
+    // ==========================================
+    // SÍLABOS EXCLUSIVOS CON COHERE
+    // ==========================================
     @Transactional
     public SilaboGeneradoDto generarSilabo(SilaboGeneracionRequestDto request) {
         if (request == null || ((request.nombreCurso() == null || request.nombreCurso().isBlank())
@@ -220,81 +209,57 @@ public class IaServicio {
                     .orElse("Curso sin nombre");
         }
 
-        int semanas = normalizarEntero(request.semanas(), 16, 4, 20); // Por defecto 16 semanas
+        int semanas = normalizarEntero(request.semanas(), 16, 4, 20);
         int ciclo = request.ciclo() <= 0 ? 1 : request.ciclo();
         int creditos = request.creditos() <= 0 ? 4 : request.creditos();
 
-        if (cohereServicio != null && cohereServicio.estaConfigurado()) {
+        if (cohereServicio.estaConfigurado()) {
             try {
                 String esquema = "{\"informacionGeneral\":{\"curso\":\"...\",\"carrera\":\"...\",\"ciclo\":0,\"creditos\":0},\"competenciasGenerales\":[\"...\"],\"competenciasEspecificas\":[\"...\"],\"sumilla\":\"...\",\"logroCurso\":\"...\",\"unidades\":[{\"tituloUnidad\":\"...\",\"logroUnidad\":\"...\",\"semanas\":[{\"numeroSemana\":1,\"temas\":\"...\",\"actividadesPracticas\":\"...\",\"evaluacion\":\"...\"}]}],\"sistemaEvaluacion\":\"...\"}";
                 String prompt = String.format(
                     "Eres un director academico experto en diseno curricular. Genera un silabo completo y devuelve SOLO JSON valido, sin markdown ni texto adicional. "
                         + "Si falta algun dato, completa con una propuesta razonable. "
                         + "Usa este esquema exacto: %s. "
-                        + "Datos: curso='%s', carrera='%s', ciclo=%d, creditos=%d, semanas=%d, descripcion='%s'.",
+                        + "Datos: curso='%s', carrera='%s', ciclo=%d, creditos=%d, total_semanas=%d, descripcion='%s'. "
+                        + "REGLA CRÍTICA Y OBLIGATORIA: El curso dura exactamente %d semanas. DEBES generar un desglose detallado para EXACTAMENTE %d semanas en el JSON. "
+                        + "Bajo ninguna circunstancia puedes generar menos semanas. No resumas, no omitas, ni saltes números. Escribe desde la semana 1 hasta la semana %d.",
                     esquema,
                     nombreCurso,
                     valorPorDefecto(request.carrera(), "Ingenieria"),
                     ciclo,
                     creditos,
                     semanas,
-                    valorPorDefecto(request.descripcionBreve(), "")
+                    valorPorDefecto(request.descripcionBreve(), ""),
+                    semanas, // Se inyecta para la regla crítica
+                    semanas, // Se inyecta para la regla crítica
+                    semanas  // Se inyecta para la regla crítica
                 );
                 String respuesta = cohereServicio.generarTexto(prompt);
                 SilaboGeneradoDto silaboGenerado = parsearJsonIa(respuesta, SilaboGeneradoDto.class);
                 guardarSilaboGenerado(request, silaboGenerado);
                 return silaboGenerado;
             } catch (Exception e) {
-                LOGGER.warn("Error generando sílabo con Cohere: {}", extraerMensajeRaiz(e));
+                LOGGER.warn("Error generando sílabo con Cohere: {}. Usando fallback local.", extraerMensajeRaiz(e));
             }
+        } else {
+             LOGGER.info("CohereServicio no disponible o no configurado, usando fallback local para sílabo");
         }
 
-        if (groqApiKey == null || groqApiKey.isBlank()) {
-            SilaboGeneradoDto silaboFallback = construirSilaboFallback(
-                    nombreCurso,
-                    request.carrera(),
-                    ciclo,
-                    creditos,
-                    semanas,
-                    request.descripcionBreve()
-            );
-            try {
-                guardarSilaboGenerado(request, silaboFallback);
-            } catch (Exception persistEx) {
-                LOGGER.warn("Error guardando sílabo fallback: {}", extraerMensajeRaiz(persistEx));
-            }
-            return silaboFallback;
-        }
-
+        // Fallback local (Se ejecuta si Cohere falla o no está configurado)
+        SilaboGeneradoDto silaboFallback = construirSilaboFallback(
+                nombreCurso,
+                request.carrera(),
+                ciclo,
+                creditos,
+                semanas,
+                request.descripcionBreve()
+        );
         try {
-            String promptSistema = "Eres un director academico experto en diseno curricular. Devuelve SOLO JSON siguiendo el esquema indicado.";
-            String esquema = "{\"informacionGeneral\":{\"curso\":\"...\",\"carrera\":\"...\",\"ciclo\":0,\"creditos\":0},\"competenciasGenerales\":[\"...\"],\"competenciasEspecificas\":[\"...\"],\"sumilla\":\"...\",\"logroCurso\":\"...\",\"unidades\":[{\"tituloUnidad\":\"...\",\"logroUnidad\":\"...\",\"semanas\":[{\"numeroSemana\":1,\"temas\":\"...\",\"actividadesPracticas\":\"...\",\"evaluacion\":\"...\"}]}],\"sistemaEvaluacion\":\"...\"}";
-            String mensajeUsuario = String.format(
-                    "Genera un silabo para el curso '%s' de la carrera '%s', ciclo %d, %d creditos, duracion %d semanas. Descripcion: %s. Devuelve estrictamente JSON: %s",
-                    nombreCurso, valorPorDefecto(request.carrera(), "Ingenieria"), ciclo, creditos, semanas, valorPorDefecto(request.descripcionBreve(), ""), esquema
-            );
-
-            String respuesta = llamarGroq(promptSistema, mensajeUsuario);
-            SilaboGeneradoDto silaboGenerado = parsearJsonIa(respuesta, SilaboGeneradoDto.class);
-            guardarSilaboGenerado(request, silaboGenerado);
-            return silaboGenerado;
-        } catch (Exception ex) {
-            LOGGER.warn("Error generando silabo con Groq: {}", extraerMensajeRaiz(ex));
-            SilaboGeneradoDto silaboFallback = construirSilaboFallback(
-                    nombreCurso,
-                    request.carrera(),
-                    ciclo,
-                    creditos,
-                    semanas,
-                    request.descripcionBreve()
-            );
-            try {
-                guardarSilaboGenerado(request, silaboFallback);
-            } catch (Exception persistEx) {
-                LOGGER.warn("Error guardando sílabo fallback: {}", extraerMensajeRaiz(persistEx));
-            }
-            return silaboFallback;
+            guardarSilaboGenerado(request, silaboFallback);
+        } catch (Exception persistEx) {
+            LOGGER.warn("Error guardando sílabo fallback: {}", extraerMensajeRaiz(persistEx));
         }
+        return silaboFallback;
     }
 
     private void guardarSilaboGenerado(SilaboGeneracionRequestDto request, SilaboGeneradoDto silaboGenerado) {
@@ -399,7 +364,7 @@ public class IaServicio {
         );
     }
 
-        private String construirPromptSistema(String rol, Usuario usuario) {
+    private String construirPromptSistema(String rol, Usuario usuario) {
         String contextoDatos = construirContextoDatosUsuario(rol, usuario);
         String base = "Eres un asistente del sistema de Gestion de Inscripcion de Cursos. "
                 + "Responde de forma clara y breve en espanol. "
@@ -734,6 +699,9 @@ public class IaServicio {
         throw new IllegalStateException("No se encontro JSON valido en la respuesta de IA");
     }
 
+    // ==========================================
+    // METODO PARA EL CHAT CON GROQ
+    // ==========================================
     private String llamarGroq(String promptSistema, String mensajeUsuario) {
         try {
             Map<String, Object> mensajeDelSistema = new LinkedHashMap<>();
