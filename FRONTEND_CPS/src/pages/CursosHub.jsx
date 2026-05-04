@@ -1,6 +1,7 @@
 import { Grid, Card, CardContent, Typography, CardActionArea, Box } from '@mui/material';
 import { ListAlt, PersonAdd, Assessment, Settings, AssignmentTurnedIn, School, Book } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { Chat } from '@mui/icons-material'
 
 const submodulosPorRol = {
   ROLE_ADMIN: [
@@ -34,6 +35,12 @@ const submodulosPorRol = {
       icon: <Settings sx={{ fontSize: 50, color: 'warning.main' }} />,
       path: '/modulo/configuracion',
     },
+    {
+      title: 'Chat Institucional',
+      description: 'Comunícate en tiempo real con profesores, alumnos o administración.',
+      icon: <Chat sx={{ fontSize: 48, color: 'info.main' }} />,
+      path: '/modulo/chat',
+    },
   ],
   ROLE_PROFESOR: [
     {
@@ -66,6 +73,12 @@ const submodulosPorRol = {
       icon: <Assessment sx={{ fontSize: 50, color: 'warning.main' }} />,
       path: '/modulo/reportes',
     },
+    {
+      title: 'Chat Institucional',
+      description: 'Comunícate en tiempo real con profesores, alumnos o administración.',
+      icon: <Chat sx={{ fontSize: 48, color: 'info.main' }} />,
+      path: '/modulo/chat',
+    },
   ],
   ROLE_ALUMNO: [
     {
@@ -91,6 +104,12 @@ const submodulosPorRol = {
       description: 'Visualiza reportes, notas y retroalimentación recibida.',
       icon: <Assessment sx={{ fontSize: 50, color: 'warning.main' }} />,
       path: '/modulo/reportes',
+    },
+    {
+      title: 'Chat Institucional',
+      description: 'Comunícate en tiempo real con tus Docentes y Compañeros de clase.',
+      icon: <Chat sx={{ fontSize: 48, color: 'info.main' }} />,
+      path: '/modulo/chat',
     },
   ],
 };

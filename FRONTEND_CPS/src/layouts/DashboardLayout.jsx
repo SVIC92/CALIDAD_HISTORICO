@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import UsuarioService from '../services/UsuarioService';
+import GlobalChatNotifier from '../components/GlobalChatNotifier';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -55,6 +56,7 @@ const DashboardLayout = () => {
         
         <Box sx={{ flex: 1 }}>
           <Outlet /> {/* Aquí se cargan las páginas (Cursos, Alumnos, etc.) */}
+          <GlobalChatNotifier />
         </Box>
 
         <Footer />

@@ -74,6 +74,11 @@ const UsuarioService = {
     const respuesta = await axios.post(`${PRESENCIA_ENDPOINT}/ping`);
     return respuesta.data;
   },
+  // Llama a @GetMapping("/todos") en PresenciaControlador para el Chat
+  listarParaChat: async () => {
+    const respuesta = await axios.get(`${PRESENCIA_ENDPOINT}/todos`);
+    return respuesta.data;
+  },
 };
 
 export default UsuarioService;

@@ -29,6 +29,7 @@ import ModuloPlaceholder from './pages/ModuloPlaceholder';
 import NoAutorizado from './pages/NoAutorizado';
 import HorarioProfesor from './pages/HorarioProfesor';
 import HorarioAlumno from './pages/HorarioAlumno';
+import ChatInstitucional from './pages/ChatInstitucional'
 import { useLoadingScreen } from './context/LoadingScreenContext';
 
 const DashboardRedirect = () => {
@@ -118,6 +119,7 @@ function App() {
               <Route path="/modulo/configuracion" element={<Configuracion />} />
               <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />
               <Route path="/modulo/horarios-profesor" element={<HorarioProfesor />} />
+              <Route path="/modulo/chat" element={<ChatInstitucional />} />
             </Route>
             {/* <Route path="/cursos/inscripcion" element={<div>Próximamente: Inscripciones</div>} /> */}
           </Route>
