@@ -31,6 +31,8 @@ import HorarioProfesor from './pages/HorarioProfesor';
 import HorarioAlumno from './pages/HorarioAlumno';
 import ChatInstitucional from './pages/ChatInstitucional'
 import { useLoadingScreen } from './context/LoadingScreenContext';
+import AccessibilityFloatingMenu from './components/AccessibilityFloatingMenu';
+import ReadingAidOverlay from './components/ReadingAidOverlay';
 
 const DashboardRedirect = () => {
   const rol = localStorage.getItem('rol');
@@ -125,6 +127,8 @@ function App() {
           </Route>
         </Route>
       </Routes>
+      <AccessibilityFloatingMenu />
+      <ReadingAidOverlay />
     </>
   )
 }

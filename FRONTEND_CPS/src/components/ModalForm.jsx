@@ -1,5 +1,6 @@
 // src/components/ModalForm.jsx
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, IconButton, Typography } from '@mui/material';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useForm } from 'react-hook-form';
 import { useEffect } from 'react';
 
@@ -25,8 +26,15 @@ const ModalForm = ({ open, handleClose, title, fields, onSubmit, defaultValues }
   };
 
   return (
-    <Dialog open={open} onClose={handleCancel} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
+    <Dialog open={open} onClose={handleCancel} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 4, boxShadow: '0 28px 70px rgba(15, 23, 42, 0.20)' } }}>
+      <DialogTitle sx={{ pb: 1.25, pr: 6 }}>
+        <Typography variant="h6" component="div" sx={{ fontWeight: 800 }}>
+          {title}
+        </Typography>
+        <IconButton onClick={handleCancel} sx={{ position: 'absolute', right: 12, top: 12 }}>
+          <CloseRoundedIcon />
+        </IconButton>
+      </DialogTitle>
       <Box component="form" onSubmit={handleSubmit(submitHandler)}>
         <DialogContent dividers>
           {fields.map((field) => (
@@ -41,11 +49,14 @@ const ModalForm = ({ open, handleClose, title, fields, onSubmit, defaultValues }
               {...register(field.name, field.rules)}
               error={!!errors[field.name]}
               helperText={errors[field.name]?.message}
+              sx={{ mb: 0.5 }}
             />
           ))}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCancel}>Cancelar</Button>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={handleCancel} variant="outlined">
+            Cancelar
+          </Button>
           <Button type="submit" variant="contained" color="primary">
             Guardar
           </Button>

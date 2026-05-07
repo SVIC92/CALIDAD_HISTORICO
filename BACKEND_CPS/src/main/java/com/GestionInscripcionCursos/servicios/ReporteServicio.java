@@ -27,20 +27,24 @@ public class ReporteServicio {
     private UsuarioRepositorio usuarioRepositorio;
 
     @Transactional
-    public void crearReporte(String respuesta, String idActividad, String idUser) throws MyException {
-
+    public void crearReporte(String respuesta, String idActividad, String idUser, String archivoUrl) throws MyException {
+        validarLimitesReporte(idUser, idActividad);
         validarReporte(respuesta);
-
-        Optional<Actividad> respuesta1 = actividadRepositorio.findById(idActividad);
-
-        Actividad actividad = respuesta1.get();
         
-        Optional<Usuario> respuesta2 = usuarioRepositorio.findById(idUser);
+        Actividad actividad = actividadRepositorio.findById(idActividad).get();
+        Usuario usuario = usuarioRepositorio.findById(idUser).get();
+        Date ahora = new Date();
 
-        Usuario usuario = respuesta2.get();
+        Reporte reporte;
+        
+        // Evaluar si es un envío atrasado
+        if (ahora.after(actividad.getFechaVencimiento())) {
+            reporte = new Reporte(respuesta, "00", "Entrega fuera de plazo.", "ATRASADO", ahora, usuario, actividad);
+        } else {
+            reporte = new Reporte(respuesta, "Por Calificar", "Ningun Comentario", "ENVIADO", ahora, usuario, actividad);
+        }
 
-        Reporte reporte = new Reporte(respuesta, "Por Calificar", "Ningun Comentario", "ENVIADO", new Date(),usuario, actividad);
-
+        reporte.setArchivoUrl(archivoUrl);
         reporteRepositorio.save(reporte);
     }
 
@@ -49,15 +53,18 @@ public class ReporteServicio {
     }
     
     
-    public void validarDobleReporte(String idUser, String idActividad)throws MyException{
+    public void validarLimitesReporte(String idUser, String idActividad) throws MyException {
+        Actividad actividad = actividadRepositorio.findById(idActividad).get();
+        Long totalReportes = reporteRepositorio.contarReportesPorUsuarioYActividad(idUser, idActividad);
         
-        Reporte reporte = reporteRepositorio.buscarReportePorIdUserIdActividad(idUser,idActividad);
-        
-        if (reporte!=null) {
-
-            throw new MyException("No puede realizar doble reporte");
+        if (totalReportes >= actividad.getIntentosPermitidos()) {
+            throw new MyException("Has alcanzado el límite máximo de " + actividad.getIntentosPermitidos() + " intento(s) para esta actividad.");
         }
-        
+    }
+
+    // Nuevo método para devolver la LISTA de reportes del alumno
+    public List<Reporte> listarReportesAlumno(String idUser, String idActividad) {
+        return reporteRepositorio.buscarReportesPorUsuarioYActividad(idUser, idActividad);
     }
 
 

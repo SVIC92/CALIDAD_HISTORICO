@@ -205,7 +205,7 @@ public class UsuarioServicio implements UserDetailsService {
                 .stream()
                 .sorted((a, b) -> a.getNombre().compareToIgnoreCase(b.getNombre()))
                 // AÑADIR u.getActivo() AL FINAL DEL MAP
-                .map(u -> new UsuarioResumenDto(u.getId(), u.getNombre(), u.getEmail(), u.getRol().name(), u.getActivo()))
+                .map(u -> new UsuarioResumenDto(u.getId(), u.getNombre(), u.getEmail(), u.getRol().name(), u.getActivo(), u.getFechaCreacion()))
                 .toList();
     }
 

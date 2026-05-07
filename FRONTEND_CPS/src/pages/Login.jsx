@@ -2,17 +2,22 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import AuthService from '../services/AuthService';
-import { 
-    Container, 
-    Box, 
-    Typography, 
-    TextField, 
-    Button, 
-    Paper, 
-    Alert 
+import {
+    Alert,
+    Box,
+    Button,
+    Container,
+    Divider,
+    InputAdornment,
+    Paper,
+    Stack,
+    TextField,
+    Typography,
 } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Avatar from '@mui/material/Avatar';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useLoadingScreen } from '../context/LoadingScreenContext';
 import { getDisplayNameFromToken } from '../utils/authIdentity';
 
@@ -64,109 +69,236 @@ const Login = () => {
     };
 
     return (
-        <Container component="main" maxWidth="xs">
-            {/* Box actúa como un div flexible que centra el contenido */}
+        <Box
+            sx={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                px: 2,
+                py: 4,
+                background: 'radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 32%), radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 28%), linear-gradient(135deg, #f8fbff 0%, #eef4ff 45%, #f6f8fc 100%)',
+            }}
+        >
             <Box
                 sx={{
-                    marginTop: 8,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(120deg, rgba(255,255,255,0.72), rgba(255,255,255,0.32))',
+                    backdropFilter: 'blur(2px)',
+                    pointerEvents: 'none',
                 }}
-            >
-                {/* Paper le da el aspecto de tarjeta con sombra */}
-                <Paper elevation={3} sx={{ padding: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2 }}>
-                    
-                    <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
-                        <LockOutlinedIcon />
-                    </Avatar>
-                    
-                    <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
-                        Iniciar Sesión
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Portal de Gestión de Cursos
-                    </Typography>
+            />
 
-                    <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 1, width: '100%' }}>
-                        
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="email"
-                            label="Correo electrónico"
-                            autoComplete="email"
-                            autoFocus
-                            {...register("email", { required: "El correo es obligatorio" })}
-                            error={!!errors.email} // MUI cambia a color rojo si hay error
-                            helperText={errors.email ? errors.email.message : ""} // Muestra el mensaje de react-hook-form
-                        />
-
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            label="Contraseña"
-                            type="password"
-                            id="password"
-                            autoComplete="current-password"
-                            {...register("password", { required: "La contraseña es obligatoria" })}
-                            error={!!errors.password}
-                            helperText={errors.password ? errors.password.message : ""}
-                        />
-
-                        {twoFactorRequired && (
-                            <TextField
-                                margin="normal"
-                                required
-                                fullWidth
-                                label="Código de autenticación (2FA)"
-                                value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value)}
-                                inputProps={{ maxLength: 8 }}
+            <Container component="main" maxWidth="lg" sx={{ position: 'relative' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            width: '100%',
+                            maxWidth: 1080,
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', md: '1fr 1.05fr' },
+                            overflow: 'hidden',
+                            borderRadius: 5,
+                            border: '1px solid rgba(148, 163, 184, 0.18)',
+                            boxShadow: '0 24px 80px rgba(15, 23, 42, 0.14)',
+                            background: 'rgba(255, 255, 255, 0.88)',
+                            backdropFilter: 'blur(18px)',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                display: { xs: 'none', md: 'flex' },
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                p: 5,
+                                color: '#f8fafc',
+                                background: 'linear-gradient(160deg, #0f172a 0%, #1d4ed8 52%, #0284c7 100%)',
+                                position: 'relative',
+                                minHeight: 620,
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 28%), radial-gradient(circle at bottom left, rgba(255,255,255,0.12), transparent 24%)',
+                                }}
                             />
-                        )}
+                            <Box sx={{ position: 'relative', zIndex: 1 }}>
+                                <Avatar sx={{ width: 56, height: 56, mb: 3, bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }}>
+                                    <LockOutlinedIcon />
+                                </Avatar>
+                                <Typography variant="overline" sx={{ letterSpacing: 3, color: 'rgba(255,255,255,0.75)' }}>
+                                    Portal académico
+                                </Typography>
+                                <Typography variant="h3" sx={{ mt: 1, fontWeight: 800, lineHeight: 1.05 }}>
+                                    Accede a tu espacio de gestión con una experiencia clara y moderna.
+                                </Typography>
+                                <Typography sx={{ mt: 2, maxWidth: 420, color: 'rgba(255,255,255,0.78)', fontSize: '1rem', lineHeight: 1.7 }}>
+                                    Centraliza cursos, horarios, reportes y comunicación institucional en un entorno pensado para trabajar rápido.
+                                </Typography>
+                            </Box>
 
-                        {serverError && (
-                            <Alert severity="error" sx={{ mt: 2 }}>
-                                {serverError}
-                            </Alert>
-                        )}
+                            <Stack spacing={1.5} sx={{ position: 'relative', zIndex: 1 }}>
+                                {['Acceso seguro con soporte 2FA', 'Vista optimizada para docentes y alumnos', 'Navegación fluida y consistente'].map((item) => (
+                                    <Box
+                                        key={item}
+                                        sx={{
+                                            px: 2,
+                                            py: 1.5,
+                                            borderRadius: 3,
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            color: 'rgba(255,255,255,0.9)',
+                                            backdropFilter: 'blur(10px)',
+                                        }}
+                                    >
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {item}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </Box>
 
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            disabled={isSubmitting}
-                            sx={{ mt: 3, mb: 2, py: 1.5 }}
+                        <Box
+                            sx={{
+                                p: { xs: 3, sm: 4, md: 5 },
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                minHeight: { md: 620 },
+                                background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
+                            }}
                         >
-                            {isSubmitting ? 'Ingresando...' : 'Ingresar'}
-                        </Button>
+                            <Stack spacing={1.5} sx={{ mb: 3 }}>
+                                <Avatar sx={{ width: 52, height: 52, bgcolor: 'primary.main', boxShadow: '0 12px 28px rgba(37, 99, 235, 0.35)' }}>
+                                    <LockOutlinedIcon />
+                                </Avatar>
 
-                        <Button
-                            type="button"
-                            fullWidth
-                            variant="text"
-                            onClick={() => navigate('/registro')}
-                        >
-                            Crear cuenta
-                        </Button>
+                                <Box>
+                                    <Typography component="h1" variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
+                                        Iniciar sesión
+                                    </Typography>
+                                    <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 420 }}>
+                                        Ingresa con tu correo institucional para continuar en el portal.
+                                    </Typography>
+                                </Box>
+                            </Stack>
 
-                        <Button
-                            type="button"
-                            fullWidth
-                            variant="text"
-                            onClick={() => navigate('/forgot-password')}
-                            sx={{ mt: 0.5 }}
-                        >
-                            ¿Olvidaste tu contraseña?
-                        </Button>
-                    </Box>
-                </Paper>
-            </Box>
-        </Container>
+                            <Divider sx={{ mb: 3, borderColor: 'rgba(148, 163, 184, 0.18)' }} />
+
+                            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ width: '100%' }}>
+                                <Stack spacing={2.2}>
+                                    <TextField
+                                        required
+                                        fullWidth
+                                        id="email"
+                                        label="Correo electrónico"
+                                        autoComplete="email"
+                                        autoFocus
+                                        {...register('email', { required: 'El correo es obligatorio' })}
+                                        error={!!errors.email}
+                                        helperText={errors.email ? errors.email.message : ''}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <EmailOutlinedIcon fontSize="small" />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+
+                                    <TextField
+                                        required
+                                        fullWidth
+                                        label="Contraseña"
+                                        type="password"
+                                        id="password"
+                                        autoComplete="current-password"
+                                        {...register('password', { required: 'La contraseña es obligatoria' })}
+                                        error={!!errors.password}
+                                        helperText={errors.password ? errors.password.message : ''}
+                                    />
+
+                                    {twoFactorRequired && (
+                                        <TextField
+                                            required
+                                            fullWidth
+                                            label="Código de autenticación (2FA)"
+                                            value={otpCode}
+                                            onChange={(e) => setOtpCode(e.target.value)}
+                                            inputProps={{ maxLength: 8 }}
+                                        />
+                                    )}
+
+                                    {serverError && (
+                                        <Alert severity="error" sx={{ borderRadius: 2 }}>
+                                            {serverError}
+                                        </Alert>
+                                    )}
+
+                                    <Button
+                                        type="submit"
+                                        fullWidth
+                                        variant="contained"
+                                        disabled={isSubmitting}
+                                        endIcon={<ArrowForwardRoundedIcon />}
+                                        sx={{
+                                            mt: 1,
+                                            py: 1.5,
+                                            borderRadius: 999,
+                                            textTransform: 'none',
+                                            fontSize: '1rem',
+                                            fontWeight: 700,
+                                            boxShadow: '0 16px 32px rgba(37, 99, 235, 0.28)',
+                                        }}
+                                    >
+                                        {isSubmitting ? 'Ingresando...' : 'Ingresar'}
+                                    </Button>
+
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ pt: 0.5 }}>
+                                        <Button
+                                            type="button"
+                                            fullWidth
+                                            variant="outlined"
+                                            onClick={() => navigate('/registro')}
+                                            sx={{
+                                                borderRadius: 999,
+                                                textTransform: 'none',
+                                                py: 1.2,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            Crear cuenta
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            fullWidth
+                                            variant="text"
+                                            onClick={() => navigate('/forgot-password')}
+                                            sx={{
+                                                borderRadius: 999,
+                                                textTransform: 'none',
+                                                py: 1.2,
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            ¿Olvidaste tu contraseña?
+                                        </Button>
+                                    </Stack>
+                                </Stack>
+                            </Box>
+                        </Box>
+                    </Paper>
+                </Box>
+            </Container>
+        </Box>
     );
 };
 

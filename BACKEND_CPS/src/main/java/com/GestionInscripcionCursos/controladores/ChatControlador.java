@@ -69,29 +69,20 @@ public class ChatControlador {
     public ResponseEntity<?> enviarArchivo(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("idReceptor") String idReceptor,
-            @RequestParam("tipo") String tipo, // Ej: "IMAGEN", "PDF", "WORD"
+            @RequestParam("tipo") String tipo,
             Authentication authentication) {
-        
         try {
-            Usuario emisor = usuarioServicio.buscarEmail(authentication.getName());
+            String emailUser = authentication.getName();
+            Usuario emisor = usuarioServicio.buscarEmail(emailUser);
             Usuario receptor = usuarioServicio.buscarPorId(idReceptor);
 
-            // 1. Subir a Cloudinary
-            String url = archivoServicio.subirArchivo(archivo);
+            // Especificar la carpeta "chat_archivos" aquí
+            String urlArchivo = archivoServicio.subirArchivo(archivo, "chat_archivos");
 
-            // 2. Guardar en Base de Datos
-            Mensaje mensajeGuardado = chatServicio.guardarMensajeArchivo(emisor, receptor, url, tipo, archivo.getOriginalFilename());
-
-            // 3. Disparar evento WebSocket al receptor
-            messagingTemplate.convertAndSend(
-            "/queue/mensajes/" + receptor.getId(),
-            mensajeGuardado
-            );
-
+            Mensaje mensajeGuardado = chatServicio.guardarMensajeArchivo(emisor, receptor, urlArchivo, tipo, archivo.getOriginalFilename());
             return ResponseEntity.ok(mensajeGuardado);
-
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al procesar el archivo: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
     @GetMapping("/no-leidos")

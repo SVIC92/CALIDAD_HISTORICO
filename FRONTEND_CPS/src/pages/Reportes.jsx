@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   Alert,
   Box,
@@ -12,7 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Assignment, Grading, Refresh } from '@mui/icons-material';
+import { ArrowBack, Assignment, Grading, Refresh, AttachFile } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import CursoService from '../services/CursoService';
@@ -68,7 +68,7 @@ const normalizeReporte = (reporte, rol) => {
     comentario: comentario || '-',
     estado: reporte?.estado || (nota === null || nota === undefined ? 'PENDIENTE' : 'CALIFICADO'),
     fechaRegistro: formatDateTimeDisplay(reporte?.fechaRegistro || reporte?.fechaCreacion || reporte?.fechaEnvio),
-    raw: reporte,
+    raw: reporte, // Guardamos todo el objeto crudo para acceder al archivoUrl luego
   };
 };
 
@@ -103,14 +103,19 @@ const Reportes = () => {
 
   const [openRespuesta, setOpenRespuesta] = useState(false);
   const [respuesta, setRespuesta] = useState('');
+  const [archivoAdjunto, setArchivoAdjunto] = useState(null);
   const [isSavingRespuesta, setIsSavingRespuesta] = useState(false);
 
   const [openCalificacion, setOpenCalificacion] = useState(false);
   const [selectedReporteId, setSelectedReporteId] = useState('');
   const [nota, setNota] = useState('');
   const [comentario, setComentario] = useState('');
+  const respuestaRef = useRef('');
+  const archivoAdjuntoRef = useRef(null);
+  
+  const [archivoAdjuntoUrl, setArchivoAdjuntoUrl] = useState(null); // Nuevo estado para la URL del adjunto
   const [isSavingCalificacion, setIsSavingCalificacion] = useState(false);
-
+  
   const loadCursosByRole = useCallback(async () => {
     try {
       setErrorMsg('');
@@ -245,21 +250,120 @@ const Reportes = () => {
     loadReportes(selectedActividadId);
   }, [selectedActividadId, loadReportes]);
 
+  useEffect(() => {
+    respuestaRef.current = respuesta;
+  }, [respuesta]);
+  useEffect(() => {
+    archivoAdjuntoRef.current = archivoAdjunto;
+  }, [archivoAdjunto]);
+
+  useEffect(() => {
+    let interval;
+
+    // Solo activamos el temporizador si el modal está abierto y es un alumno
+    if (openRespuesta && canResponder && selectedActividadId) {
+      interval = setInterval(async () => {
+        const actividadActual = actividades.find(a => (a.id || a._id) === selectedActividadId);
+
+        if (actividadActual?.fechaVencimiento) {
+          const vencimiento = new Date(actividadActual.fechaVencimiento).getTime();
+          const ahora = new Date().getTime();
+
+          // Si el tiempo actual sobrepasa la fecha de vencimiento
+          if (ahora >= vencimiento) {
+            clearInterval(interval); // Detener el reloj
+
+            // Avisar visualmente al usuario
+            setErrorMsg('¡Tiempo agotado! El sistema está enviando tu avance automáticamente...');
+            setIsSavingRespuesta(true); // Bloquear el botón para que el usuario no haga doble clic
+
+            const textoFinal = respuestaRef.current.trim() || 'Avance parcial enviado automáticamente por cierre de actividad.';
+            const archivoFinal = archivoAdjuntoRef.current;
+
+            try {
+              // Enviar directamente lo que haya en las referencias
+              await ReporteService.registro(selectedActividadId, { respuesta: textoFinal }, archivoFinal);
+              setOpenRespuesta(false);
+              setArchivoAdjunto(null);
+              setRespuesta('');
+              setSuccessMsg('Tiempo agotado. Reporte enviado automáticamente.');
+              await loadReportes(selectedActividadId);
+            } catch (error) {
+              setErrorMsg(extractBackendValidationMessage(error, 'Error al auto-enviar el reporte.'));
+              setIsSavingRespuesta(false);
+            }
+          }
+        }
+      }, 1000); // Revisa el reloj cada 1 segundo
+    }
+
+    // Limpieza del intervalo si el alumno cierra el modal a mano
+    return () => clearInterval(interval);
+  }, [openRespuesta, canResponder, selectedActividadId, actividades, loadReportes]);
+
+  // Columna eliminada para mantener la tabla limpia
   const columns = [
     { id: 'alumnoNombre', label: 'Alumno' },
     { id: 'alumnoEmail', label: 'Email' },
     { id: 'respuesta', label: 'Respuesta' },
-    { id: 'nota', label: 'Nota', align: 'center' },
-    { id: 'estado', label: 'Estado', align: 'center' },
+    { id: 'adjunto', label: 'Adjunto', align: 'center' },
+    {
+      id: 'nota',
+      label: 'Nota',
+      align: 'center',
+      render: (row) => {
+        if (row.nota === '-' || row.nota === null || row.nota === 'Por Calificar') return row.nota;
+        const num = Number(row.nota);
+        if (isNaN(num)) return row.nota;
+
+        // Lógica de semaforización
+        let color = 'text.primary';
+        if (num >= 0 && num <= 10) color = 'error.main'; // Rojo (0 - 10)
+        else if (num >= 11 && num <= 15) color = 'warning.main'; // Amarillo/Naranja (11 - 15)
+        else if (num >= 16 && num <= 20) color = 'success.main'; // Verde (16 - 20)
+
+        return (
+          <Typography variant="body2" sx={{ color, fontWeight: 'bold' }}>
+            {num.toString().padStart(2, '0')}
+          </Typography>
+        );
+      }
+    },
+    {
+      id: 'estado',
+      label: 'Estado',
+      align: 'center',
+      render: (row) => {
+        let color = 'text.primary';
+        if (row.estado === 'ATRASADO') color = 'error.main'; // Rojo para atrasados
+        else if (row.estado === 'CALIFICADO') color = 'success.main';
+        else if (row.estado === 'ENVIADO') color = 'info.main';
+
+        return (
+          <Typography variant="body2" sx={{ color, fontWeight: 'bold' }}>
+            {row.estado}
+          </Typography>
+        );
+      }
+    },
     { id: 'comentario', label: 'Comentario' },
     { id: 'fechaRegistro', label: 'Fecha' },
   ];
 
-  const alumnoYaEnvioReporte = useMemo(() => {
-    if (!canResponder) return false;
-    return reportes.some(hasReporteEnviado);
-  }, [canResponder, reportes]);
+  const limiteAlcanzado = useMemo(() => {
+    if (!canResponder || !selectedActividadId) return false;
+    const actividadActual = actividades.find(a => (a.id || a._id) === selectedActividadId);
+    const intentosMaximos = actividadActual?.intentosPermitidos || 1;
+    // "reportes" en la vista alumno, ya trae exclusivamente sus propios reportes
+    return reportes.length >= intentosMaximos;
+  }, [canResponder, selectedActividadId, actividades, reportes]);
 
+  const intentosRestantes = useMemo(() => {
+    if (!canResponder || !selectedActividadId) return 0;
+    const actividadActual = actividades.find(a => (a.id || a._id) === selectedActividadId);
+    const intentosMaximos = actividadActual?.intentosPermitidos || 1;
+    return Math.max(0, intentosMaximos - reportes.length);
+  }, [canResponder, selectedActividadId, actividades, reportes]);
   const handleRecargar = async () => {
     await loadReportes(selectedActividadId);
   };
@@ -267,20 +371,20 @@ const Reportes = () => {
   const handleAbrirResponder = async () => {
     if (!canResponder || !selectedActividadId) return;
 
-    if (alumnoYaEnvioReporte) {
-      setErrorMsg('Ya registraste un reporte para esta actividad. No puedes enviar otro.');
+    // Cambiado: Ahora validamos contra el límite
+    if (limiteAlcanzado) {
+      setErrorMsg('Has alcanzado el límite máximo de intentos para esta actividad.');
       return;
     }
 
     try {
       setErrorMsg('');
-      const pref = await ReporteService.registrar(selectedActividadId);
-      const prefRespuesta = pref?.respuesta || pref?.contenido || '';
-      setRespuesta(prefRespuesta);
+      setRespuesta(''); // Limpiar la respuesta para el nuevo intento
     } catch {
       setRespuesta('');
     }
 
+    setArchivoAdjunto(null);
     setOpenRespuesta(true);
   };
 
@@ -302,8 +406,9 @@ const Reportes = () => {
       setIsSavingRespuesta(true);
       setErrorMsg('');
       setSuccessMsg('');
-      await ReporteService.registro(selectedActividadId, { respuesta: texto });
+      await ReporteService.registro(selectedActividadId, { respuesta: texto }, archivoAdjunto);
       setOpenRespuesta(false);
+      setArchivoAdjunto(null);
       setSuccessMsg('Reporte enviado correctamente.');
       await loadReportes(selectedActividadId);
     } catch (error) {
@@ -322,6 +427,7 @@ const Reportes = () => {
     setSelectedReporteId(reporteId);
     setNota(reporte?.nota === '-' ? '' : String(reporte?.nota ?? ''));
     setComentario(reporte?.comentario === '-' ? '' : String(reporte?.comentario ?? ''));
+    setArchivoAdjuntoUrl(reporte?.raw?.archivoUrl || null); // Cargamos la URL del archivo
     setOpenCalificacion(true);
   };
 
@@ -359,13 +465,13 @@ const Reportes = () => {
 
   const actions = canCalificar
     ? [
-        {
-          label: 'Calificar',
-          icon: <Grading />,
-          color: 'primary',
-          onClick: handleAbrirCalificar,
-        },
-      ]
+      {
+        label: 'Calificar',
+        icon: <Grading />,
+        color: 'primary',
+        onClick: handleAbrirCalificar,
+      },
+    ]
     : undefined;
 
   const titulo = useMemo(() => {
@@ -391,9 +497,9 @@ const Reportes = () => {
             variant="contained"
             startIcon={<Assignment />}
             onClick={handleAbrirResponder}
-            disabled={!selectedActividadId || alumnoYaEnvioReporte}
+            disabled={!selectedActividadId || limiteAlcanzado}
           >
-            {alumnoYaEnvioReporte ? 'Reporte ya enviado' : 'Responder Actividad'}
+            {limiteAlcanzado ? 'Límite alcanzado' : `Responder (Quedan ${intentosRestantes})`}
           </Button>
         )}
       </Stack>
@@ -469,6 +575,17 @@ const Reportes = () => {
             minRows={4}
             slotProps={{ htmlInput: { maxLength: 8000 } }}
           />
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button variant="outlined" component="label" startIcon={<AttachFile />}>
+              Adjuntar Archivo
+              <input type="file" hidden onChange={(e) => setArchivoAdjunto(e.target.files[0])} />
+            </Button>
+            {archivoAdjunto && (
+              <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 250 }}>
+                {archivoAdjunto.name}
+              </Typography>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenRespuesta(false)} disabled={isSavingRespuesta}>Cancelar</Button>
@@ -481,6 +598,18 @@ const Reportes = () => {
       <Dialog open={openCalificacion} onClose={() => !isSavingCalificacion && setOpenCalificacion(false)} fullWidth maxWidth="sm">
         <DialogTitle>Calificar Reporte</DialogTitle>
         <DialogContent>
+          {/* Aquí mostramos el botón del adjunto si existe */}
+          {archivoAdjuntoUrl && (
+            <Box sx={{ mb: 3, mt: 1, p: 2, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                El alumno incluyó un archivo adjunto.
+              </Typography>
+              <Button size="small" variant="contained" color="secondary" startIcon={<AttachFile />} href={archivoAdjuntoUrl} target="_blank" rel="noopener noreferrer">
+                Ver Archivo
+              </Button>
+            </Box>
+          )}
+
           <TextField
             margin="dense"
             label="Nota (0 a 20)"

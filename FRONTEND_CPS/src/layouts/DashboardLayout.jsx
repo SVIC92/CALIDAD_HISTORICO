@@ -31,7 +31,13 @@ const DashboardLayout = () => {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        background: 'transparent',
+      }}
+    >
       <CssBaseline />
       <Navbar onToggleSidebar={toggleSidebar} />
       
@@ -41,20 +47,24 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          px: { xs: 2, sm: 3, md: 4 },
+          py: { xs: 2, sm: 3 },
           display: 'flex',
           flexDirection: 'column',
-          transition: (theme) => theme.transitions.create('margin', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-          // Ajuste dinámico de margen si el sidebar está abierto
-          marginLeft: sidebarOpen ? 0 : '-240px', 
+          gap: 3,
         }}
       >
         <Toolbar /> {/* Espaciador para el AppBar fixed */}
         
-        <Box sx={{ flex: 1 }}>
+        <Box
+          sx={{
+            flex: 1,
+            width: '100%',
+            maxWidth: '1600px',
+            mx: 'auto',
+            p: { xs: 0, sm: 0 },
+          }}
+        >
           <Outlet /> {/* Aquí se cargan las páginas (Cursos, Alumnos, etc.) */}
           <GlobalChatNotifier />
         </Box>

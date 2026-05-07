@@ -3,6 +3,7 @@ import {
     Box, Typography, Button, TextField, MenuItem,
     Paper, CircularProgress, Alert, Card, CardContent
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { ArrowBack, AccessTime, ClassOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ProfesorService from '../services/ProfesorService';
@@ -27,6 +28,8 @@ const timeToMinutes = (timeStr) => {
 
 const HorarioProfesor = () => {
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [profesores, setProfesores] = useState([]);
     const [selectedProfesor, setSelectedProfesor] = useState('');
     const [horarios, setHorarios] = useState([]);
@@ -39,8 +42,8 @@ const HorarioProfesor = () => {
             try {
                 const data = await ProfesorService.listar();
                 setProfesores(data || []);
-            } catch (error) {
-                setErrorMsg('Error al cargar la lista de profesores.',error);
+            } catch {
+                setErrorMsg('Error al cargar la lista de profesores.');
             }
         };
         fetchProfesores();
@@ -59,8 +62,8 @@ const HorarioProfesor = () => {
             try {
                 const data = await CursoService.listarHorariosProfesor(selectedProfesor);
                 setHorarios(data || []);
-            } catch (error) {
-                setErrorMsg('Error al cargar los horarios del profesor.',error);
+            } catch {
+                setErrorMsg('Error al cargar los horarios del profesor.');
             } finally {
                 setLoading(false);
             }
@@ -75,7 +78,15 @@ const HorarioProfesor = () => {
     };
 
     return (
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box
+            sx={{
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                color: 'text.primary',
+            }}
+        >
             {/* Cabecera */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos/listado')} sx={{ mr: 2 }}>
@@ -87,7 +98,17 @@ const HorarioProfesor = () => {
             </Box>
 
             {/* Filtro superior */}
-            <Paper sx={{ p: 3, mb: 3, borderRadius: 2, boxShadow: 2 }}>
+            <Paper
+                sx={{
+                    p: 3,
+                    mb: 3,
+                    borderRadius: 2,
+                    boxShadow: isDark ? '0 18px 40px rgba(2, 6, 23, 0.34)' : 2,
+                    bgcolor: isDark ? alpha(theme.palette.background.paper, 0.9) : 'background.paper',
+                    border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.18)'}`,
+                    backdropFilter: 'blur(18px)',
+                }}
+            >
                 <Typography variant="body1" sx={{ mb: 2, color: 'text.secondary' }}>
                     Selecciona un profesor para visualizar su carga horaria semanal.
                 </Typography>
@@ -119,14 +140,33 @@ const HorarioProfesor = () => {
             ) : selectedProfesor ? (
 
                 // Contenedor principal del calendario con scroll horizontal
-                <Paper sx={{ overflowX: 'auto', borderRadius: 2, boxShadow: 3, bgcolor: 'background.paper' }}>
+                <Paper
+                    sx={{
+                        overflowX: 'auto',
+                        borderRadius: 2,
+                        boxShadow: isDark ? '0 20px 48px rgba(2, 6, 23, 0.38)' : 3,
+                        bgcolor: isDark ? alpha(theme.palette.background.paper, 0.9) : 'background.paper',
+                        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.18)'}`,
+                        backdropFilter: 'blur(18px)',
+                    }}
+                >
                     <Box sx={{ minWidth: 900 }}> {/* Garantiza que no se aplaste en móviles */}
 
                         {/* Cabecera de los días */}
                         <Box sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: 1, borderColor: 'divider' }}>
                             <Box /> {/* Espacio vacío arriba de las horas */}
                             {diasSemana.map((dia) => (
-                                <Box key={dia} sx={{ textAlign: 'center', p: 1.5, bgcolor: 'primary.main', color: 'white', borderRight: 1, borderColor: 'primary.dark' }}>
+                                <Box
+                                    key={dia}
+                                    sx={{
+                                        textAlign: 'center',
+                                        p: 1.5,
+                                        bgcolor: isDark ? alpha(theme.palette.primary.main, 0.24) : 'primary.main',
+                                        color: 'white',
+                                        borderRight: 1,
+                                        borderColor: isDark ? 'rgba(148, 163, 184, 0.16)' : 'primary.dark',
+                                    }}
+                                >
                                     <Typography variant="subtitle2" fontWeight="bold">{dia}</Typography>
                                 </Box>
                             ))}
@@ -136,10 +176,27 @@ const HorarioProfesor = () => {
                         <Box sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', position: 'relative' }}>
 
                             {/* Columna de las Horas (Eje Y) */}
-                            <Box sx={{ borderRight: 1, borderColor: 'divider', position: 'relative', bgcolor: '#fafafa' }}>
+                            <Box
+                                sx={{
+                                    borderRight: 1,
+                                    borderColor: 'divider',
+                                    position: 'relative',
+                                    bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : '#fafafa',
+                                }}
+                            >
                                 {hoursList.map((hour) => (
                                     <Box key={hour} sx={{ height: `${60 * PIXELS_PER_MINUTE}px`, position: 'relative', borderBottom: 1, borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ position: 'absolute', top: -10, right: 8, bgcolor: '#fafafa', px: 0.5 }}>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -10,
+                                                right: 8,
+                                                bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : '#fafafa',
+                                                px: 0.5,
+                                            }}
+                                        >
                                             {`${hour.toString().padStart(2, '0')}:00`}
                                         </Typography>
                                     </Box>
@@ -152,7 +209,15 @@ const HorarioProfesor = () => {
 
                                     {/* Líneas horizontales de fondo para guiarse */}
                                     {hoursList.map((hour) => (
-                                        <Box key={`bg-${hour}`} sx={{ height: `${60 * PIXELS_PER_MINUTE}px`, borderBottom: 1, borderColor: 'divider', borderBottomStyle: 'dashed' }} />
+                                        <Box
+                                            key={`bg-${hour}`}
+                                            sx={{
+                                                height: `${60 * PIXELS_PER_MINUTE}px`,
+                                                borderBottom: 1,
+                                                borderColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'divider',
+                                                borderBottomStyle: 'dashed',
+                                            }}
+                                        />
                                     ))}
 
                                     {/* Renderizado dinámico de las clases */}
@@ -173,13 +238,13 @@ const HorarioProfesor = () => {
                                                     height: `${cardHeight}px`,
                                                     left: 4,
                                                     right: 4,
-                                                    bgcolor: 'secondary.light',
+                                                    bgcolor: isDark ? alpha(theme.palette.secondary.main, 0.18) : 'secondary.light',
                                                     color: 'secondary.contrastText',
                                                     overflow: 'hidden',
-                                                    boxShadow: 3,
+                                                    boxShadow: isDark ? '0 12px 28px rgba(2, 6, 23, 0.32)' : 3,
                                                     borderRadius: 2,
                                                     borderLeft: '4px solid',
-                                                    borderColor: 'secondary.dark',
+                                                    borderColor: isDark ? alpha(theme.palette.secondary.main, 0.75) : 'secondary.dark',
                                                     transition: 'transform 0.2s',
                                                     zIndex: 10,
                                                     '&:hover': { transform: 'scale(1.02)', zIndex: 20 }

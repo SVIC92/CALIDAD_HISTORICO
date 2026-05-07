@@ -58,6 +58,9 @@ public class Actividad {
     @NotNull(message = "La fecha de vencimiento es obligatoria")
     @Future(message = "La fecha de vencimiento debe estar en el futuro")
     private Date fechaVencimiento;
+
+    @Column(name = "intentos_permitidos")
+    private Integer intentosPermitidos = 1;
     
     @ManyToOne
     @JoinColumn(name = "curso_id", nullable = false)

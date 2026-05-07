@@ -1,6 +1,8 @@
 package com.GestionInscripcionCursos.repositorios;
 
 import com.GestionInscripcionCursos.entidades.Inscripcion;
+import com.GestionInscripcionCursos.entidades.Usuario;
+
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,7 +33,8 @@ public interface InscripcionRepositorio extends JpaRepository<Inscripcion,String
     @Query("SELECT COUNT(i) > 0 FROM Inscripcion i WHERE i.usuario.id = :idUser AND i.curso.id = :idCurso AND i.estado = 'APROBADO'")
     public Boolean existeInscripcionAprobada(@Param("idUser") String idUser, @Param("idCurso") String idCurso);
     
-
+    @Query("SELECT i.usuario FROM Inscripcion i WHERE i.curso.id = :idCurso AND i.estado = 'APROBADO' AND i.usuario.rol = 'ALUMNO'")
+    List<Usuario> buscarAlumnosAprobadosPorCurso(@Param("idCurso") String idCurso);
     
     
 }

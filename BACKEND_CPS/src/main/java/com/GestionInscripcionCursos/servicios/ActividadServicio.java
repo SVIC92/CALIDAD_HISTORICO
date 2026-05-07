@@ -28,43 +28,36 @@ public class ActividadServicio {
     private CursoRepositorio cursoRepositorio;
 
     @Transactional
-    public void crearActividad(String nombre, String descripcion, Date fechaVencimiento, String idCurso) throws MyException {
-
-        validarActividad(nombre, descripcion, fechaVencimiento);
-
+    public void crearActividad(String nombre, String descripcion, Date fechaVencimiento, Integer intentosPermitidos, String idCurso) throws MyException {
+        validarActividad(nombre, descripcion, fechaVencimiento, intentosPermitidos);
         Optional<Curso> respuesta = cursoRepositorio.findById(idCurso);
-
         Curso curso = respuesta.get();
-
         Actividad actividad = new Actividad(nombre, descripcion, fechaVencimiento, curso);
-
+        actividad.setIntentosPermitidos(intentosPermitidos);
         actividadRepositorio.save(actividad);
+    }
+
+    @Transactional
+    public void modificarActividad(String id, String nombre, String descripcion, Date fechaVencimiento, Integer intentosPermitidos) throws MyException {
+        validarActividad(nombre, descripcion, fechaVencimiento, intentosPermitidos);
+        Optional<Actividad> respuesta = actividadRepositorio.findById(id);
+        if (respuesta.isPresent()) {
+            Actividad actividad = respuesta.get();
+            actividad.setNombre(nombre);
+            actividad.setDescripcion(descripcion);
+            actividad.setFechaVencimiento(fechaVencimiento);
+            actividad.setIntentosPermitidos(intentosPermitidos);
+            actividadRepositorio.save(actividad);
+        }
     }
 
     public List<Actividad> listarActividadesPorIdCurso(String idCurso) {
         return actividadRepositorio.buscarActividadesPorIdCurso(idCurso);
     }
-
-    @Transactional
-    public void modificarActividad(String id, String nombre, String descripcion, Date fechaVencimiento) throws MyException {
-
-        validarActividad(nombre, descripcion, fechaVencimiento);
-
-
-        Optional<Actividad> respuesta = actividadRepositorio.findById(id);
-
-        if (respuesta.isPresent()) {
-
-            Actividad actividad = respuesta.get();
-
-            actividad.setNombre(nombre);
-
-            actividad.setDescripcion(descripcion);
-
-            actividad.setFechaVencimiento(fechaVencimiento);
-
-            actividadRepositorio.save(actividad);
-
+    private void validarActividad(String nombre, String descripcion, Date fechaVencimiento, Integer intentosPermitidos) throws MyException {
+        // ... (tus validaciones previas de nombre, desc y fecha) ...
+        if (intentosPermitidos == null || intentosPermitidos < 1 || intentosPermitidos > 3) {
+            throw new MyException("Los intentos permitidos deben estar entre 1 y 3");
         }
     }
 

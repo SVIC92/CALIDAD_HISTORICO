@@ -1,6 +1,8 @@
+@import url('open-dyslexic/open-dyslexic-regular.css');
+
 :root {
-  --app-bg: #f4f6f8;
-  --app-text: #1f2937;
+  --app-bg: #eef3fb;
+  --app-text: #0f172a;
 }
 
 html, body, #root {
@@ -12,15 +14,19 @@ html, body, #root {
   color: var(--app-text);
 }
 
+#root {
+  filter: none;
+}
+
 html[data-theme='dark'] {
-  --app-bg: #101418;
+  --app-bg: #0b1220;
   --app-text: #e5e7eb;
 }
 
 html[data-theme='dark'] .MuiPaper-root,
 html[data-theme='dark'] .MuiCard-root,
 html[data-theme='dark'] .MuiDrawer-paper {
-  background-color: #1a2027 !important;
+  background-color: #111a2e !important;
   color: #e5e7eb !important;
 }
 
@@ -31,6 +37,156 @@ html[data-theme='dark'] .MuiInputBase-input {
   color: #e5e7eb !important;
 }
 
+html[data-contrast='high'] {
+  --app-bg: #ffffff;
+  --app-text: #000000;
+}
+
+html[data-contrast='high'][data-theme='dark'] {
+  --app-bg: #000000;
+  --app-text: #ffffff;
+}
+
+html[data-contrast='high'] .MuiPaper-root,
+html[data-contrast='high'] .MuiCard-root,
+html[data-contrast='high'] .MuiDrawer-paper,
+html[data-contrast='high'] .MuiAppBar-root {
+  border-width: 2px !important;
+}
+
+html[data-contrast='high'] .MuiButton-root,
+html[data-contrast='high'] .MuiOutlinedInput-root,
+html[data-contrast='high'] .MuiMenu-paper {
+  border-width: 2px !important;
+}
+
+html[data-contrast-mode='invertido'] body {
+  filter: invert(1) hue-rotate(180deg) saturate(var(--app-saturation, 100%));
+}
+
+html[data-contrast-mode='oscuro'] body {
+  filter: saturate(var(--app-saturation, 100%));
+}
+
+html[data-contrast-mode='luz-alta'] body {
+  filter: saturate(var(--app-saturation, 100%)) contrast(1.12) brightness(1.03);
+}
+
+html[data-contrast-mode='normal'] body {
+  filter: saturate(var(--app-saturation, 100%));
+}
+
+html[data-spacing-mode='low'] body {
+  letter-spacing: 0.008em;
+}
+
+html[data-spacing-mode='medium'] body {
+  letter-spacing: 0.02em;
+}
+
+html[data-spacing-mode='high'] body {
+  letter-spacing: 0.06em;
+}
+
+html[data-spacing-mode='normal'] body {
+  letter-spacing: normal;
+}
+
+html[data-font-style='readable'] body {
+  letter-spacing: 0.01em;
+  font-family: Verdana, "Segoe UI", Arial, sans-serif;
+}
+
+html[data-font-style='dyslexia'] body {
+  letter-spacing: 0.04em;
+  word-spacing: 0.08em;
+  font-family: 'OpenDyslexicRegular', sans-serif;
+}
+
+html[data-font-style='dyslexia'] .MuiTypography-root,
+html[data-font-style='dyslexia'] .MuiButton-root,
+html[data-font-style='dyslexia'] .MuiInputBase-input,
+html[data-font-style='dyslexia'] .MuiMenuItem-root {
+  letter-spacing: 0.04em;
+  word-spacing: 0.08em;
+}
+
+html[data-reading-aid-mode='cursor'] * {
+  cursor: none !important;
+}
+
+html[data-images='hidden'] img,
+html[data-images='hidden'] picture,
+html[data-images='hidden'] .MuiAvatar-root,
+html[data-images='hidden'] .MuiAvatar-root img,
+html[data-images='hidden'] .MuiCardMedia-root {
+  display: none !important;
+}
+
+html[data-text-align-mode='left'] body {
+  text-align: left;
+}
+
+html[data-text-align-mode='center'] body {
+  text-align: center;
+}
+
+html[data-text-align-mode='right'] body {
+  text-align: right;
+}
+
+html[data-text-align-mode='justify'] body {
+  text-align: justify;
+}
+
+html[data-text-align-mode='normal'] body {
+  text-align: initial;
+}
+
+html[data-line-height-mode='low'] body {
+  line-height: 1.35;
+}
+
+html[data-line-height-mode='medium'] body {
+  line-height: 1.6;
+}
+
+html[data-line-height-mode='high'] body {
+  line-height: 1.9;
+}
+
+html[data-line-height-mode='normal'] body {
+  line-height: 1.5;
+}
+
+html[data-line-height-mode='low'] .MuiTypography-root,
+html[data-line-height-mode='low'] .MuiButton-root,
+html[data-line-height-mode='low'] .MuiInputBase-input,
+html[data-line-height-mode='low'] .MuiMenuItem-root {
+  line-height: 1.35;
+}
+
+html[data-line-height-mode='medium'] .MuiTypography-root,
+html[data-line-height-mode='medium'] .MuiButton-root,
+html[data-line-height-mode='medium'] .MuiInputBase-input,
+html[data-line-height-mode='medium'] .MuiMenuItem-root {
+  line-height: 1.6;
+}
+
+html[data-line-height-mode='high'] .MuiTypography-root,
+html[data-line-height-mode='high'] .MuiButton-root,
+html[data-line-height-mode='high'] .MuiInputBase-input,
+html[data-line-height-mode='high'] .MuiMenuItem-root {
+  line-height: 1.9;
+}
+
+html[data-line-height-mode='normal'] .MuiTypography-root,
+html[data-line-height-mode='normal'] .MuiButton-root,
+html[data-line-height-mode='normal'] .MuiInputBase-input,
+html[data-line-height-mode='normal'] .MuiMenuItem-root {
+  line-height: 1.5;
+}
+
 body.compact-mode .MuiTableCell-root {
   padding-top: 6px !important;
   padding-bottom: 6px !important;
@@ -39,4 +195,11 @@ body.compact-mode .MuiTableCell-root {
 body.compact-mode .MuiCardContent-root {
   padding-top: 12px !important;
   padding-bottom: 12px !important;
+}
+
+body {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

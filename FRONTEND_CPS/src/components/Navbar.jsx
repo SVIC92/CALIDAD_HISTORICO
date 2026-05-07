@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { AppBar, Toolbar, Typography, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { AppBar, Toolbar, Typography, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Box, Avatar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = ({ onToggleSidebar }) => {
@@ -22,17 +23,47 @@ const Navbar = ({ onToggleSidebar }) => {
         position="fixed" 
         sx={{ 
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          bgcolor: (theme) => theme.palette.mode === 'light' ? theme.palette.grey[800] : undefined
+          bgcolor: 'transparent',
+          px: { xs: 0.5, sm: 1.5 },
+          py: 1,
+          boxShadow: 'none',
         }}
       >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={onToggleSidebar} sx={{ mr: 2 }}>
+        <Toolbar
+          sx={{
+            minHeight: 72,
+            borderRadius: 4,
+            mx: { xs: 0, sm: 1, md: 2 },
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.78)' : 'rgba(255, 255, 255, 0.84)',
+            backdropFilter: 'blur(18px)',
+            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)',
+          }}
+        >
+          <IconButton color="inherit" edge="start" onClick={onToggleSidebar} sx={{ mr: 1.5 }}>
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Gestión de Cursos - CPS
-          </Typography>
-          <Button color="inherit" onClick={() => setOpenLogoutDialog(true)} startIcon={<LogoutIcon />}>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1, minWidth: 0 }}>
+            <Avatar sx={{ width: 38, height: 38, bgcolor: 'primary.main' }}>
+              <SchoolRoundedIcon fontSize="small" />
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="overline" sx={{ display: 'block', lineHeight: 1.1, color: 'text.secondary', letterSpacing: 1.6 }}>
+                CPS
+              </Typography>
+              <Typography variant="subtitle1" component="div" sx={{ fontWeight: 800 }} noWrap>
+                Gestión de Cursos
+              </Typography>
+            </Box>
+          </Box>
+
+          <Button
+            variant="outlined"
+            onClick={() => setOpenLogoutDialog(true)}
+            startIcon={<LogoutIcon />}
+            sx={{ px: 2 }}
+          >
             Salir
           </Button>
         </Toolbar>

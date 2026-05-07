@@ -94,6 +94,7 @@ const Actividades = () => {
     nombre: '',
     descripcion: '',
     fechaVencimiento: '',
+    intentosPermitidos: 1,
   });
 
   const resetForm = () => {
@@ -184,6 +185,7 @@ const Actividades = () => {
         nombre: data?.nombre || actividad?.nombre || '',
         descripcion: data?.descripcion || actividad?.descripcion || '',
         fechaVencimiento: toDateTimeLocalValue(data?.fechaVencimiento || actividad?.fechaVencimiento),
+        intentosPermitidos: data?.intentosPermitidos || actividad?.intentosPermitidos || 1, // <<< NUEVO
       });
       setOpenModal(true);
     } catch (error) {
@@ -243,6 +245,11 @@ const Actividades = () => {
       setErrorMsg('La fecha y hora de vencimiento debe ser mayor o igual al momento actual.');
       return;
     }
+    const intentosPermitidos = Number(formData.intentosPermitidos);
+    if (intentosPermitidos < 1 || intentosPermitidos > 3) {
+      setErrorMsg('Los intentos permitidos deben ser entre 1 y 3.');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -295,6 +302,7 @@ const Actividades = () => {
   const columns = [
     { id: 'nombre', label: 'Actividad' },
     { id: 'descripcion', label: 'Descripción' },
+    { id: 'intentosPermitidos', label: 'Intentos Max', align: 'center' }, // <<< NUEVA COLUMNA
     { id: 'fechaCreacion', label: 'Creación' },
     { id: 'fechaVencimiento', label: 'Vencimiento' },
   ];
@@ -398,6 +406,16 @@ const Actividades = () => {
               multiline
               minRows={3}
               slotProps={{ htmlInput: { maxLength: 1000 } }}
+            />
+            <TextField
+              margin="dense"
+              label="Intentos Permitidos (Max 3)"
+              type="number"
+              value={formData.intentosPermitidos}
+              onChange={(e) => setFormData((prev) => ({ ...prev, intentosPermitidos: e.target.value }))}
+              fullWidth
+              required
+              slotProps={{ htmlInput: { min: 1, max: 3 } }}
             />
             <TextField
               margin="dense"

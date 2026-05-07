@@ -8,17 +8,25 @@ import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
 import UsuarioService from '../services/UsuarioService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
-import axios from '../API/axios'; // Importamos la instancia de axios para los PATCH directos
+import axios from '../API/axios';
+
+// Función para formatear la fecha
+const formatDate = (value) => {
+  if (!value || value === '-') return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString(); // Devuelve formato DD/MM/YYYY
+};
 
 const normalizeUsuario = (usuario) => ({
   id: usuario.id || usuario._id || '-',
   nombre: usuario.nombre || '-',
   email: usuario.email || '-',
   rol: usuario.rol || '-',
-  // Ahora que el backend envía 'activo', React lo leerá correctamente
   activo: typeof usuario.activo === 'boolean' ? usuario.activo : true,
   activoTexto: (typeof usuario.activo === 'boolean' ? usuario.activo : true) ? 'SI' : 'NO',
-  fechaCreacion: usuario.fechaCreacion || usuario.createdAt || '-',
+  // Se aplica el formato a la fecha recibida
+  fechaCreacion: formatDate(usuario.fechaCreacion || usuario.createdAt),
 });
 
 const initialForm = {
@@ -26,7 +34,7 @@ const initialForm = {
   email: '',
   password: '',
   password2: '',
-  rol: 'ROLE_ALUMNO',
+  rol: 'ALUMNO',
   activo: true,
 };
 
@@ -40,6 +48,7 @@ const ListadoUsuarios = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUsuarioId, setSelectedUsuarioId] = useState('');
   const [formData, setFormData] = useState(initialForm);
+
   const navigate = useNavigate();
 
   const fetchUsuarios = async () => {
@@ -86,18 +95,16 @@ const ListadoUsuarios = () => {
       email: row.email === '-' ? '' : row.email,
       password: '',
       password2: '',
-      rol: row.rol === '-' ? 'ROLE_ALUMNO' : row.rol,
+      rol: row.rol === '-' ? 'ALUMNO' : row.rol.replace('ROLE_', ''),
       activo: !!row.activo,
     });
     setOpenModal(true);
   };
 
   const handleToggleStatus = async (row, activar) => {
-    // 1. Limpiamos AMBOS mensajes SIEMPRE al iniciar la acción
     setErrorMsg('');
     setSuccessMsg('');
 
-    // 2. Verificamos si ya está en el estado deseado
     if (row.activo === activar) {
       setErrorMsg(`El usuario ya se encuentra ${activar ? 'activo' : 'inactivo'}.`);
       return;
@@ -109,7 +116,6 @@ const ListadoUsuarios = () => {
 
     try {
       setIsSubmitting(true);
-      // Llamada segura y directa al endpoint PATCH de tu AdminControlador
       await axios.patch(`/admin/usuarios/${row.id}/${accionTexto}`);
       await fetchUsuarios();
       setSuccessMsg(`Usuario ${activar ? 'activado' : 'desactivado'} correctamente.`);
@@ -131,6 +137,7 @@ const ListadoUsuarios = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) { setErrorMsg('Ingresa un email valido.'); return; }
+
     if (!isEditMode && !password) { setErrorMsg('La contraseña es obligatoria para registrar un usuario.'); return; }
     if (password && password.length < 6) { setErrorMsg('La contraseña debe tener al menos 6 caracteres.'); return; }
     if ((password || password2) && password !== password2) { setErrorMsg('Las contraseñas no coinciden.'); return; }
@@ -141,8 +148,12 @@ const ListadoUsuarios = () => {
       setSuccessMsg('');
 
       const payload = {
-        nombre, email, password: password || undefined, password2: password2 || undefined,
-        rol: formData.rol, activo: formData.activo,
+        nombre,
+        email,
+        password: password || undefined,
+        password2: password2 || undefined,
+        rol: formData.rol.replace('ROLE_', ''),
+        activo: formData.activo,
       };
 
       if (isEditMode) {
@@ -166,7 +177,7 @@ const ListadoUsuarios = () => {
     { id: 'email', label: 'Email' },
     { id: 'rol', label: 'Rol', align: 'center' },
     { id: 'activoTexto', label: 'Activo', align: 'center' },
-    { id: 'fechaCreacion', label: 'Fecha de Creación' },
+    { id: 'fechaCreacion', label: 'Fecha de Creación', align: 'center' },
   ];
 
   const actions = [
@@ -178,7 +189,7 @@ const ListadoUsuarios = () => {
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return usuarios.filter((u) =>
-      `${u.nombre} ${u.email} ${u.rol} ${u.activoTexto}`.toLowerCase().includes(term)
+      `${u.nombre} ${u.email} ${u.rol} ${u.activoTexto} ${u.fechaCreacion}`.toLowerCase().includes(term)
     );
   }, [usuarios, searchTerm]);
 
@@ -218,11 +229,13 @@ const ListadoUsuarios = () => {
           <Stack spacing={1.5} sx={{ mt: 0.5 }}>
             <TextField label="Nombre" value={formData.nombre} onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))} fullWidth />
             <TextField label="Email" value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} fullWidth />
+
             <TextField select label="Rol" value={formData.rol} onChange={(e) => setFormData((prev) => ({ ...prev, rol: e.target.value }))} fullWidth >
-              <MenuItem value="ROLE_ALUMNO">Alumno</MenuItem>
-              <MenuItem value="ROLE_PROFESOR">Profesor</MenuItem>
-              <MenuItem value="ROLE_ADMIN">Administrador</MenuItem>
+              <MenuItem value="ALUMNO">Alumno</MenuItem>
+              <MenuItem value="PROFESOR">Profesor</MenuItem>
+              <MenuItem value="ADMIN">Administrador</MenuItem>
             </TextField>
+
             <TextField select label="Activo" value={formData.activo ? 'true' : 'false'} onChange={(e) => setFormData((prev) => ({ ...prev, activo: e.target.value === 'true' }))} fullWidth >
               <MenuItem value="true">SI</MenuItem>
               <MenuItem value="false">NO</MenuItem>

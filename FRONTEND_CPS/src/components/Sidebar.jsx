@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Avatar, Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from '@mui/material';
-import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth } from '@mui/icons-material';
+import { Avatar, Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Chip } from '@mui/material';
+import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth, Circle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
 import AuthService from '../services/AuthService';
@@ -111,13 +111,18 @@ const Sidebar = ({ open, variant }) => {
   const menuItems = menuByRole[rolFinal] || menuByRole.ROLE_ALUMNO;
 
   return (
-    <Drawer
-      variant={variant}
-      open={open}
+    <Box
+      component="aside"
       sx={{
         width: drawerWidth,
         flexShrink: 0,
-        [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+        display: open ? 'block' : 'none',
+        alignSelf: 'flex-start',
+        bgcolor: 'background.paper',
+        boxShadow: '18px 0 40px rgba(15, 23, 42, 0.12)',
+        borderRight: 'none',
+        boxSizing: 'border-box',
+        minHeight: '100vh',
       }}
     >
       <Toolbar /> {/* Espacio para que no choque con el Navbar */}
@@ -125,41 +130,58 @@ const Sidebar = ({ open, variant }) => {
       <Box
         sx={{
           px: 2,
-          py: 2.5,
+          py: 3,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          gap: 1,
+          gap: 1.25,
         }}
       >
         <Avatar
-          sx={{ width: 56, height: 56, bgcolor: 'primary.main', cursor: 'pointer' }}
+          sx={{ width: 64, height: 64, bgcolor: 'primary.main', cursor: 'pointer', boxShadow: '0 12px 28px rgba(37, 99, 235, 0.32)' }}
           onClick={() => navigate('/perfil-usuario')}
           title="Ir a perfil"
         >
           <AccountCircle sx={{ fontSize: 36 }} />
         </Avatar>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, maxWidth: '100%' }} noWrap title={nombre}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 800, maxWidth: '100%' }} noWrap title={nombre}>
           {nombre}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 0.5 }}>
-          {rolLabel}
-        </Typography>
+        <Chip
+          icon={<Circle sx={{ fontSize: 10 }} />}
+          label={rolLabel}
+          size="small"
+          sx={{
+            borderRadius: 999,
+            fontWeight: 700,
+            px: 0.5,
+            '& .MuiChip-icon': { fontSize: 8 },
+          }}
+        />
       </Box>
 
       <Divider />
-      <List>
+      <List sx={{ px: 1.5, py: 1 }}>
         {menuItems.map((item) => (
           <ListItem disablePadding key={item.text}>
-            <ListItemButton onClick={() => navigate(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+            <ListItemButton
+              onClick={() => navigate(item.path)}
+              sx={{
+                mb: 0.5,
+                borderRadius: 3,
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: 600 }} />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-    </Drawer>
+        </Box>
   );
 };
 

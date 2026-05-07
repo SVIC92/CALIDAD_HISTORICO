@@ -52,6 +52,9 @@ public class Reporte {
     @Temporal(TemporalType.DATE)
     @NotNull(message = "La fecha de creacion del reporte es obligatoria")
     private Date fechaCreacion;
+
+    @Column(name = "archivo_url", length = 1000)
+    private String archivoUrl;
     
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
@@ -72,6 +75,7 @@ public class Reporte {
         this.fechaCreacion = fechaCreacion;
         this.usuario = usuario;
         this.actividad = actividad;
+        this.archivoUrl = null;
     }
     
 }

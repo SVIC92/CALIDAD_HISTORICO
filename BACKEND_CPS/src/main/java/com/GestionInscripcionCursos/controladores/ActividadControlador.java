@@ -45,18 +45,30 @@ public class ActividadControlador {
     }
 
     @PostMapping("/registro/{id}")
-    public ResponseEntity<?> registro(
-            @PathVariable String id,
-            @RequestParam String nombre,
-            @RequestParam String descripcion,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) Date fechaVencimiento) {
-
+    public ResponseEntity<?> registro(@PathVariable String id, 
+            @RequestParam String nombre, 
+            @RequestParam String descripcion, 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date fechaVencimiento,
+            @RequestParam(required = false, defaultValue = "1") Integer intentosPermitidos) {
         try {
-            actividadServicio.crearActividad(nombre, descripcion, fechaVencimiento, id);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("mensaje", "Actividad registrada correctamente"));
-        } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            actividadServicio.crearActividad(nombre, descripcion, fechaVencimiento, intentosPermitidos, id);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Actividad registrada correctamente"));
+        } catch (MyException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/modificar/{id}")
+    public ResponseEntity<?> modificar(@PathVariable String id, 
+            @RequestParam String nombre, 
+            @RequestParam String descripcion, 
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date fechaVencimiento,
+            @RequestParam(required = false, defaultValue = "1") Integer intentosPermitidos) {
+        try {
+            actividadServicio.modificarActividad(id, nombre, descripcion, fechaVencimiento, intentosPermitidos);
+            return ResponseEntity.ok(Map.of("mensaje", "Actividad modificada correctamente"));
+        } catch (MyException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -81,22 +93,6 @@ public class ActividadControlador {
     @GetMapping("/modificar/{id}")
     public ResponseEntity<?> modificar(@PathVariable String id) {
         return ResponseEntity.ok(actividadServicio.buscarPorId(id));
-    }
-
-    @PostMapping("/modificar/{id}")
-    public ResponseEntity<?> modificar(
-            @PathVariable String id,
-            @RequestParam String nombre,
-            @RequestParam String descripcion,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) Date fechaVencimiento) {
-
-        try {
-            actividadServicio.modificarActividad(id, nombre, descripcion, fechaVencimiento);
-            return ResponseEntity.ok(actividadServicio.buscarPorId(id));
-        } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
-        }
-
     }
 
     @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")

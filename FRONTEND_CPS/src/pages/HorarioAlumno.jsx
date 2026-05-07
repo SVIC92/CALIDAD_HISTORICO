@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Box, Typography, Button, Paper, CircularProgress, Alert, Card, CardContent
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { ArrowBack, AccessTime, ClassOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import CursoService from '../services/CursoService';
@@ -22,6 +23,8 @@ const timeToMinutes = (timeStr) => {
 
 const HorarioAlumno = () => {
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [horarios, setHorarios] = useState([]);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
@@ -31,8 +34,8 @@ const HorarioAlumno = () => {
             try {
                 const data = await CursoService.listarMisHorarios();
                 setHorarios(data || []);
-            } catch (error) {
-                setErrorMsg('Error al cargar tu horario. Verifica que estés matriculado en algún curso.',error);
+            } catch {
+                setErrorMsg('Error al cargar tu horario. Verifica que estés matriculado en algún curso.');
             } finally {
                 setLoading(false);
             }
@@ -45,7 +48,15 @@ const HorarioAlumno = () => {
     };
 
     return (
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box
+            sx={{
+                flexGrow: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                color: 'text.primary',
+            }}
+        >
             {/* Cabecera */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard/alumno')} sx={{ mr: 2 }}>
@@ -66,13 +77,32 @@ const HorarioAlumno = () => {
                 <Alert severity="info">Aún no tienes cursos asignados. Inscríbete en la sección de Cursos Disponibles.</Alert>
             ) : horarios.length > 0 ? (
 
-                <Paper sx={{ overflowX: 'auto', borderRadius: 2, boxShadow: 3, bgcolor: 'background.paper' }}>
+                <Paper
+                    sx={{
+                        overflowX: 'auto',
+                        borderRadius: 2,
+                        boxShadow: isDark ? '0 20px 48px rgba(2, 6, 23, 0.38)' : 3,
+                        bgcolor: isDark ? alpha(theme.palette.background.paper, 0.9) : 'background.paper',
+                        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.18)'}`,
+                        backdropFilter: 'blur(18px)',
+                    }}
+                >
                     <Box sx={{ minWidth: 900 }}>
 
                         <Box sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: 1, borderColor: 'divider' }}>
                             <Box />
                             {diasSemana.map((dia) => (
-                                <Box key={dia} sx={{ textAlign: 'center', p: 1.5, bgcolor: 'primary.main', color: 'white', borderRight: 1, borderColor: 'primary.dark' }}>
+                                <Box
+                                    key={dia}
+                                    sx={{
+                                        textAlign: 'center',
+                                        p: 1.5,
+                                        bgcolor: isDark ? alpha(theme.palette.primary.main, 0.24) : 'primary.main',
+                                        color: 'white',
+                                        borderRight: 1,
+                                        borderColor: isDark ? 'rgba(148, 163, 184, 0.16)' : 'primary.dark',
+                                    }}
+                                >
                                     <Typography variant="subtitle2" fontWeight="bold">{dia}</Typography>
                                 </Box>
                             ))}
@@ -80,10 +110,27 @@ const HorarioAlumno = () => {
 
                         <Box sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', position: 'relative' }}>
 
-                            <Box sx={{ borderRight: 1, borderColor: 'divider', position: 'relative', bgcolor: '#fafafa' }}>
+                            <Box
+                                sx={{
+                                    borderRight: 1,
+                                    borderColor: 'divider',
+                                    position: 'relative',
+                                    bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : '#fafafa',
+                                }}
+                            >
                                 {hoursList.map((hour) => (
                                     <Box key={hour} sx={{ height: `${60 * PIXELS_PER_MINUTE}px`, position: 'relative', borderBottom: 1, borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ position: 'absolute', top: -10, right: 8, bgcolor: '#fafafa', px: 0.5 }}>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -10,
+                                                right: 8,
+                                                bgcolor: isDark ? alpha(theme.palette.background.default, 0.96) : '#fafafa',
+                                                px: 0.5,
+                                            }}
+                                        >
                                             {`${hour.toString().padStart(2, '0')}:00`}
                                         </Typography>
                                     </Box>
@@ -93,7 +140,15 @@ const HorarioAlumno = () => {
                             {diasSemana.map((dia) => (
                                 <Box key={dia} sx={{ position: 'relative', borderRight: 1, borderColor: 'divider' }}>
                                     {hoursList.map((hour) => (
-                                        <Box key={`bg-${hour}`} sx={{ height: `${60 * PIXELS_PER_MINUTE}px`, borderBottom: 1, borderColor: 'divider', borderBottomStyle: 'dashed' }} />
+                                        <Box
+                                            key={`bg-${hour}`}
+                                            sx={{
+                                                height: `${60 * PIXELS_PER_MINUTE}px`,
+                                                borderBottom: 1,
+                                                borderColor: isDark ? 'rgba(148, 163, 184, 0.14)' : 'divider',
+                                                borderBottomStyle: 'dashed',
+                                            }}
+                                        />
                                     ))}
 
                                     {getHorariosPorDia(dia).map((clase) => {
@@ -112,13 +167,13 @@ const HorarioAlumno = () => {
                                                     height: `${cardHeight}px`,
                                                     left: 4,
                                                     right: 4,
-                                                    bgcolor: 'info.light', /* Cambiamos el color a azul claro para diferenciar del profesor */
+                                                    bgcolor: isDark ? alpha(theme.palette.info.main, 0.18) : 'info.light',
                                                     color: 'info.contrastText',
                                                     overflow: 'hidden',
-                                                    boxShadow: 3,
+                                                    boxShadow: isDark ? '0 12px 28px rgba(2, 6, 23, 0.32)' : 3,
                                                     borderRadius: 2,
                                                     borderLeft: '4px solid',
-                                                    borderColor: 'info.dark',
+                                                    borderColor: isDark ? alpha(theme.palette.info.main, 0.75) : 'info.dark',
                                                     transition: 'transform 0.2s',
                                                     zIndex: 10,
                                                     '&:hover': { transform: 'scale(1.02)', zIndex: 20 }
