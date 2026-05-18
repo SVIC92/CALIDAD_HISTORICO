@@ -553,9 +553,7 @@ public class CursoServicio {
             validarCapacidadCurso(curso);
             validarPrerequisitosAlumno(idUser, idCurso);
             
-            // --- NUEVA VALIDACIÓN DE HORARIOS AQUÍ ---
             validarCruceHorariosAlumno(idUser, curso);
-            // -----------------------------------------
         }
 
         if (inscripcion != null) {
@@ -605,11 +603,11 @@ public class CursoServicio {
     }
 
     private void validarCruceHorariosAlumno(String idUser, Curso nuevoCurso) throws MyException {
-        // 1. Obtener los horarios del curso al que el alumno se quiere matricular
+        
         List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
         
         if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
-            return; // Si el curso nuevo no tiene horarios, no hay cruce
+            return; 
         }
 
         // 2. Obtener los cursos donde el alumno ya está inscrito (y aprobado)
