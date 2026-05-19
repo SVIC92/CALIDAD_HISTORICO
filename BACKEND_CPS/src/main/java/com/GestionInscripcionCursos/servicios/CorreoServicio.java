@@ -23,7 +23,7 @@ public class CorreoServicio {
         this.mailSender = mailSender;
     }
 
-    public void enviarCorreoRecuperacion(String destinatario, String nombreUsuario, String link) {
+    public void enviarCorreo(String destinatario, String asunto, String cuerpo) {
         try {
             MimeMessage mensaje = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mensaje, "UTF-8");
@@ -34,19 +34,25 @@ public class CorreoServicio {
                 helper.setFrom(new InternetAddress(from, fromName).toString());
             }
 
-            helper.setSubject("Reestablecer contraseña");
-            helper.setText(
-                    "Hola " + nombreUsuario + ",\n\n"
-                    + "Recibimos una solicitud para reestablecer tu contraseña.\n"
-                    + "Haz clic en el siguiente enlace para continuar:\n"
-                    + link + "\n\n"
-                    + "Este enlace expira en 30 minutos.\n"
-                    + "Si no solicitaste este cambio, ignora este correo."
-            );
+            helper.setSubject(asunto);
+            helper.setText(cuerpo);
 
             mailSender.send(mensaje);
         } catch (Exception ex) {
-            throw new MailPreparationException("No se pudo preparar el correo de recuperacion", ex);
+            throw new MailPreparationException("No se pudo preparar el correo", ex);
         }
+    }
+
+    public void enviarCorreoRecuperacion(String destinatario, String nombreUsuario, String link) {
+        enviarCorreo(
+                destinatario,
+                "Reestablecer contraseña",
+                "Hola " + nombreUsuario + ",\n\n"
+                + "Recibimos una solicitud para reestablecer tu contraseña.\n"
+                + "Haz clic en el siguiente enlace para continuar:\n"
+                + link + "\n\n"
+                + "Este enlace expira en 30 minutos.\n"
+                + "Si no solicitaste este cambio, ignora este correo."
+        );
     }
 }

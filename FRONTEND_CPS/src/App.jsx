@@ -30,6 +30,7 @@ import NoAutorizado from './pages/NoAutorizado';
 import HorarioProfesor from './pages/HorarioProfesor';
 import HorarioAlumno from './pages/HorarioAlumno';
 import ChatInstitucional from './pages/ChatInstitucional'
+import SalaEstudioMUI from './pages/SalaEstudioMUI';
 import { useLoadingScreen } from './context/LoadingScreenContext';
 import AccessibilityFloatingMenu from './components/AccessibilityFloatingMenu';
 import ReadingAidOverlay from './components/ReadingAidOverlay';
@@ -119,6 +120,8 @@ function App() {
               <Route path="/modulo/ia/silabo" element={<SilaboIA />} />
               <Route path="/modulo/estudia" element={<Navigate to="/modulo/ia" replace />} />
               <Route path="/modulo/configuracion" element={<Configuracion />} />
+              <Route path="/videoconferencia" element={<SalaEstudioMUI />} />
+              <Route path="/videoconferencia/:salaUuid" element={<SalaEstudioMUI />} />
               <Route path="/modulo/:moduloNombre" element={<ModuloPlaceholder />} />
               <Route path="/modulo/horarios-profesor" element={<HorarioProfesor />} />
               <Route path="/modulo/chat" element={<ChatInstitucional />} />

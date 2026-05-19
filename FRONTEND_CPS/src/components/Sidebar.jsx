@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Chip } from '@mui/material';
-import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth, Circle } from '@mui/icons-material';
+import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth, Circle, VideoCall } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
 import AuthService from '../services/AuthService';
@@ -19,7 +19,7 @@ const normalizeRole = (roleValue) => {
   return '';
 };
 
-const Sidebar = ({ open, variant }) => {
+const Sidebar = ({ open }) => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const rolGuardado = localStorage.getItem('rol');
@@ -82,6 +82,7 @@ const Sidebar = ({ open, variant }) => {
     ROLE_ADMIN: [
       { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/admin' },
       { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
+      { text: 'Videoconferencia', icon: <VideoCall />, path: '/videoconferencia' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
       { text: 'Carreras', icon: <Apartment />, path: '/carreras' },
       { text: 'Usuarios', icon: <People />, path: '/usuarios' },
@@ -91,6 +92,7 @@ const Sidebar = ({ open, variant }) => {
     ROLE_PROFESOR: [
       { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/profesor' },
       { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
+      { text: 'Videoconferencia', icon: <VideoCall />, path: '/videoconferencia' },
       { text: 'Mis Cursos', icon: <School />, path: '/cursos' },
       { text: 'Actividades', icon: <Book />, path: '/modulo/actividades' },
       { text: 'Inscripciones', icon: <AssignmentTurnedIn />, path: '/modulo/inscripciones' },
@@ -101,6 +103,7 @@ const Sidebar = ({ open, variant }) => {
       { text: 'Panel de Control', icon: <Dashboard />, path: '/dashboard/alumno' },
       { text: 'Mi Horario', icon: <CalendarMonth />, path: '/modulo/mi-horario' },
       { text: 'Cursos', icon: <Book />, path: '/cursos' },
+      { text: 'Videoconferencia', icon: <VideoCall />, path: '/videoconferencia' },
       { text: 'Mis Cursos Inscritos', icon: <AssignmentTurnedIn />, path: '/modulo/inscripciones' },
       { text: 'Mis Reportes', icon: <Assessment />, path: '/modulo/reportes' },
       { text: 'IA', icon: <SmartToy />, path: '/modulo/ia' },
@@ -176,7 +179,9 @@ const Sidebar = ({ open, variant }) => {
               }}
             >
               <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: 600 }} />
+              <ListItemText
+                primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{item.text}</Typography>}
+              />
             </ListItemButton>
           </ListItem>
         ))}

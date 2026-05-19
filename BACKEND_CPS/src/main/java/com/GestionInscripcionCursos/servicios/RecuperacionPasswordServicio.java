@@ -21,7 +21,7 @@ public class RecuperacionPasswordServicio {
     private final PasswordResetTokenRepositorio tokenRepositorio;
     private final CorreoServicio correoServicio;
 
-    @Value("${app.frontend.reset-password-url:http://localhost:5173/reset-password}")
+    @Value("${app.frontend.reset-password-url:${FRONTEND_RESET_URL:https://calidad-historico.vercel.app/reset-password}}")
     private String resetPasswordUrl;
 
     public RecuperacionPasswordServicio(

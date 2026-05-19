@@ -47,6 +47,7 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
+          minHeight: 0,
           px: { xs: 2, sm: 3, md: 4 },
           py: { xs: 2, sm: 3 },
           display: 'flex',
@@ -59,9 +60,13 @@ const DashboardLayout = () => {
         <Box
           sx={{
             flex: 1,
+            minHeight: 0,
             width: '100%',
             maxWidth: '1600px',
             mx: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
             p: { xs: 0, sm: 0 },
           }}
         >
