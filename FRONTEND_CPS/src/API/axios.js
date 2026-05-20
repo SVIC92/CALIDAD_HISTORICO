@@ -22,9 +22,31 @@ const normalizeApiBaseUrl = (url, fallbackUrl) => {
   return clean.endsWith("/api") ? clean : `${clean}/api`;
 };
 
-const resolvedBaseUrl = isLocalRuntime()
-  ? normalizeApiBaseUrl(import.meta.env.VITE_LOCAL_API_BASE_URL, DEFAULT_LOCAL_API_BASE_URL)
-  : normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL, DEFAULT_REMOTE_API_BASE_URL);
+const isLocalHostUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    return ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
+
+const resolveBaseUrl = () => {
+  const localBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_LOCAL_API_BASE_URL, DEFAULT_LOCAL_API_BASE_URL);
+  const remoteBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL, DEFAULT_REMOTE_API_BASE_URL);
+
+  if (isLocalRuntime()) {
+    return localBaseUrl;
+  }
+
+  if (isLocalHostUrl(remoteBaseUrl)) {
+    return DEFAULT_REMOTE_API_BASE_URL;
+  }
+
+  return remoteBaseUrl;
+};
+
+const resolvedBaseUrl = resolveBaseUrl();
 
 const api = axios.create({
   baseURL: resolvedBaseUrl,

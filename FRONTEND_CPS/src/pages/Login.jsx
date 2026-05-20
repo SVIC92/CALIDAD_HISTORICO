@@ -21,6 +21,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useLoadingScreen } from '../context/LoadingScreenContext';
 import { getDisplayNameFromToken } from '../utils/authIdentity';
+import api from '../API/axios';
 
 const Login = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
@@ -31,6 +32,28 @@ const Login = () => {
     const navigate = useNavigate();
     const { startLoading, stopLoading } = useLoadingScreen();
     const theme = useTheme();
+
+    const isBackendSleeping = (error) => {
+        const status = error?.response?.status;
+        if ([502, 503, 504, 521, 522, 524].includes(status)) return true;
+
+        if (!error?.response) {
+            const message = String(error?.message || '').toLowerCase();
+            if (message.includes('network')) return true;
+            if (message.includes('timeout')) return true;
+            if (error?.code === 'ERR_NETWORK') return true;
+        }
+
+        return false;
+    };
+
+    const wakeUpBackend = async () => {
+        try {
+            await api.get('/', { timeout: 12000 });
+        } catch (wakeError) {
+            console.info('Intento de despertar backend:', wakeError?.message || wakeError);
+        }
+    };
 
     const getRedirectByRole = (rol) => {
         if (rol === 'ROLE_ADMIN') return '/dashboard/admin';
@@ -54,6 +77,11 @@ const Login = () => {
             navigate(getRedirectByRole(respuesta.rol));
         } catch (err) {
             console.error('Error en login:', err);
+            if (isBackendSleeping(err)) {
+                setServerError('Servidor dormido en Render. Lo estamos despertando, intenta de nuevo en unos segundos.');
+                await wakeUpBackend();
+                return;
+            }
             const body = err?.response?.data;
             if (body?.twoFactorRequired) {
                 setTwoFactorRequired(true);
@@ -214,12 +242,14 @@ const Login = () => {
                                         {...register('email', { required: 'El correo es obligatorio' })}
                                         error={!!errors.email}
                                         helperText={errors.email ? errors.email.message : ''}
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <EmailOutlinedIcon fontSize="small" />
-                                                </InputAdornment>
-                                            ),
+                                        slotProps={{
+                                            input: {
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <EmailOutlinedIcon fontSize="small" />
+                                                    </InputAdornment>
+                                                ),
+                                            },
                                         }}
                                     />
 
