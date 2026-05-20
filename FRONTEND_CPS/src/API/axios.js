@@ -4,10 +4,12 @@ const DEFAULT_REMOTE_API_BASE_URL = "https://calidad-historico.onrender.com/api"
 const DEFAULT_LOCAL_API_BASE_URL = "http://localhost:8080/api";
 
 const isLocalRuntime = () => {
-  if (import.meta.env.DEV) return true;
   if (typeof window === "undefined") return false;
 
-  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  if (!isLocalHost) return false;
+
+  return Boolean(import.meta.env.DEV || isLocalHost);
 };
 
 const normalizeApiBaseUrl = (url, fallbackUrl) => {
