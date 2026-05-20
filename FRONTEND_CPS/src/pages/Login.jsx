@@ -18,6 +18,7 @@ import Avatar from '@mui/material/Avatar';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useLoadingScreen } from '../context/LoadingScreenContext';
 import { getDisplayNameFromToken } from '../utils/authIdentity';
 
@@ -29,6 +30,7 @@ const Login = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const { startLoading, stopLoading } = useLoadingScreen();
+    const theme = useTheme();
 
     const getRedirectByRole = (rol) => {
         if (rol === 'ROLE_ADMIN') return '/dashboard/admin';
@@ -55,7 +57,13 @@ const Login = () => {
             const body = err?.response?.data;
             if (body?.twoFactorRequired) {
                 setTwoFactorRequired(true);
-                setServerError(body?.mensaje || 'Debes ingresar el código de autenticación (2FA).');
+                if (otpCode) {
+                    const mensajeOtp = 'Código 2FA incorrecto. Intenta de nuevo.';
+                    setServerError(mensajeOtp);
+                } else {
+                    setOtpCode('');
+                    setServerError('');
+                }
             } else {
                 const backendMessage = typeof body === 'string'
                     ? body
@@ -79,14 +87,16 @@ const Login = () => {
                 overflow: 'hidden',
                 px: 2,
                 py: 4,
-                background: 'radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 32%), radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 28%), linear-gradient(135deg, #f8fbff 0%, #eef4ff 45%, #f6f8fc 100%)',
+                background: `radial-gradient(circle at top left, ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.22 : 0.18)}, transparent 32%), radial-gradient(circle at top right, ${alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.2 : 0.16)}, transparent 28%), linear-gradient(135deg, ${alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.92 : 0.96)} 0%, ${alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.86 : 0.9)} 45%, ${alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.94 : 0.98)} 100%)`,
             }}
         >
             <Box
                 sx={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'linear-gradient(120deg, rgba(255,255,255,0.72), rgba(255,255,255,0.32))',
+                    background: theme.palette.mode === 'dark'
+                        ? `linear-gradient(120deg, ${alpha(theme.palette.background.paper, 0.22)}, ${alpha(theme.palette.background.paper, 0.08)})`
+                        : `linear-gradient(120deg, ${alpha(theme.palette.common.white, 0.72)}, ${alpha(theme.palette.common.white, 0.32)})`,
                     backdropFilter: 'blur(2px)',
                     pointerEvents: 'none',
                 }}
@@ -103,9 +113,9 @@ const Login = () => {
                             gridTemplateColumns: { xs: '1fr', md: '1fr 1.05fr' },
                             overflow: 'hidden',
                             borderRadius: 5,
-                            border: '1px solid rgba(148, 163, 184, 0.18)',
-                            boxShadow: '0 24px 80px rgba(15, 23, 42, 0.14)',
-                            background: 'rgba(255, 255, 255, 0.88)',
+                            border: `1px solid ${alpha(theme.palette.divider, 0.28)}`,
+                            boxShadow: `0 24px 80px ${alpha(theme.palette.common.black, 0.12)}`,
+                            background: alpha(theme.palette.background.paper, 0.86),
                             backdropFilter: 'blur(18px)',
                         }}
                     >
@@ -115,8 +125,8 @@ const Login = () => {
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
                                 p: 5,
-                                color: '#f8fafc',
-                                background: 'linear-gradient(160deg, #0f172a 0%, #1d4ed8 52%, #0284c7 100%)',
+                                color: theme.palette.primary.contrastText,
+                                background: `linear-gradient(160deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 52%, ${theme.palette.info.main} 100%)`,
                                 position: 'relative',
                                 minHeight: 620,
                             }}
@@ -125,20 +135,20 @@ const Login = () => {
                                 sx={{
                                     position: 'absolute',
                                     inset: 0,
-                                    background: 'radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 28%), radial-gradient(circle at bottom left, rgba(255,255,255,0.12), transparent 24%)',
+                                    background: `radial-gradient(circle at top right, ${alpha(theme.palette.common.white, 0.18)}, transparent 28%), radial-gradient(circle at bottom left, ${alpha(theme.palette.common.white, 0.12)}, transparent 24%)`,
                                 }}
                             />
                             <Box sx={{ position: 'relative', zIndex: 1 }}>
-                                <Avatar sx={{ width: 56, height: 56, mb: 3, bgcolor: 'rgba(255,255,255,0.14)', color: '#fff' }}>
+                                <Avatar sx={{ width: 56, height: 56, mb: 3, bgcolor: alpha(theme.palette.common.white, 0.14), color: theme.palette.common.white }}>
                                     <LockOutlinedIcon />
                                 </Avatar>
-                                <Typography variant="overline" sx={{ letterSpacing: 3, color: 'rgba(255,255,255,0.75)' }}>
+                                <Typography variant="overline" sx={{ letterSpacing: 3, color: alpha(theme.palette.common.white, 0.75) }}>
                                     Portal académico
                                 </Typography>
                                 <Typography variant="h3" sx={{ mt: 1, fontWeight: 800, lineHeight: 1.05 }}>
                                     Accede a tu espacio de gestión con una experiencia clara y moderna.
                                 </Typography>
-                                <Typography sx={{ mt: 2, maxWidth: 420, color: 'rgba(255,255,255,0.78)', fontSize: '1rem', lineHeight: 1.7 }}>
+                                <Typography sx={{ mt: 2, maxWidth: 420, color: alpha(theme.palette.common.white, 0.78), fontSize: '1rem', lineHeight: 1.7 }}>
                                     Centraliza cursos, horarios, reportes y comunicación institucional en un entorno pensado para trabajar rápido.
                                 </Typography>
                             </Box>
@@ -151,9 +161,9 @@ const Login = () => {
                                             px: 2,
                                             py: 1.5,
                                             borderRadius: 3,
-                                            background: 'rgba(255,255,255,0.1)',
-                                            border: '1px solid rgba(255,255,255,0.12)',
-                                            color: 'rgba(255,255,255,0.9)',
+                                            background: alpha(theme.palette.common.white, 0.1),
+                                            border: `1px solid ${alpha(theme.palette.common.white, 0.12)}`,
+                                            color: alpha(theme.palette.common.white, 0.9),
                                             backdropFilter: 'blur(10px)',
                                         }}
                                     >
@@ -172,11 +182,11 @@ const Login = () => {
                                 flexDirection: 'column',
                                 justifyContent: 'center',
                                 minHeight: { md: 620 },
-                                background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
+                                background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${alpha(theme.palette.background.default, 0.98)} 100%)`,
                             }}
                         >
                             <Stack spacing={1.5} sx={{ mb: 3 }}>
-                                <Avatar sx={{ width: 52, height: 52, bgcolor: 'primary.main', boxShadow: '0 12px 28px rgba(37, 99, 235, 0.35)' }}>
+                                <Avatar sx={{ width: 52, height: 52, bgcolor: 'primary.main', boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.35)}` }}>
                                     <LockOutlinedIcon />
                                 </Avatar>
 
@@ -190,7 +200,7 @@ const Login = () => {
                                 </Box>
                             </Stack>
 
-                            <Divider sx={{ mb: 3, borderColor: 'rgba(148, 163, 184, 0.18)' }} />
+                            <Divider sx={{ mb: 3, borderColor: alpha(theme.palette.divider, 0.28) }} />
 
                             <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate sx={{ width: '100%' }}>
                                 <Stack spacing={2.2}>
@@ -255,7 +265,7 @@ const Login = () => {
                                             textTransform: 'none',
                                             fontSize: '1rem',
                                             fontWeight: 700,
-                                            boxShadow: '0 16px 32px rgba(37, 99, 235, 0.28)',
+                                            boxShadow: `0 16px 32px ${alpha(theme.palette.primary.main, 0.28)}`,
                                         }}
                                     >
                                         {isSubmitting ? 'Ingresando...' : 'Ingresar'}

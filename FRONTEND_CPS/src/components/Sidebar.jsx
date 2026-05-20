@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Chip } from '@mui/material';
 import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth, Circle, VideoCall } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { getDisplayNameFromToken, getRoleFromToken } from '../utils/authIdentity';
 import AuthService from '../services/AuthService';
 
@@ -21,6 +22,7 @@ const normalizeRole = (roleValue) => {
 
 const Sidebar = ({ open }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem('token');
   const rolGuardado = localStorage.getItem('rol');
   const nombreGuardado = localStorage.getItem('nombre') || '';
@@ -169,7 +171,12 @@ const Sidebar = ({ open }) => {
         {menuItems.map((item) => (
           <ListItem disablePadding key={item.text}>
             <ListItemButton
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                if (location.pathname.startsWith('/videoconferencia') && item.path !== location.pathname) {
+                  window.dispatchEvent(new Event('app:leave-videoconference'));
+                }
+                navigate(item.path);
+              }}
               sx={{
                 mb: 0.5,
                 borderRadius: 3,

@@ -54,8 +54,7 @@ public class SeguridadWeb {
             .csrf().disable()
             .authorizeRequests()
                 .requestMatchers("/api/auth/login").permitAll() // La ruta de login es pública
-                // Puedes ir protegiendo tus rutas así:
-                // .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/subtitulos/interno").permitAll()
                 .requestMatchers("/api/**").permitAll() // TEMPORALMENTE abierto para que sigas probando
             .and()
             // Configuramos la gestión de sesiones como STATELESS (sin estado)

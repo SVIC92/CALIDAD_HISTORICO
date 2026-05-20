@@ -77,10 +77,12 @@ public class VideoconferenciaServicio {
             asignarRolASala(sala, usuario, rolAsignado, true);
 
             try {
-                correoServicio.enviarCorreo(
+                correoServicio.enviarCorreoInvitacionVideoconferencia(
                         usuario.getEmail(),
-                        "Invitación a Reunión",
-                        construirMensajeInvitacion(sala, rolAsignado, enlace)
+                        usuario.getNombre(),
+                        sala.getTitulo(),
+                        formatearRolSala(rolAsignado),
+                        enlace
                 );
             } catch (RuntimeException ex) {
                 LOGGER.warn("No se pudo enviar la invitación por correo a {}: {}", usuario.getEmail(), ex.getMessage());
@@ -109,5 +111,17 @@ public class VideoconferenciaServicio {
     private String construirMensajeInvitacion(Videoconferencia sala, RolSala rolAsignado, String enlace) {
         return "Has sido invitado a la reunión '" + sala.getTitulo() + "' con el rol de "
                 + rolAsignado + ".\nÚnete aquí: " + enlace;
+    }
+
+    private String formatearRolSala(RolSala rolSala) {
+        if (rolSala == null) {
+            return "Participante";
+        }
+
+        return switch (rolSala) {
+            case ADMIN -> "Administrador";
+            case PRESENTADOR -> "Presentador";
+            case PARTICIPANTE -> "Participante";
+        };
     }
 }
