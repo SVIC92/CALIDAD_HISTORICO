@@ -1,8 +1,10 @@
 package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.dto.MensajeRequestDto; 
+import com.GestionInscripcionCursos.dto.GifResultadoDto;
 import com.GestionInscripcionCursos.entidades.Mensaje;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.ArchivoServicio;
 import com.GestionInscripcionCursos.servicios.ChatServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
@@ -96,5 +98,14 @@ public class ChatControlador {
         Usuario receptor = usuarioServicio.buscarEmail(authentication.getName());
         chatServicio.marcarMensajesLeidos(idEmisor, receptor.getId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/gifs")
+    public ResponseEntity<?> buscarGifs(@RequestParam(defaultValue = "") String query) {
+        try {
+            return ResponseEntity.ok(chatServicio.buscarGifs(query));
+        } catch (MyException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

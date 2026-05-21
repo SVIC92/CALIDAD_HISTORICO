@@ -28,6 +28,13 @@ const ChatService = {
     const respuesta = await axios.put(`/chat/marcar-leidos/${idEmisor}`);
     return respuesta.data;
   },
+
+  buscarGifs: async (query) => {
+    const respuesta = await axios.get('/chat/gifs', {
+      params: { query },
+    });
+    return respuesta.data;
+  },
 };
 
 export default ChatService;

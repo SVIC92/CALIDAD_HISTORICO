@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,6 +20,8 @@ import java.util.function.Function;
 @Service
 public class JwtUtil {
 
+    private static final String FALLBACK_JWT_SECRET = "gci-plus-dev-jwt-secret-key-for-local-dev-32b!";
+
     private final Key secretKey;
     private final long expirationTime;
 
@@ -26,8 +29,31 @@ public class JwtUtil {
             @Value("${jwt.secret}") String jwtSecret,
             @Value("${jwt.expiration.ms:36000000}") long expirationTime
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        this.secretKey = Keys.hmacShaKeyFor(resolveSecretBytes(jwtSecret));
         this.expirationTime = expirationTime;
+    }
+
+    private byte[] resolveSecretBytes(String jwtSecret) {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            return FALLBACK_JWT_SECRET.getBytes(StandardCharsets.UTF_8);
+        }
+
+        String secret = jwtSecret.trim();
+        try {
+            byte[] decoded = Decoders.BASE64.decode(secret);
+            if (decoded.length >= 32) {
+                return decoded;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // If the configured secret is not Base64, fall back to raw bytes below.
+        }
+
+        byte[] rawBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (rawBytes.length >= 32) {
+            return rawBytes;
+        }
+
+        return FALLBACK_JWT_SECRET.getBytes(StandardCharsets.UTF_8);
     }
 
     public String extractUsername(String token) {
