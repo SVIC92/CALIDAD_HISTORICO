@@ -9,9 +9,17 @@ from pathlib import Path
 import requests
 import vosk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Permite conexiones desde cualquier frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 APP_ENV = os.getenv("APP_ENV", "local").lower()
@@ -38,6 +46,10 @@ if not MODEL_PATH.exists() or not MODEL_PATH.is_dir():
 
 model = vosk.Model(str(MODEL_PATH))
 
+# Ruta raíz para que Hugging Face detecte que la app está viva
+@app.get("/")
+def read_root():
+    return {"status": "API de transcripción Vosk funcionando"}
 
 async def enviar_a_spring_boot(payload: dict[str, str]) -> None:
     try:

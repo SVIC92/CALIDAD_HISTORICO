@@ -33,6 +33,11 @@ const VideoconferenciaService = {
     });
     return respuesta.data;
   },
+
+  listarParticipantes: async (salaUuid) => {
+    const respuesta = await axios.get(`/videoconferencias/${salaUuid}/participantes`);
+    return respuesta.data;
+  },
 };
 
 export default VideoconferenciaService;

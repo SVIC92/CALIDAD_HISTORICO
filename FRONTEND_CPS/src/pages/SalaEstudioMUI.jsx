@@ -55,6 +55,118 @@ const getWsUrl = () => {
 
 const normalizeRol = (rol) => String(rol || '').replace('ROLE_', '').toUpperCase();
 
+const formatearRolSalaVisible = (rol) => {
+    switch (normalizeRol(rol)) {
+        case 'ADMIN':
+            return 'Administrador';
+        case 'PRESENTADOR':
+            return 'Presentador';
+        case 'PARTICIPANTE':
+        default:
+            return 'Participante';
+    }
+};
+
+const normalizarParticipanteSala = (participante, perfilActualId) => {
+    const usuarioId = participante?.usuarioId || participante?.id || '';
+
+    return {
+        id: usuarioId,
+        nombre: participante?.nombreUsuario || participante?.nombre || participante?.displayName || participante?.email || 'Usuario',
+        email: participante?.email || '',
+        rol: normalizeRol(participante?.rolSala || participante?.rol || (usuarioId && usuarioId === perfilActualId ? 'ADMIN' : 'PARTICIPANTE')),
+        invitado: Boolean(participante?.invitado),
+        dentroDeSala: Boolean(participante?.dentroDeSala),
+    };
+};
+
+const obtenerIdParticipanteJitsi = (participante) => {
+    if (!participante) return '';
+
+    return String(
+        participante.participantId
+        || participante.id
+        || participante.userId
+        || participante.email
+        || participante.displayName
+        || participante.name
+        || ''
+    );
+};
+
+const normalizarParticipanteJitsi = (participante) => {
+    const id = obtenerIdParticipanteJitsi(participante);
+    if (!id) return null;
+
+    return {
+        id,
+        nombre: participante?.displayName || participante?.name || 'Usuario',
+        email: participante?.email || '',
+        rol: 'PARTICIPANTE',
+        invitado: false,
+        dentroDeSala: true,
+    };
+};
+
+const obtenerToolbarPorRolSala = (rolSala) => {
+    switch (normalizeRol(rolSala)) {
+        case 'ADMIN':
+            return undefined;
+        case 'PRESENTADOR':
+            return [
+                'microphone',
+                'camera',
+                'desktop',
+                'chat',
+                'hangup',
+            ];
+        default:
+            return [
+                'chat',
+                'hangup',
+            ];
+    }
+};
+
+const obtenerConfigJitsiPorRolSala = (rolSala) => {
+    const rolNormalizado = normalizeRol(rolSala);
+
+    if (rolNormalizado === 'ADMIN') {
+        return {
+            startWithAudioMuted: false,
+            startWithVideoMuted: false,
+            prejoinPageEnabled: false,
+        };
+    }
+
+    if (rolNormalizado === 'PRESENTADOR') {
+        return {
+            startWithAudioMuted: false,
+            startWithVideoMuted: false,
+            prejoinPageEnabled: false,
+            remoteVideoMenu: {
+                disableKick: true,
+                disableMute: true,
+                disableGrantModerator: true,
+            },
+            disableRemoteMute: true,
+        };
+    }
+
+    return {
+        startWithAudioMuted: true,
+        startWithVideoMuted: true,
+        prejoinPageEnabled: false,
+        remoteVideoMenu: {
+            disableKick: true,
+            disableMute: true,
+            disableGrantModerator: true,
+        },
+        disableRemoteMute: true,
+        disableTileView: false,
+    };
+};
+
 const JITSI_EXTERNAL_API_URL = 'https://meet.jit.si/external_api.js';
 let jitsiExternalApiLoader = null;
 const EMPTY_CONNECTED_USERS = [];
@@ -120,6 +232,8 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
     const [rosterAnchorEl, setRosterAnchorEl] = useState(null);
     const [miRolEnSala, setMiRolEnSala] = useState('PARTICIPANTE');
     const [rolesUsuarios, setRolesUsuarios] = useState({});
+    const [participantesSala, setParticipantesSala] = useState([]);
+    const [participantesJitsi, setParticipantesJitsi] = useState([]);
 
     const openRoster = Boolean(rosterAnchorEl);
     const handleOpenRoster = (event) => {
@@ -131,7 +245,8 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
 
     const rolUsuario = useMemo(() => normalizeRol(perfil?.rol), [perfil?.rol]);
     const rolSala = rolUsuario === 'ADMIN' ? 'ADMIN' : 'PARTICIPANTE';
-    const esModerador = miRolEnSala === 'ADMIN';
+    const rolSalaEnVivo = useMemo(() => normalizeRol(miRolEnSala), [miRolEnSala]);
+    const esModerador = rolSalaEnVivo === 'ADMIN';
 
     const [videoId, setVideoId] = useState('4xDzrJKXOOY');
     const [inputVideoId, setInputVideoId] = useState('4xDzrJKXOOY');
@@ -196,15 +311,51 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
     }, [usuariosConectadosExternos, perfil?.id, miRolEnSala]);
 
     useEffect(() => {
-        if (esModerador) {
-            setEnSalaDeEspera(false);
-            setAccesoRechazado(false);
-            return;
-        }
+        if (!perfil?.id || participantesSala.length === 0) return;
 
+        const participanteActual = participantesSala.find((participante) => {
+            const idParticipante = String(participante?.usuarioId || participante?.id || '').trim();
+            const emailParticipante = String(participante?.email || '').trim().toLowerCase();
+            const idPerfil = String(perfil?.id || '').trim();
+            const emailPerfil = String(perfil?.email || '').trim().toLowerCase();
+
+            return (idParticipante && idParticipante === idPerfil)
+                || (emailParticipante && emailParticipante === emailPerfil);
+        });
+
+        if (!participanteActual?.rolSala) return;
+
+        const rolNormalizado = normalizeRol(participanteActual.rolSala);
+        setMiRolEnSala((rolAnterior) => (rolAnterior === rolNormalizado ? rolAnterior : rolNormalizado));
+    }, [participantesSala, perfil?.id, perfil?.email]);
+
+    useEffect(() => {
+        if (!salaUuid || !perfil?.id) return;
+
+        setEnSalaDeEspera(rolUsuario !== 'ADMIN');
         setAccesoRechazado(false);
-        setEnSalaDeEspera(true);
-    }, [esModerador]);
+        setSolicitudesPendientes([]);
+        setOpenDialogSolicitud(false);
+        setRolesUsuarios({});
+        setParticipantesSala([]);
+        setParticipantesJitsi([]);
+    }, [salaUuid, perfil?.id]);
+
+    const cargarParticipantesSala = useCallback(async () => {
+        if (!salaUuid) return;
+
+        try {
+            const participantes = await VideoconferenciaService.listarParticipantes(salaUuid);
+            setParticipantesSala(Array.isArray(participantes) ? participantes : []);
+        } catch (error) {
+            console.error('No se pudo cargar el roster de participantes de la sala:', error);
+            setParticipantesSala([]);
+        }
+    }, [salaUuid]);
+
+    useEffect(() => {
+        cargarParticipantesSala();
+    }, [cargarParticipantesSala]);
 
     const aplicarComandoReproductor = useCallback((datos) => {
         if (!reproductorRef.current) return;
@@ -382,6 +533,15 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                     ejecutarComandoSincronizado(datos);
                 });
 
+                client.subscribe(`/topic/sala/${salaUuid}/participantes`, (mensaje) => {
+                    try {
+                        const participantes = JSON.parse(mensaje.body);
+                        setParticipantesSala(Array.isArray(participantes) ? participantes : []);
+                    } catch (error) {
+                        console.error('No se pudo procesar el roster de participantes:', error);
+                    }
+                });
+
                 if (esModerador) {
                     client.subscribe(`/topic/sala/${salaUuid}/lobby-admin`, (mensaje) => {
                         try {
@@ -471,33 +631,12 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
 
                 jitsiContainerRef.current.innerHTML = '';
 
-                const opcionesConfig = esModerador
-                    ? {
-                        startWithAudioMuted: true,
-                        startWithVideoMuted: false,
-                        prejoinPageEnabled: false,
-                    }
-                    : {
-                        startWithAudioMuted: true,
-                        startWithVideoMuted: false,
-                        prejoinPageEnabled: false,
-                        remoteVideoMenu: {
-                            disableKick: true,
-                            disableMute: true,
-                            disableGrantModerator: true
-                        },
-                        disableRemoteMute: true,
-                    };
+                const opcionesConfig = obtenerConfigJitsiPorRolSala(rolSalaEnVivo);
 
-                const opcionesInterfaz = esModerador
-                    ? {}
-                    : {
-                        TOOLBAR_BUTTONS: [
-                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                            'fodeviceselection', 'hangup', 'profile', 'chat', 'raisehand',
-                            'videoquality', 'filmstrip', 'tileview'
-                        ]
-                    };
+                const toolbarButtons = obtenerToolbarPorRolSala(rolSalaEnVivo);
+                const opcionesInterfaz = toolbarButtons
+                    ? { TOOLBAR_BUTTONS: toolbarButtons }
+                    : {};
 
                 const apiJitsi = new JitsiExternalAPI('meet.jit.si', {
                     roomName: salaUuid,
@@ -512,6 +651,22 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                 });
 
                 apiJitsi.addEventListener('videoConferenceJoined', () => {
+                    setParticipantesJitsi((prev) => {
+                        const selfParticipant = normalizarParticipanteJitsi({
+                            participantId: perfil?.id || perfil?.email || perfil?.nombre,
+                            displayName: perfil?.nombre || usuarioAutenticado?.nombre || 'Usuario',
+                            email: perfil?.email || usuarioAutenticado?.email || '',
+                        });
+
+                        if (!selfParticipant) return prev;
+
+                        if (prev.some((item) => item.id === selfParticipant.id)) {
+                            return prev;
+                        }
+
+                        return [...prev, selfParticipant];
+                    });
+
                     if (esModerador) {
                         try {
                             apiJitsi.executeCommand('toggleLobby', true);
@@ -519,6 +674,30 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                             // Si la versión de Jitsi no soporta el comando, seguimos sin bloquear la sala.
                         }
                     }
+                });
+
+                apiJitsi.addEventListener('participantJoined', (evento) => {
+                    const participante = normalizarParticipanteJitsi(evento?.participant || evento);
+                    if (!participante) return;
+
+                    setParticipantesJitsi((prev) => {
+                        if (prev.some((item) => item.id === participante.id)) {
+                            return prev;
+                        }
+
+                        return [...prev, participante];
+                    });
+                });
+
+                apiJitsi.addEventListener('participantLeft', (evento) => {
+                    const participanteId = obtenerIdParticipanteJitsi(evento?.participant || evento);
+                    if (!participanteId) return;
+
+                    setParticipantesJitsi((prev) => prev.filter((item) => item.id !== participanteId));
+                });
+
+                apiJitsi.addEventListener('videoConferenceLeft', () => {
+                    setParticipantesJitsi([]);
                 });
 
                 jitsiApiRef.current = apiJitsi;
@@ -535,8 +714,9 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
         return () => {
             isMounted = false;
             limpiarJitsi();
+            setParticipantesJitsi([]);
         };
-    }, [enSalaDeEspera, salaUuid, perfil?.nombre, usuarioAutenticado?.nombre, esModerador, limpiarJitsi]);
+    }, [enSalaDeEspera, salaUuid, perfil?.nombre, usuarioAutenticado?.nombre, rolSalaEnVivo, esModerador, limpiarJitsi]);
 
     useEffect(() => {
         const handleLeaveVideoconference = () => {
@@ -624,19 +804,59 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
     };
 
     const participantesConectados = useMemo(() => {
-        if (usuariosConectadosExternos.length > 0) {
-            return usuariosConectadosExternos;
+        if (participantesJitsi.length === 0) {
+            return [];
         }
 
-        if (perfil?.id) {
-            return [{
-                id: perfil.id,
-                nombre: perfil.nombre || usuarioAutenticado?.nombre || 'Usuario',
-            }];
-        }
+        const perfilIdNormalizado = String(perfil?.id || '').trim().toLowerCase();
+        const perfilEmailNormalizado = String(perfil?.email || '').trim().toLowerCase();
+        const perfilNombreNormalizado = String(perfil?.nombre || usuarioAutenticado?.nombre || '').trim().toLowerCase();
 
-        return [];
-    }, [usuariosConectadosExternos, perfil?.id, perfil?.nombre, usuarioAutenticado?.nombre]);
+        const participantePersistidoDelPerfil = participantesSala.find((participante) => {
+            const idPersistido = String(participante?.usuarioId || participante?.id || '').trim().toLowerCase();
+            const emailPersistido = String(participante?.email || '').trim().toLowerCase();
+            const nombrePersistido = String(participante?.nombreUsuario || participante?.nombre || '').trim().toLowerCase();
+
+            return (perfilIdNormalizado && perfilIdNormalizado === idPersistido)
+                || (perfilEmailNormalizado && perfilEmailNormalizado === emailPersistido)
+                || (perfilNombreNormalizado && perfilNombreNormalizado === nombrePersistido)
+                || (perfilNombreNormalizado && perfilNombreNormalizado === emailPersistido);
+        });
+
+        return participantesJitsi
+            .map((participanteJitsi) => {
+                const candidatoId = String(participanteJitsi?.id || '').trim().toLowerCase();
+                const candidatoEmail = String(participanteJitsi?.email || '').trim().toLowerCase();
+                const candidatoNombre = String(participanteJitsi?.nombre || '').trim().toLowerCase();
+
+                const coincideConPerfilActual = Boolean(
+                    (perfilIdNormalizado && (candidatoId === perfilIdNormalizado || candidatoEmail === perfilIdNormalizado || candidatoNombre === perfilIdNormalizado))
+                    || (perfilEmailNormalizado && (candidatoId === perfilEmailNormalizado || candidatoEmail === perfilEmailNormalizado || candidatoNombre === perfilEmailNormalizado))
+                    || (perfilNombreNormalizado && (candidatoId === perfilNombreNormalizado || candidatoEmail === perfilNombreNormalizado || candidatoNombre === perfilNombreNormalizado))
+                );
+
+                const participantePersistido = participantesSala.find((participante) => {
+                    const idPersistido = String(participante?.usuarioId || participante?.id || '').trim().toLowerCase();
+                    const emailPersistido = String(participante?.email || '').trim().toLowerCase();
+                    const nombrePersistido = String(participante?.nombreUsuario || participante?.nombre || '').trim().toLowerCase();
+
+                    return (candidatoId && (candidatoId === idPersistido || candidatoId === emailPersistido || candidatoId === nombrePersistido))
+                        || (candidatoEmail && (candidatoEmail === idPersistido || candidatoEmail === emailPersistido || candidatoEmail === nombrePersistido))
+                        || (candidatoNombre && (candidatoNombre === idPersistido || candidatoNombre === emailPersistido || candidatoNombre === nombrePersistido));
+                });
+
+                if (coincideConPerfilActual && participantePersistidoDelPerfil) {
+                    return normalizarParticipanteSala(participantePersistidoDelPerfil, perfil?.id);
+                }
+
+                if (participantePersistido) {
+                    return normalizarParticipanteSala(participantePersistido, perfil?.id);
+                }
+
+                return normalizarParticipanteSala(participanteJitsi, perfil?.id);
+            })
+            .filter((participante) => Boolean(participante?.id));
+    }, [participantesSala, participantesJitsi, perfil?.id]);
 
     if (!salaUuid) {
         return (
@@ -1003,7 +1223,11 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                         {participantesConectados.map((usuario) => {
                             if (!usuario?.id) return null;
 
-                            const rolActual = rolesUsuarios[usuario.id] || (usuario.id === perfil?.id ? miRolEnSala : 'PARTICIPANTE');
+                            const rolActual = normalizeRol(
+                                rolesUsuarios[usuario.id]
+                                || usuario.rol
+                                || (usuario.id === perfil?.id ? miRolEnSala : 'PARTICIPANTE')
+                            );
                             const nombreVisible = usuario.nombre || usuario.email || 'Usuario';
                             const inicial = String(nombreVisible).trim().charAt(0).toUpperCase() || '?';
                             const chipColor = rolActual === 'ADMIN' ? 'error' : rolActual === 'PRESENTADOR' ? 'warning' : 'default';
@@ -1069,7 +1293,7 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                                                     {usuario.email || 'Sin correo visible'}
                                                 </Typography>
                                                 <Chip
-                                                    label={rolActual}
+                                                    label={formatearRolSalaVisible(rolActual)}
                                                     size="small"
                                                     color={chipColor}
                                                     variant={rolActual === 'PARTICIPANTE' ? 'outlined' : 'filled'}
@@ -1094,9 +1318,9 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                                                             },
                                                         }}
                                                     >
-                                                        <MenuItem value="PARTICIPANTE">Estudiante</MenuItem>
+                                                        <MenuItem value="PARTICIPANTE">Participante</MenuItem>
                                                         <MenuItem value="PRESENTADOR">Presentador</MenuItem>
-                                                        <MenuItem value="ADMIN">Moderador</MenuItem>
+                                                        <MenuItem value="ADMIN">Administrador</MenuItem>
                                                     </Select>
                                                 </FormControl>
                                             ) : (
@@ -1219,7 +1443,7 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                                         >
                                             <MenuItem value="PARTICIPANTE">Participante</MenuItem>
                                             <MenuItem value="PRESENTADOR">Presentador</MenuItem>
-                                            <MenuItem value="ADMIN">Co-administrador</MenuItem>
+                                            <MenuItem value="ADMIN">Administrador</MenuItem>
                                         </Select>
                                     </FormControl>
 

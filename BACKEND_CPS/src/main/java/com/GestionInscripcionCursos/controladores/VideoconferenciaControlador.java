@@ -1,5 +1,6 @@
 package com.GestionInscripcionCursos.controladores;
 
+import com.GestionInscripcionCursos.dto.VideoconferenciaParticipanteDto;
 import com.GestionInscripcionCursos.entidades.*;
 import com.GestionInscripcionCursos.repositorios.VideoconferenciaRepositorio;
 import com.GestionInscripcionCursos.servicios.VideoconferenciaServicio;
@@ -21,6 +22,11 @@ public class VideoconferenciaControlador {
     @GetMapping("/publicas")
     public List<Videoconferencia> listarPublicasDisponibles() {
         return videoRepo.findSalasPublicasDisponibles();
+    }
+
+    @GetMapping("/{salaUuid}/participantes")
+    public ResponseEntity<List<VideoconferenciaParticipanteDto>> listarParticipantes(@PathVariable String salaUuid) {
+        return ResponseEntity.ok(videoServicio.listarParticipantes(salaUuid));
     }
 
     // Aquí puedes capturar el usuario actual autenticado desde tu lógica de sesión o JWT

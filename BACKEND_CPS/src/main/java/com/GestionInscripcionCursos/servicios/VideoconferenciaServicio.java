@@ -1,10 +1,13 @@
 package com.GestionInscripcionCursos.servicios;
 
+import com.GestionInscripcionCursos.dto.VideoconferenciaParticipanteDto;
 import com.GestionInscripcionCursos.entidades.*;
 import com.GestionInscripcionCursos.enumeraciones.RolSala;
 import com.GestionInscripcionCursos.repositorios.*;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -90,6 +93,57 @@ public class VideoconferenciaServicio {
         }
     }
 
+    public List<VideoconferenciaParticipanteDto> listarParticipantes(String salaUuid) {
+        if (salaUuid == null || salaUuid.isBlank()) {
+            throw new IllegalArgumentException("El identificador de la sala es obligatorio");
+        }
+
+        videoRepo.findBySalaUuid(salaUuid)
+                .orElseThrow(() -> new IllegalArgumentException("Sala no encontrada"));
+
+        return participanteRepo.findByVideoconferenciaSalaUuid(salaUuid).stream()
+                .sorted(Comparator.comparing(
+                        participante -> participante.getUsuario() != null ? participante.getUsuario().getNombre() : "",
+                        String.CASE_INSENSITIVE_ORDER))
+                .map(this::mapearParticipante)
+                .collect(Collectors.toList());
+    }
+
+    public VideoconferenciaParticipanteDto cambiarRolParticipanteEnSala(String salaUuid, String usuarioId, String nuevoRol) {
+        if (salaUuid == null || salaUuid.isBlank()) {
+            throw new IllegalArgumentException("El identificador de la sala es obligatorio");
+        }
+        if (usuarioId == null || usuarioId.isBlank()) {
+            throw new IllegalArgumentException("El usuario a actualizar es obligatorio");
+        }
+        if (nuevoRol == null || nuevoRol.isBlank()) {
+            throw new IllegalArgumentException("El nuevo rol es obligatorio");
+        }
+
+        Videoconferencia sala = videoRepo.findBySalaUuid(salaUuid)
+                .orElseThrow(() -> new IllegalArgumentException("Sala no encontrada"));
+
+        Usuario usuario = usuarioRepo.findById(usuarioId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        RolSala rolSala = RolSala.valueOf(nuevoRol.trim().toUpperCase());
+        VideoconferenciaParticipante participante = participanteRepo
+                .findByVideoconferenciaSalaUuidAndUsuarioId(salaUuid, usuarioId)
+                .orElseGet(VideoconferenciaParticipante::new);
+
+        boolean eraInvitado = participante.getId() != null
+                ? participante.isInvitado()
+                : (sala.getCreador() == null || !usuarioId.equals(sala.getCreador().getId()));
+
+        participante.setVideoconferencia(sala);
+        participante.setUsuario(usuario);
+        participante.setRolSala(rolSala);
+        participante.setInvitado(eraInvitado);
+        participante.setDentroDeSala(true);
+
+        return mapearParticipante(participanteRepo.save(participante));
+    }
+
     private void asignarRolASala(Videoconferencia sala, Usuario usuario, RolSala rol, boolean esInvitado) {
         VideoconferenciaParticipante p = participanteRepo.findByVideoconferenciaSalaUuidAndUsuarioId(sala.getSalaUuid(), usuario.getId())
                 .orElse(new VideoconferenciaParticipante());
@@ -123,5 +177,17 @@ public class VideoconferenciaServicio {
             case PRESENTADOR -> "Presentador";
             case PARTICIPANTE -> "Participante";
         };
+    }
+
+    private VideoconferenciaParticipanteDto mapearParticipante(VideoconferenciaParticipante participante) {
+        VideoconferenciaParticipanteDto dto = new VideoconferenciaParticipanteDto();
+        dto.setId(participante.getId());
+        dto.setUsuarioId(participante.getUsuario() != null ? participante.getUsuario().getId() : null);
+        dto.setNombreUsuario(participante.getUsuario() != null ? participante.getUsuario().getNombre() : null);
+        dto.setEmail(participante.getUsuario() != null ? participante.getUsuario().getEmail() : null);
+        dto.setRolSala(participante.getRolSala() != null ? participante.getRolSala().name() : RolSala.PARTICIPANTE.name());
+        dto.setInvitado(participante.isInvitado());
+        dto.setDentroDeSala(participante.isDentroDeSala());
+        return dto;
     }
 }
