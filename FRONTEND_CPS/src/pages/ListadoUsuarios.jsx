@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Alert, Button,
+  Box, Typography, TextField, InputAdornment, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Stack,
 } from '@mui/material';
 import { ArrowBack, Search, Add, Edit, Block, CheckCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import FloatingConfirmModal from '../components/FloatingConfirmModal';
+import FloatingMessageModal from '../components/FloatingMessageModal';
 import UsuarioService from '../services/UsuarioService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
 import axios from '../API/axios';
@@ -48,6 +50,7 @@ const ListadoUsuarios = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUsuarioId, setSelectedUsuarioId] = useState('');
   const [formData, setFormData] = useState(initialForm);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const navigate = useNavigate();
 
@@ -111,19 +114,25 @@ const ListadoUsuarios = () => {
     }
 
     const accionTexto = activar ? 'activar' : 'desactivar';
-    const confirmar = window.confirm(`¿Estás seguro de ${accionTexto} el usuario "${row.nombre}"?`);
-    if (!confirmar) return;
 
-    try {
-      setIsSubmitting(true);
-      await axios.patch(`/admin/usuarios/${row.id}/${accionTexto}`);
-      await fetchUsuarios();
-      setSuccessMsg(`Usuario ${activar ? 'activado' : 'desactivado'} correctamente.`);
-    } catch (error) {
-      setErrorMsg(extractBackendValidationMessage(error, `No se pudo ${accionTexto} el usuario.`));
-    } finally {
-      setIsSubmitting(false);
-    }
+    setConfirmDialog({
+      title: `${activar ? 'Activar' : 'Desactivar'} usuario`,
+      message: `¿Estás seguro de ${accionTexto} el usuario "${row.nombre}"?`,
+      confirmText: activar ? 'Activar' : 'Desactivar',
+      severity: activar ? 'success' : 'warning',
+      onConfirm: async () => {
+        try {
+          setIsSubmitting(true);
+          await axios.patch(`/admin/usuarios/${row.id}/${accionTexto}`);
+          await fetchUsuarios();
+          setSuccessMsg(`Usuario ${activar ? 'activado' : 'desactivado'} correctamente.`);
+        } catch (error) {
+          setErrorMsg(extractBackendValidationMessage(error, `No se pudo ${accionTexto} el usuario.`));
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -207,8 +216,21 @@ const ListadoUsuarios = () => {
         </Button>
       </Box>
 
-      {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
-      {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
+      <FloatingMessageModal
+        open={Boolean(errorMsg)}
+        severity="error"
+        title="Error"
+        message={errorMsg}
+        onClose={() => setErrorMsg('')}
+      />
+
+      <FloatingMessageModal
+        open={Boolean(successMsg)}
+        severity="success"
+        title="Operación completada"
+        message={successMsg}
+        onClose={() => setSuccessMsg('')}
+      />
 
       <TextField
         fullWidth
@@ -251,6 +273,22 @@ const ListadoUsuarios = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <FloatingConfirmModal
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title || 'Confirmar acción'}
+        message={confirmDialog?.message || ''}
+        confirmText={confirmDialog?.confirmText || 'Confirmar'}
+        severity={confirmDialog?.severity || 'warning'}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={async () => {
+          const action = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (action) {
+            await action();
+          }
+        }}
+      />
     </Box>
   );
 };

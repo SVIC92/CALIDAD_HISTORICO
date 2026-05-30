@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Fab,
   Menu,
@@ -7,6 +8,7 @@ import {
   ListItemText,
   Divider,
   Tooltip,
+  Portal,
 } from '@mui/material';
 import {
   AccessibilityNew,
@@ -35,9 +37,31 @@ import { useUISettings } from '../context/UISettingsContext';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const FAB_SIZE = 56;
+const FAB_MARGIN = 24;
+
+const getInitialFloatingPosition = () => {
+  if (typeof window === 'undefined') {
+    return { x: FAB_MARGIN, y: FAB_MARGIN };
+  }
+
+  return {
+    x: Math.max(FAB_MARGIN, window.innerWidth - FAB_SIZE - FAB_MARGIN),
+    y: Math.max(FAB_MARGIN, window.innerHeight - FAB_SIZE - FAB_MARGIN),
+  };
+};
+
 const AccessibilityFloatingMenu = () => {
   const { preferences, updatePreferences, resetAllPreferences } = useUISettings();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [floatingPosition, setFloatingPosition] = useState(getInitialFloatingPosition);
+  const dragStateRef = useRef({
+    dragging: false,
+    pointerId: null,
+    offsetX: 0,
+    offsetY: 0,
+    moved: false,
+  });
 
   const open = Boolean(anchorEl);
 
@@ -93,6 +117,73 @@ const AccessibilityFloatingMenu = () => {
 
   const handleOpen = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setFloatingPosition((prev) => ({
+        x: clamp(prev.x, FAB_MARGIN, Math.max(FAB_MARGIN, window.innerWidth - FAB_SIZE - FAB_MARGIN)),
+        y: clamp(prev.y, FAB_MARGIN, Math.max(FAB_MARGIN, window.innerHeight - FAB_SIZE - FAB_MARGIN)),
+      }));
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handlePointerDown = (event) => {
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    dragStateRef.current = {
+      dragging: true,
+      pointerId: event.pointerId,
+      offsetX: event.clientX - floatingPosition.x,
+      offsetY: event.clientY - floatingPosition.y,
+      moved: false,
+    };
+
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handlePointerMove = (event) => {
+    const dragState = dragStateRef.current;
+    if (!dragState.dragging || dragState.pointerId !== event.pointerId) return;
+
+    const nextX = clamp(event.clientX - dragState.offsetX, FAB_MARGIN, Math.max(FAB_MARGIN, window.innerWidth - FAB_SIZE - FAB_MARGIN));
+    const nextY = clamp(event.clientY - dragState.offsetY, FAB_MARGIN, Math.max(FAB_MARGIN, window.innerHeight - FAB_SIZE - FAB_MARGIN));
+
+    if (Math.abs(nextX - floatingPosition.x) > 2 || Math.abs(nextY - floatingPosition.y) > 2) {
+      dragState.moved = true;
+    }
+
+    setFloatingPosition({ x: nextX, y: nextY });
+  };
+
+  const handlePointerUp = (event) => {
+    const dragState = dragStateRef.current;
+    if (!dragState.dragging || dragState.pointerId !== event.pointerId) return;
+
+    dragStateRef.current = {
+      dragging: false,
+      pointerId: null,
+      offsetX: 0,
+      offsetY: 0,
+      moved: dragState.moved,
+    };
+  };
+
+  const handleClickFloatingButton = (event) => {
+    if (dragStateRef.current.moved) {
+      dragStateRef.current.moved = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    handleOpen(event);
+  };
 
   const cycleFontScale = () => {
     updatePreferences((prev) => {
@@ -200,24 +291,37 @@ const AccessibilityFloatingMenu = () => {
     handleClose();
   };
 
+  const floatingButton = (
+    <Tooltip title="Accesibilidad" placement="left">
+      <Fab
+        color="primary"
+        aria-label="Accesibilidad"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onClick={handleClickFloatingButton}
+        sx={{
+          position: 'fixed !important',
+          left: `${floatingPosition.x}px !important`,
+          top: `${floatingPosition.y}px !important`,
+          right: 'auto !important',
+          bottom: 'auto !important',
+          zIndex: (theme) => theme.zIndex.drawer + 3000,
+          boxShadow: '0 16px 36px rgba(37, 99, 235, 0.35)',
+          cursor: 'grab',
+          touchAction: 'none',
+          userSelect: 'none',
+        }}
+      >
+        <AccessibilityNew />
+      </Fab>
+    </Tooltip>
+  );
+
   return (
     <>
-      <Tooltip title="Accesibilidad" placement="left">
-        <Fab
-          color="primary"
-          aria-label="Accesibilidad"
-          onClick={handleOpen}
-          sx={{
-            position: 'fixed',
-            right: 24,
-            bottom: 24,
-            zIndex: (theme) => theme.zIndex.drawer + 3000,
-            boxShadow: '0 16px 36px rgba(37, 99, 235, 0.35)',
-          }}
-        >
-          <AccessibilityNew />
-        </Fab>
-      </Tooltip>
+      {createPortal(floatingButton, document.body)}
 
       <Menu
         anchorEl={anchorEl}

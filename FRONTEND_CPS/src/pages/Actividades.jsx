@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -15,6 +14,8 @@ import {
 import { Add, ArrowBack, Delete, Edit, Assessment } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import FloatingConfirmModal from '../components/FloatingConfirmModal';
+import FloatingMessageModal from '../components/FloatingMessageModal';
 import ActividadService from '../services/ActividadService';
 import CursoService from '../services/CursoService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
@@ -85,6 +86,7 @@ const Actividades = () => {
   const [actividades, setActividades] = useState([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const [openModal, setOpenModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -199,17 +201,22 @@ const Actividades = () => {
     const id = actividad?.id || actividad?._id;
     if (!id) return;
 
-    const confirm = window.confirm(`¿Eliminar la actividad "${actividad.nombre}"?`);
-    if (!confirm) return;
-
-    try {
-      await ActividadService.eliminar(id);
-      setSuccessMsg('Actividad eliminada correctamente.');
-      await fetchActividades(selectedCursoId);
-    } catch (error) {
-      console.error('Error al eliminar actividad', error);
-      setErrorMsg('No se pudo eliminar la actividad.');
-    }
+    setConfirmDialog({
+      title: 'Eliminar actividad',
+      message: `¿Eliminar la actividad "${actividad.nombre}"?`,
+      confirmText: 'Eliminar',
+      severity: 'error',
+      onConfirm: async () => {
+        try {
+          await ActividadService.eliminar(id);
+          setSuccessMsg('Actividad eliminada correctamente.');
+          await fetchActividades(selectedCursoId);
+        } catch (error) {
+          console.error('Error al eliminar actividad', error);
+          setErrorMsg('No se pudo eliminar la actividad.');
+        }
+      },
+    });
   };
 
   const handleSubmit = async () => {
@@ -360,17 +367,21 @@ const Actividades = () => {
         </Typography>
       )}
 
-      {errorMsg && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(errorMsg)}
+        severity="error"
+        title="Error"
+        message={errorMsg}
+        onClose={() => setErrorMsg('')}
+      />
 
-      {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(successMsg)}
+        severity="success"
+        title="Operación completada"
+        message={successMsg}
+        onClose={() => setSuccessMsg('')}
+      />
 
       <DataTable
         columns={columns}
@@ -446,6 +457,22 @@ const Actividades = () => {
           </DialogActions>
         </Dialog>
       )}
+
+      <FloatingConfirmModal
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title || 'Confirmar acción'}
+        message={confirmDialog?.message || ''}
+        confirmText={confirmDialog?.confirmText || 'Confirmar'}
+        severity={confirmDialog?.severity || 'warning'}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={async () => {
+          const action = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (action) {
+            await action();
+          }
+        }}
+      />
     </Box>
   );
 };

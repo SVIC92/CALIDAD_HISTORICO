@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -15,6 +14,8 @@ import {
 import { Add, ArrowBack, Delete, Edit, Search } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import FloatingConfirmModal from '../components/FloatingConfirmModal';
+import FloatingMessageModal from '../components/FloatingMessageModal';
 import CarreraService from '../services/CarreraService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
 
@@ -42,6 +43,7 @@ const Carreras = () => {
   const [selectedCarreraId, setSelectedCarreraId] = useState('');
   const [formData, setFormData] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const cargarCarreras = useCallback(async () => {
     try {
@@ -148,18 +150,23 @@ const Carreras = () => {
       return;
     }
 
-    const confirmar = window.confirm(`¿Eliminar la carrera "${row.nombre}"?`);
-    if (!confirmar) return;
-
-    try {
-      setErrorMsg('');
-      setSuccessMsg('');
-      await CarreraService.eliminar(row.id);
-      await cargarCarreras();
-      setSuccessMsg('Carrera eliminada correctamente.');
-    } catch (error) {
-      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar la carrera.'));
-    }
+    setConfirmDialog({
+      title: 'Eliminar carrera',
+      message: `¿Eliminar la carrera "${row.nombre}"?`,
+      confirmText: 'Eliminar',
+      severity: 'error',
+      onConfirm: async () => {
+        try {
+          setErrorMsg('');
+          setSuccessMsg('');
+          await CarreraService.eliminar(row.id);
+          await cargarCarreras();
+          setSuccessMsg('Carrera eliminada correctamente.');
+        } catch (error) {
+          setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar la carrera.'));
+        }
+      },
+    });
   };
 
   const filteredData = useMemo(() => {
@@ -202,17 +209,21 @@ const Carreras = () => {
         </Button>
       </Stack>
 
-      {errorMsg && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(errorMsg)}
+        severity="error"
+        title="Error"
+        message={errorMsg}
+        onClose={() => setErrorMsg('')}
+      />
 
-      {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(successMsg)}
+        severity="success"
+        title="Operación completada"
+        message={successMsg}
+        onClose={() => setSuccessMsg('')}
+      />
 
       <TextField
         fullWidth
@@ -280,6 +291,22 @@ const Carreras = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <FloatingConfirmModal
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title || 'Confirmar acción'}
+        message={confirmDialog?.message || ''}
+        confirmText={confirmDialog?.confirmText || 'Confirmar'}
+        severity={confirmDialog?.severity || 'warning'}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={async () => {
+          const action = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (action) {
+            await action();
+          }
+        }}
+      />
     </Box>
   );
 };

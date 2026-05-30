@@ -448,6 +448,18 @@ public class CursoServicio {
         return horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(idCurso);
     }
 
+    @Transactional
+    public void eliminarHorario(String idCurso, String idHorario) throws MyException {
+        HorarioSesion horario = horarioSesionRepositorio.findById(idHorario)
+                .orElseThrow(() -> new MyException("Horario no encontrado"));
+
+        if (horario.getCurso() == null || horario.getCurso().getId() == null || !horario.getCurso().getId().equals(idCurso)) {
+            throw new MyException("El horario no pertenece al curso indicado");
+        }
+
+        horarioSesionRepositorio.delete(horario);
+    }
+
     public List<CursoPrerequisito> listarPrerequisitosCurso(String idCurso) {
         return cursoPrerequisitoRepositorio.findByCursoId(idCurso);
     }

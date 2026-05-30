@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Alert,
   Box,
   Typography,
   Button,
@@ -11,10 +10,14 @@ import {
   DialogContent,
   DialogActions,
   MenuItem,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, ArrowBack, HowToReg, CalendarMonth, DateRange} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import FloatingConfirmModal from '../components/FloatingConfirmModal';
+import FloatingMessageModal from '../components/FloatingMessageModal';
 import CursoService from '../services/CursoService';
 import ProfesorService from '../services/ProfesorService';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
@@ -55,6 +58,7 @@ const CursosListado = () => {
   const canSelfEnroll = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ALUMNO';
   const [openHorarioModal, setOpenHorarioModal] = useState(false);
   const [horariosCurso, setHorariosCurso] = useState([]);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [horarioFormData, setHorarioFormData] = useState({
     diaSemana: 'Lunes',
     horaInicio: '',
@@ -419,21 +423,24 @@ const CursosListado = () => {
       return;
     }
 
-    const confirmar = window.confirm(`¿Eliminar el curso "${curso.nombre}"?`);
-    if (!confirmar) {
-      return;
-    }
-
-    try {
-      setErrorMsg('');
-      setSuccessMsg('');
-      await CursoService.eliminar(cursoId);
-      await fetchCursos();
-      setSuccessMsg('Curso eliminado correctamente.');
-    } catch (error) {
-      console.error('Error al eliminar curso', error);
-      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar el curso.'));
-    }
+    setConfirmDialog({
+      title: 'Eliminar curso',
+      message: `¿Eliminar el curso "${curso.nombre}"?`,
+      confirmText: 'Eliminar',
+      severity: 'error',
+      onConfirm: async () => {
+        try {
+          setErrorMsg('');
+          setSuccessMsg('');
+          await CursoService.eliminar(cursoId);
+          await fetchCursos();
+          setSuccessMsg('Curso eliminado correctamente.');
+        } catch (error) {
+          console.error('Error al eliminar curso', error);
+          setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar el curso.'));
+        }
+      },
+    });
   };
 
   const handleInscribirCurso = async (curso) => {
@@ -445,19 +452,24 @@ const CursosListado = () => {
       return;
     }
 
-    const confirmar = window.confirm(`¿Inscribirte al curso "${curso.nombre}"?`);
-    if (!confirmar) return;
-
-    try {
-      setErrorMsg('');
-      setSuccessMsg('');
-      await CursoService.inscribirCurso(cursoId);
-      await fetchCursos();
-      setSuccessMsg('Inscripción registrada correctamente.');
-    } catch (error) {
-      console.error('Error al inscribirse en curso', error);
-      setErrorMsg(extractBackendValidationMessage(error, 'No se pudo completar la inscripción.'));
-    }
+    setConfirmDialog({
+      title: rol === 'ROLE_PROFESOR' ? 'Inscribirme a dictar' : 'Inscribirme al curso',
+      message: `¿Inscribirte al curso "${curso.nombre}"?`,
+      confirmText: 'Inscribirme',
+      severity: 'warning',
+      onConfirm: async () => {
+        try {
+          setErrorMsg('');
+          setSuccessMsg('');
+          await CursoService.inscribirCurso(cursoId);
+          await fetchCursos();
+          setSuccessMsg('Inscripción registrada correctamente.');
+        } catch (error) {
+          console.error('Error al inscribirse en curso', error);
+          setErrorMsg(extractBackendValidationMessage(error, 'No se pudo completar la inscripción.'));
+        }
+      },
+    });
   };
 
   useEffect(() => {
@@ -502,6 +514,40 @@ const CursosListado = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEliminarHorario = async (horario) => {
+    if (!canManageCursos) return;
+
+    const horarioId = horario?.id || horario?._id;
+    if (!selectedCursoId || !horarioId) {
+      setErrorMsg('No se pudo identificar el horario a eliminar.');
+      return;
+    }
+
+    setConfirmDialog({
+      title: 'Eliminar horario',
+      message: `¿Eliminar el horario ${horario.diaSemana} de ${horario.horaInicio} a ${horario.horaFin}?`,
+      confirmText: 'Eliminar',
+      severity: 'error',
+      onConfirm: async () => {
+        try {
+          setIsSubmitting(true);
+          setErrorMsg('');
+          setSuccessMsg('');
+
+          await CursoService.eliminarHorario(selectedCursoId, horarioId);
+          const horarios = await CursoService.listarHorarios(selectedCursoId);
+          setHorariosCurso(Array.isArray(horarios) ? horarios : []);
+          setSuccessMsg('Horario eliminado correctamente.');
+        } catch (error) {
+          console.error('Error al eliminar horario', error);
+          setErrorMsg(extractBackendValidationMessage(error, 'No se pudo eliminar el horario.'));
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+    });
   };
 
 
@@ -607,17 +653,21 @@ const CursosListado = () => {
         }}
       />
 
-      {errorMsg && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(errorMsg)}
+        severity="error"
+        title="Error"
+        message={errorMsg}
+        onClose={() => setErrorMsg('')}
+      />
 
-      {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMsg}
-        </Alert>
-      )}
+      <FloatingMessageModal
+        open={Boolean(successMsg)}
+        severity="success"
+        title="Operación completada"
+        message={successMsg}
+        onClose={() => setSuccessMsg('')}
+      />
 
       {canManageCursos && (
         <TextField
@@ -864,9 +914,35 @@ const CursosListado = () => {
           ) : (
             <Box sx={{ mb: 3 }}>
               {horariosCurso.map((h, i) => (
-                <Typography key={i} variant="body2" sx={{ mb: 0.5 }}>
-                  • {h.diaSemana}: {h.horaInicio} - {h.horaFin} ({h.modalidad} | Aula: {h.aula || 'N/A'})
-                </Typography>
+                <Box
+                  key={h.id || i}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    mb: 0.75,
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: 'action.hover',
+                  }}
+                >
+                  <Typography variant="body2">
+                    • {h.diaSemana}: {h.horaInicio} - {h.horaFin} ({h.modalidad} | Aula: {h.aula || 'N/A'})
+                  </Typography>
+                  <Tooltip title="Eliminar horario">
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleEliminarHorario(h)}
+                        disabled={isSubmitting}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
               ))}
             </Box>
           )}
@@ -934,6 +1010,22 @@ const CursosListado = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <FloatingConfirmModal
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title || 'Confirmar acción'}
+        message={confirmDialog?.message || ''}
+        confirmText={confirmDialog?.confirmText || 'Confirmar'}
+        severity={confirmDialog?.severity || 'warning'}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={async () => {
+          const action = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (action) {
+            await action();
+          }
+        }}
+      />
 
     </Box>
   );

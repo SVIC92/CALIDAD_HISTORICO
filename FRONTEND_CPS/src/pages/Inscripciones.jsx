@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -14,6 +13,7 @@ import {
 import { ArrowBack, CheckCircle, Close, Refresh, ListAlt } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import FloatingMessageModal from '../components/FloatingMessageModal';
 import InscripcionService from '../services/InscripcionService';
 import CursoService from '../services/CursoService';
 
@@ -286,15 +286,23 @@ const Inscripciones = () => {
       )}
 
       {errorMsg && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMsg}
-        </Alert>
+        <FloatingMessageModal
+          open={Boolean(errorMsg)}
+          severity="error"
+          title="Error"
+          message={errorMsg}
+          onClose={() => setErrorMsg('')}
+        />
       )}
 
       {successMsg && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {successMsg}
-        </Alert>
+        <FloatingMessageModal
+          open={Boolean(successMsg)}
+          severity="success"
+          title="Operación completada"
+          message={successMsg}
+          onClose={() => setSuccessMsg('')}
+        />
       )}
 
       {(rol === 'ROLE_ADMIN' || rol === 'ROLE_PROFESOR') && (

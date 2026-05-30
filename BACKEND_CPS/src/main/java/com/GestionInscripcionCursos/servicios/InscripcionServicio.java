@@ -13,7 +13,11 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import com.GestionInscripcionCursos.repositorios.HorarioSesionRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
+import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
+
 import jakarta.transaction.Transactional;
+
+import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +34,9 @@ public class InscripcionServicio {
     @Autowired
     private HorarioSesionRepositorio horarioSesionRepositorio;
 
+    @Autowired
+    private UsuarioRepositorio usuarioRepositorio;
+
     public List<Inscripcion> listaPendientesProfesor() {
         return inscripcionRepositorio.listarPendientesProfesor();
     }
@@ -44,6 +51,77 @@ public class InscripcionServicio {
 
     public List<Inscripcion> listaRealizadasAlumno() {
         return inscripcionRepositorio.listarRealizadasAlumno();
+    }
+
+    @Transactional
+    public void inscribirAlumnoDirecto(String usuarioId, String cursoId) throws MyException {
+        Usuario alumno = usuarioRepositorio.findById(usuarioId)
+                .orElseThrow(() -> new MyException("Usuario no encontrado"));
+            
+        if (!Rol.ALUMNO.equals(alumno.getRol())) {
+            throw new MyException("El usuario no es un alumno");
+        }
+
+        Curso curso = cursoRepositorio.findById(cursoId)
+                .orElseThrow(() -> new MyException("Curso no encontrado"));
+
+        // SOLUCIÓN: Usar el atributo real 'capacidad' de la entidad Curso
+        if (curso.getCapacidadMaxima() != null) { 
+            List<Inscripcion> inscripcionesDelCurso = inscripcionRepositorio.findAll();
+            
+            // Contamos cuántas inscripciones activas ("APROBADO") existen para este curso
+            long alumnosInscritosActualmente = inscripcionesDelCurso.stream()
+                    .filter(i -> i.getCurso().getId().equals(cursoId) && "APROBADO".equals(i.getEstado()))
+                    .count();
+
+            // Comprobación contra el límite real del curso
+            if (alumnosInscritosActualmente >= curso.getCapacidadMaxima()) {
+                throw new MyException("El cupo/aforo del curso ya se encuentra lleno. Capacidad máxima: " + curso.getCapacidadMaxima());
+            }
+        }
+
+        // Validación de cruces de horario del alumno
+        validarCruceHorariosAlumno(alumno, curso);
+
+        // Registro automático de la inscripción
+        Inscripcion nuevaInscripcion = new Inscripcion();
+        nuevaInscripcion.setUsuario(alumno);
+        nuevaInscripcion.setCurso(curso);
+        nuevaInscripcion.setEstado("APROBADO");  
+
+        inscripcionRepositorio.save(nuevaInscripcion);
+    }
+
+    private void validarCruceHorariosAlumno(Usuario alumno, Curso nuevoCurso) throws MyException {
+        List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
+        
+        if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
+            return; 
+        }
+
+        // Buscamos todas las inscripciones aprobadas que ya tiene el alumno
+        List<Inscripcion> inscripcionesAlumno = inscripcionRepositorio.listarRealizadasAlumno();
+
+        for (Inscripcion ins : inscripcionesAlumno) {
+            if ("APROBADO".equals(ins.getEstado())) {
+                Curso cursoExistente = ins.getCurso();
+                List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
+
+                for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
+                    for (HorarioSesion horarioExistente : horariosExistente) {
+                        if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
+                            if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
+                                horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
+                                
+                                throw new MyException("Cruce de horarios detectado. El alumno ya está inscrito en el curso '" 
+                                    + cursoExistente.getNombre() + "' los días " + horarioExistente.getDiaSemana() 
+                                    + " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Transactional

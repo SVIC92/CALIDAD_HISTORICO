@@ -18,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -261,6 +262,20 @@ public class CursoControlador {
     @GetMapping("/{idCurso}/horarios")
     public ResponseEntity<List<HorarioSesion>> listarHorarios(@PathVariable String idCurso) {
         return ResponseEntity.ok(cursoServicio.listarHorariosCurso(idCurso));
+    }
+
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @DeleteMapping("/{idCurso}/horarios/{idHorario}")
+    public ResponseEntity<?> eliminarHorario(
+            @PathVariable String idCurso,
+            @PathVariable String idHorario
+    ) {
+        try {
+            cursoServicio.eliminarHorario(idCurso, idHorario);
+            return ResponseEntity.ok(Map.of("mensaje", "Horario eliminado correctamente"));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")

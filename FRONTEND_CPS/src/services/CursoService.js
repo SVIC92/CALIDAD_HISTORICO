@@ -141,6 +141,11 @@ const CursoService = {
     return respuesta.data;
   },
 
+  eliminarHorario: async (cursoId, horarioId) => {
+    const respuesta = await axios.delete(`/curso/${cursoId}/horarios/${horarioId}`);
+    return respuesta.data;
+  },
+
   listarHorarios: async (cursoId) => {
     const respuesta = await axios.get(`/curso/${cursoId}/horarios`);
     return respuesta.data;
