@@ -32,6 +32,12 @@ const initialForm = {
   descripcion: '',
 };
 
+const codigoRegex = /^[A-Za-z0-9_-]+$/;
+const nombreRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+
+const sanitizeCodigo = (value) => value.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase();
+const sanitizeNombre = (value) => value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]/g, '');
+
 const Carreras = () => {
   const navigate = useNavigate();
   const [carreras, setCarreras] = useState([]);
@@ -106,8 +112,18 @@ const Carreras = () => {
       return;
     }
 
+    if (!nombreRegex.test(nombre)) {
+      setErrorMsg('El nombre de carrera solo puede contener letras, espacios, apóstrofes y guiones.');
+      return;
+    }
+
     if (codigo.length > 20) {
       setErrorMsg('El código no debe superar 20 caracteres.');
+      return;
+    }
+
+    if (!codigoRegex.test(codigo)) {
+      setErrorMsg('El código solo puede contener letras, números, guiones y guiones bajos.');
       return;
     }
 
@@ -256,20 +272,20 @@ const Carreras = () => {
             margin="dense"
             label="Código"
             value={formData.codigo}
-            onChange={(e) => setFormData((prev) => ({ ...prev, codigo: e.target.value.toUpperCase() }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, codigo: sanitizeCodigo(e.target.value) }))}
             fullWidth
             required
-            slotProps={{ htmlInput: { maxLength: 20 } }}
+            slotProps={{ htmlInput: { maxLength: 20, pattern: '[A-Za-z0-9_-]+' } }}
             helperText="Máximo 20 caracteres"
           />
           <TextField
             margin="dense"
             label="Nombre"
             value={formData.nombre}
-            onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombre(e.target.value) }))}
             fullWidth
             required
-            slotProps={{ htmlInput: { maxLength: 120 } }}
+            slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
             helperText="Máximo 120 caracteres"
           />
           <TextField

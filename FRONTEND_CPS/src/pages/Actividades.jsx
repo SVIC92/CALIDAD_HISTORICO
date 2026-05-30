@@ -74,6 +74,9 @@ const nowDateTimeLocal = () => {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 };
 
+const nombreActividadRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+const sanitizeNombreActividad = (value) => value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]/g, '');
+
 const Actividades = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -228,6 +231,11 @@ const Actividades = () => {
 
     if (!nombre || !descripcion) {
       setErrorMsg('Nombre y descripción son obligatorios.');
+      return;
+    }
+
+    if (!nombreActividadRegex.test(nombre)) {
+      setErrorMsg('El nombre de la actividad solo puede contener letras, espacios, apóstrofes y guiones.');
       return;
     }
 
@@ -402,10 +410,10 @@ const Actividades = () => {
               margin="dense"
               label="Nombre"
               value={formData.nombre}
-              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombreActividad(e.target.value) }))}
               fullWidth
               required
-              slotProps={{ htmlInput: { maxLength: 120 } }}
+              slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
             />
             <TextField
               margin="dense"

@@ -40,6 +40,10 @@ const initialForm = {
   activo: true,
 };
 
+const nombreRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const sanitizeNombre = (value) => value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]/g, '');
+
 const ListadoUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,9 +146,9 @@ const ListadoUsuarios = () => {
     const password2 = formData.password2.trim();
 
     if (!nombre) { setErrorMsg('El nombre es obligatorio.'); return; }
+    if (!nombreRegex.test(nombre)) { setErrorMsg('El nombre solo puede contener letras, espacios, apóstrofes y guiones.'); return; }
     if (!email) { setErrorMsg('El email es obligatorio.'); return; }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) { setErrorMsg('Ingresa un email valido.'); return; }
 
     if (!isEditMode && !password) { setErrorMsg('La contraseña es obligatoria para registrar un usuario.'); return; }
@@ -249,8 +253,20 @@ const ListadoUsuarios = () => {
         <DialogTitle>{isEditMode ? 'Editar Usuario' : 'Nuevo Usuario'}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <TextField label="Nombre" value={formData.nombre} onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))} fullWidth />
-            <TextField label="Email" value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} fullWidth />
+            <TextField
+              label="Nombre"
+              value={formData.nombre}
+              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombre(e.target.value) }))}
+              fullWidth
+              slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
+            />
+            <TextField
+              label="Email"
+              value={formData.email}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              fullWidth
+              slotProps={{ htmlInput: { maxLength: 255, inputMode: 'email' } }}
+            />
 
             <TextField select label="Rol" value={formData.rol} onChange={(e) => setFormData((prev) => ({ ...prev, rol: e.target.value }))} fullWidth >
               <MenuItem value="ALUMNO">Alumno</MenuItem>
@@ -262,8 +278,22 @@ const ListadoUsuarios = () => {
               <MenuItem value="true">SI</MenuItem>
               <MenuItem value="false">NO</MenuItem>
             </TextField>
-            <TextField type="password" label={isEditMode ? 'Contraseña (opcional)' : 'Contraseña'} value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} fullWidth />
-            <TextField type="password" label={isEditMode ? 'Repetir contraseña (opcional)' : 'Repetir contraseña'} value={formData.password2} onChange={(e) => setFormData((prev) => ({ ...prev, password2: e.target.value }))} fullWidth />
+            <TextField
+              type="password"
+              label={isEditMode ? 'Contraseña (opcional)' : 'Contraseña'}
+              value={formData.password}
+              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6, maxLength: 100 } }}
+            />
+            <TextField
+              type="password"
+              label={isEditMode ? 'Repetir contraseña (opcional)' : 'Repetir contraseña'}
+              value={formData.password2}
+              onChange={(e) => setFormData((prev) => ({ ...prev, password2: e.target.value }))}
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6, maxLength: 100 } }}
+            />
           </Stack>
         </DialogContent>
         <DialogActions>

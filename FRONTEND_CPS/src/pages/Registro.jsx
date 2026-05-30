@@ -19,6 +19,8 @@ import { useLoadingScreen } from '../context/LoadingScreenContext';
 import { extractBackendValidationMessage } from '../utils/backendValidation';
 
 const Registro = () => {
+    const nombreRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+
     const {
         register,
         handleSubmit,
@@ -133,6 +135,10 @@ const Registro = () => {
                             autoFocus
                             {...register('nombre', {
                                 required: 'El nombre es obligatorio',
+                                pattern: {
+                                    value: nombreRegex,
+                                    message: 'El nombre solo puede contener letras, espacios, apóstrofes y guiones',
+                                },
                                 minLength: {
                                     value: 3,
                                     message: 'El nombre debe tener al menos 3 caracteres',
@@ -144,6 +150,7 @@ const Registro = () => {
                             })}
                             error={!!errors.nombre}
                             helperText={errors.nombre ? errors.nombre.message : ''}
+                            slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
                         />
 
                         <TextField

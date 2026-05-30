@@ -81,6 +81,14 @@ const CursosListado = () => {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   };
 
+  const nombreCursoRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+  const codigoCursoRegex = /^[A-Za-z0-9_-]+$/;
+  const textoCarreraRegex = /^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
+
+  const sanitizeLettersOnly = (value) => value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]/g, '');
+  const sanitizeCourseCode = (value) => value.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase();
+  const sanitizeCareerValue = (value) => value.replace(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\s'\-]/g, '');
+
   const cursoTieneProfesorAsignado = (curso) => {
     const profesorAsignado = curso?.profesorAsignado;
     const profesorId = curso?.profesorId;
@@ -278,6 +286,38 @@ const CursosListado = () => {
   const handleChangeForm = (event) => {
     const { name, value } = event.target;
 
+    if (name === 'nombre') {
+      setFormData((prev) => ({
+        ...prev,
+        nombre: sanitizeLettersOnly(value),
+      }));
+      return;
+    }
+
+    if (name === 'codigoCurso') {
+      setFormData((prev) => ({
+        ...prev,
+        codigoCurso: sanitizeCourseCode(value),
+      }));
+      return;
+    }
+
+    if (name === 'carrera') {
+      setFormData((prev) => ({
+        ...prev,
+        carrera: sanitizeCareerValue(value),
+      }));
+      return;
+    }
+
+    if (name === 'descripcion') {
+      setFormData((prev) => ({
+        ...prev,
+        descripcion: value,
+      }));
+      return;
+    }
+
     if (name === 'profesorId') {
       const profesorSeleccionado = profesores.find((p) => p.id === value);
       setFormData((prev) => ({
@@ -315,6 +355,11 @@ const CursosListado = () => {
       return;
     }
 
+    if (!nombreCursoRegex.test(nombre)) {
+      setErrorMsg('El nombre solo puede contener letras, espacios, apóstrofes y guiones.');
+      return;
+    }
+
     if (nombre.length > 150) {
       setErrorMsg('El nombre no debe superar 150 caracteres.');
       return;
@@ -322,6 +367,11 @@ const CursosListado = () => {
 
     if (codigoCurso && codigoCurso.length > 30) {
       setErrorMsg('El código no debe superar 30 caracteres.');
+      return;
+    }
+
+    if (codigoCurso && !codigoCursoRegex.test(codigoCurso)) {
+      setErrorMsg('El código solo puede contener letras, números, guiones y guiones bajos.');
       return;
     }
 
@@ -369,6 +419,11 @@ const CursosListado = () => {
 
     if (!carrera) {
       setErrorMsg('La carrera es obligatoria.');
+      return;
+    }
+
+    if (!textoCarreraRegex.test(carrera)) {
+      setErrorMsg('La carrera solo puede contener letras, números, espacios, apóstrofes y guiones.');
       return;
     }
 
