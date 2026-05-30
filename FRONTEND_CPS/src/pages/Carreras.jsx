@@ -43,6 +43,7 @@ const Carreras = () => {
   const [carreras, setCarreras] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ codigo: '', nombre: '', descripcion: '' });
   const [successMsg, setSuccessMsg] = useState('');
   const [openModal, setOpenModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -73,6 +74,7 @@ const Carreras = () => {
     setIsEditMode(false);
     setSelectedCarreraId('');
     setFormData(initialForm);
+    setFieldErrors({ codigo: '', nombre: '', descripcion: '' });
   };
 
   const openCreate = () => {
@@ -81,6 +83,7 @@ const Carreras = () => {
     setIsEditMode(false);
     setSelectedCarreraId('');
     setFormData(initialForm);
+    setFieldErrors({ codigo: '', nombre: '', descripcion: '' });
     setOpenModal(true);
   };
 
@@ -89,6 +92,7 @@ const Carreras = () => {
     setSuccessMsg('');
     setIsEditMode(true);
     setSelectedCarreraId(row.id);
+    setFieldErrors({ codigo: '', nombre: '', descripcion: '' });
     setFormData({
       codigo: row.codigo === '-' ? '' : row.codigo,
       nombre: row.nombre === '-' ? '' : row.nombre,
@@ -97,43 +101,49 @@ const Carreras = () => {
     setOpenModal(true);
   };
 
+  const setValidationError = (field, message) => {
+    setFieldErrors({ codigo: '', nombre: '', descripcion: '' , [field]: message });
+    setErrorMsg(message);
+  };
+
   const handleSave = async () => {
+    setFieldErrors({ codigo: '', nombre: '', descripcion: '' });
     const codigo = formData.codigo.trim().toUpperCase();
     const nombre = formData.nombre.trim();
     const descripcion = formData.descripcion.trim();
 
     if (!codigo) {
-      setErrorMsg('El código de carrera es obligatorio.');
+      setValidationError('codigo', 'El código de carrera es obligatorio.');
       return;
     }
 
     if (!nombre) {
-      setErrorMsg('El nombre de carrera es obligatorio.');
+      setValidationError('nombre', 'El nombre de carrera es obligatorio.');
       return;
     }
 
     if (!nombreRegex.test(nombre)) {
-      setErrorMsg('El nombre de carrera solo puede contener letras, espacios, apóstrofes y guiones.');
+      setValidationError('nombre', 'El nombre de carrera solo puede contener letras, espacios, apóstrofes y guiones.');
       return;
     }
 
     if (codigo.length > 20) {
-      setErrorMsg('El código no debe superar 20 caracteres.');
+      setValidationError('codigo', 'El código no debe superar 20 caracteres.');
       return;
     }
 
     if (!codigoRegex.test(codigo)) {
-      setErrorMsg('El código solo puede contener letras, números, guiones y guiones bajos.');
+      setValidationError('codigo', 'El código solo puede contener letras, números, guiones y guiones bajos.');
       return;
     }
 
     if (nombre.length > 120) {
-      setErrorMsg('El nombre no debe superar 120 caracteres.');
+      setValidationError('nombre', 'El nombre no debe superar 120 caracteres.');
       return;
     }
 
     if (descripcion.length > 1000) {
-      setErrorMsg('La descripción no debe superar 1000 caracteres.');
+      setValidationError('descripcion', 'La descripción no debe superar 1000 caracteres.');
       return;
     }
 
@@ -272,21 +282,25 @@ const Carreras = () => {
             margin="dense"
             label="Código"
             value={formData.codigo}
-            onChange={(e) => setFormData((prev) => ({ ...prev, codigo: sanitizeCodigo(e.target.value) }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, codigo: e.target.value }))}
             fullWidth
             required
             slotProps={{ htmlInput: { maxLength: 20, pattern: '[A-Za-z0-9_-]+' } }}
             helperText="Máximo 20 caracteres"
+            error={Boolean(fieldErrors.codigo)}
+            FormHelperTextProps={{ children: fieldErrors.codigo || 'Máximo 20 caracteres' }}
           />
           <TextField
             margin="dense"
             label="Nombre"
             value={formData.nombre}
-            onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombre(e.target.value) }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
             fullWidth
             required
             slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
             helperText="Máximo 120 caracteres"
+            error={Boolean(fieldErrors.nombre)}
+            FormHelperTextProps={{ children: fieldErrors.nombre || 'Máximo 120 caracteres' }}
           />
           <TextField
             margin="dense"
@@ -298,6 +312,8 @@ const Carreras = () => {
             minRows={3}
             slotProps={{ htmlInput: { maxLength: 1000 } }}
             helperText="Opcional, máximo 1000 caracteres"
+            error={Boolean(fieldErrors.descripcion)}
+            FormHelperTextProps={{ children: fieldErrors.descripcion || 'Opcional, máximo 1000 caracteres' }}
           />
         </DialogContent>
         <DialogActions>

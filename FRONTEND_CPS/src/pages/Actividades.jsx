@@ -88,6 +88,7 @@ const Actividades = () => {
   const [selectedCursoId, setSelectedCursoId] = useState('');
   const [actividades, setActividades] = useState([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ nombre: '', descripcion: '', fechaVencimiento: '', intentosPermitidos: '' });
   const [successMsg, setSuccessMsg] = useState('');
   const [confirmDialog, setConfirmDialog] = useState(null);
 
@@ -103,9 +104,10 @@ const Actividades = () => {
   });
 
   const resetForm = () => {
-    setFormData({ nombre: '', descripcion: '', fechaVencimiento: '' });
+    setFormData({ nombre: '', descripcion: '', fechaVencimiento: '', intentosPermitidos: 1 });
     setSelectedActividadId('');
     setIsEditMode(false);
+    setFieldErrors({ nombre: '', descripcion: '', fechaVencimiento: '', intentosPermitidos: '' });
   };
 
   const fetchCursosByRole = useCallback(async () => {
@@ -192,6 +194,7 @@ const Actividades = () => {
         fechaVencimiento: toDateTimeLocalValue(data?.fechaVencimiento || actividad?.fechaVencimiento),
         intentosPermitidos: data?.intentosPermitidos || actividad?.intentosPermitidos || 1, // <<< NUEVO
       });
+      setFieldErrors({ nombre: '', descripcion: '', fechaVencimiento: '', intentosPermitidos: '' });
       setOpenModal(true);
     } catch (error) {
       console.error('Error al cargar actividad para edición', error);
@@ -225,31 +228,39 @@ const Actividades = () => {
   const handleSubmit = async () => {
     if (!canManage || !selectedCursoId) return;
 
+    setFieldErrors({ nombre: '', descripcion: '', fechaVencimiento: '', intentosPermitidos: '' });
+
     const nombre = formData.nombre.trim();
     const descripcion = formData.descripcion.trim();
     const fechaVencimiento = formData.fechaVencimiento;
 
     if (!nombre || !descripcion) {
-      setErrorMsg('Nombre y descripción son obligatorios.');
+      const message = 'Nombre y descripción son obligatorios.';
+      setFieldErrors((prev) => ({ ...prev, nombre: !nombre ? message : '', descripcion: !descripcion ? message : '' }));
+      setErrorMsg(message);
       return;
     }
 
     if (!nombreActividadRegex.test(nombre)) {
+      setFieldErrors((prev) => ({ ...prev, nombre: 'El nombre de la actividad solo puede contener letras, espacios, apóstrofes y guiones.' }));
       setErrorMsg('El nombre de la actividad solo puede contener letras, espacios, apóstrofes y guiones.');
       return;
     }
 
     if (nombre.length > 120) {
+      setFieldErrors((prev) => ({ ...prev, nombre: 'El nombre de la actividad no debe superar 120 caracteres.' }));
       setErrorMsg('El nombre de la actividad no debe superar 120 caracteres.');
       return;
     }
 
     if (descripcion.length > 1000) {
+      setFieldErrors((prev) => ({ ...prev, descripcion: 'La descripción no debe superar 1000 caracteres.' }));
       setErrorMsg('La descripción no debe superar 1000 caracteres.');
       return;
     }
 
     if (!fechaVencimiento) {
+      setFieldErrors((prev) => ({ ...prev, fechaVencimiento: 'La fecha y hora de vencimiento es obligatoria.' }));
       setErrorMsg('La fecha y hora de vencimiento es obligatoria.');
       return;
     }
@@ -257,11 +268,13 @@ const Actividades = () => {
     const vencimientoDate = new Date(fechaVencimiento);
     const ahora = new Date();
     if (Number.isNaN(vencimientoDate.getTime()) || vencimientoDate < ahora) {
+      setFieldErrors((prev) => ({ ...prev, fechaVencimiento: 'La fecha y hora de vencimiento debe ser mayor o igual al momento actual.' }));
       setErrorMsg('La fecha y hora de vencimiento debe ser mayor o igual al momento actual.');
       return;
     }
     const intentosPermitidos = Number(formData.intentosPermitidos);
     if (intentosPermitidos < 1 || intentosPermitidos > 3) {
+      setFieldErrors((prev) => ({ ...prev, intentosPermitidos: 'Los intentos permitidos deben ser entre 1 y 3.' }));
       setErrorMsg('Los intentos permitidos deben ser entre 1 y 3.');
       return;
     }
@@ -410,10 +423,12 @@ const Actividades = () => {
               margin="dense"
               label="Nombre"
               value={formData.nombre}
-              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombreActividad(e.target.value) }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
               fullWidth
               required
               slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
+              error={Boolean(fieldErrors.nombre)}
+              helperText={fieldErrors.nombre || ''}
             />
             <TextField
               margin="dense"
@@ -425,6 +440,8 @@ const Actividades = () => {
               multiline
               minRows={3}
               slotProps={{ htmlInput: { maxLength: 1000 } }}
+              error={Boolean(fieldErrors.descripcion)}
+              helperText={fieldErrors.descripcion || ''}
             />
             <TextField
               margin="dense"
@@ -435,6 +452,8 @@ const Actividades = () => {
               fullWidth
               required
               slotProps={{ htmlInput: { min: 1, max: 3 } }}
+              error={Boolean(fieldErrors.intentosPermitidos)}
+              helperText={fieldErrors.intentosPermitidos || 'Rango permitido: 1 a 3'}
             />
             <TextField
               margin="dense"
@@ -455,6 +474,8 @@ const Actividades = () => {
                 inputLabel: { shrink: true },
                 input: { min: nowDateTimeLocal() },
               }}
+              error={Boolean(fieldErrors.fechaVencimiento)}
+              helperText={fieldErrors.fechaVencimiento || 'Debe ser mayor o igual al momento actual'}
             />
           </DialogContent>
           <DialogActions>

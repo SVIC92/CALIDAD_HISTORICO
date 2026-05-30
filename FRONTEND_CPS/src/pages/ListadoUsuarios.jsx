@@ -48,6 +48,7 @@ const ListadoUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ nombre: '', email: '', password: '', password2: '' });
   const [successMsg, setSuccessMsg] = useState('');
   const [openModal, setOpenModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -80,6 +81,7 @@ const ListadoUsuarios = () => {
     setIsEditMode(false);
     setSelectedUsuarioId('');
     setFormData(initialForm);
+    setFieldErrors({ nombre: '', email: '', password: '', password2: '' });
     setErrorMsg('');
   };
 
@@ -89,6 +91,7 @@ const ListadoUsuarios = () => {
     setIsEditMode(false);
     setSelectedUsuarioId('');
     setFormData(initialForm);
+    setFieldErrors({ nombre: '', email: '', password: '', password2: '' });
     setOpenModal(true);
   };
 
@@ -97,6 +100,7 @@ const ListadoUsuarios = () => {
     setSuccessMsg('');
     setIsEditMode(true);
     setSelectedUsuarioId(row.id);
+    setFieldErrors({ nombre: '', email: '', password: '', password2: '' });
     setFormData({
       nombre: row.nombre === '-' ? '' : row.nombre,
       email: row.email === '-' ? '' : row.email,
@@ -106,6 +110,11 @@ const ListadoUsuarios = () => {
       activo: !!row.activo,
     });
     setOpenModal(true);
+  };
+
+  const setValidationError = (field, message) => {
+    setFieldErrors({ nombre: '', email: '', password: '', password2: '', [field]: message });
+    setErrorMsg(message);
   };
 
   const handleToggleStatus = async (row, activar) => {
@@ -140,20 +149,21 @@ const ListadoUsuarios = () => {
   };
 
   const handleSave = async () => {
+    setFieldErrors({ nombre: '', email: '', password: '', password2: '' });
     const nombre = formData.nombre.trim();
     const email = formData.email.trim();
     const password = formData.password.trim();
     const password2 = formData.password2.trim();
 
-    if (!nombre) { setErrorMsg('El nombre es obligatorio.'); return; }
-    if (!nombreRegex.test(nombre)) { setErrorMsg('El nombre solo puede contener letras, espacios, apóstrofes y guiones.'); return; }
-    if (!email) { setErrorMsg('El email es obligatorio.'); return; }
+    if (!nombre) { setValidationError('nombre', 'El nombre es obligatorio.'); return; }
+    if (!nombreRegex.test(nombre)) { setValidationError('nombre', 'El nombre solo puede contener letras, espacios, apóstrofes y guiones.'); return; }
+    if (!email) { setValidationError('email', 'El email es obligatorio.'); return; }
 
-    if (!emailRegex.test(email)) { setErrorMsg('Ingresa un email valido.'); return; }
+    if (!emailRegex.test(email)) { setValidationError('email', 'Ingresa un email válido.'); return; }
 
-    if (!isEditMode && !password) { setErrorMsg('La contraseña es obligatoria para registrar un usuario.'); return; }
-    if (password && password.length < 6) { setErrorMsg('La contraseña debe tener al menos 6 caracteres.'); return; }
-    if ((password || password2) && password !== password2) { setErrorMsg('Las contraseñas no coinciden.'); return; }
+    if (!isEditMode && !password) { setValidationError('password', 'La contraseña es obligatoria para registrar un usuario.'); return; }
+    if (password && password.length < 6) { setValidationError('password', 'La contraseña debe tener al menos 6 caracteres.'); return; }
+    if ((password || password2) && password !== password2) { setValidationError('password2', 'Las contraseñas no coinciden.'); return; }
 
     try {
       setIsSubmitting(true);
@@ -256,8 +266,10 @@ const ListadoUsuarios = () => {
             <TextField
               label="Nombre"
               value={formData.nombre}
-              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: sanitizeNombre(e.target.value) }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, nombre: e.target.value }))}
               fullWidth
+              error={Boolean(fieldErrors.nombre)}
+              helperText={fieldErrors.nombre || 'Solo letras, espacios, apóstrofes y guiones'}
               slotProps={{ htmlInput: { maxLength: 120, pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+" } }}
             />
             <TextField
@@ -265,6 +277,8 @@ const ListadoUsuarios = () => {
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               fullWidth
+              error={Boolean(fieldErrors.email)}
+              helperText={fieldErrors.email || 'Ingresa un correo válido'}
               slotProps={{ htmlInput: { maxLength: 255, inputMode: 'email' } }}
             />
 
@@ -284,6 +298,8 @@ const ListadoUsuarios = () => {
               value={formData.password}
               onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
               fullWidth
+              error={Boolean(fieldErrors.password)}
+              helperText={fieldErrors.password || 'Mínimo 6 caracteres'}
               slotProps={{ htmlInput: { minLength: 6, maxLength: 100 } }}
             />
             <TextField
@@ -292,6 +308,8 @@ const ListadoUsuarios = () => {
               value={formData.password2}
               onChange={(e) => setFormData((prev) => ({ ...prev, password2: e.target.value }))}
               fullWidth
+              error={Boolean(fieldErrors.password2)}
+              helperText={fieldErrors.password2 || ''}
               slotProps={{ htmlInput: { minLength: 6, maxLength: 100 } }}
             />
           </Stack>
