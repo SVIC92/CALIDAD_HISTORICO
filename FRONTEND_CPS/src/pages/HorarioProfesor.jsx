@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
-    Box, Typography, Button, TextField, MenuItem,
+    Box, Typography, TextField, MenuItem,
     Paper, CircularProgress, Alert, Card, CardContent
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { ArrowBack, AccessTime, ClassOutlined } from '@mui/icons-material';
+import { CalendarMonth, AccessTime, ClassOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 import ProfesorService from '../services/ProfesorService';
 import CursoService from '../services/CursoService';
 
@@ -88,14 +89,11 @@ const HorarioProfesor = () => {
             }}
         >
             {/* Cabecera */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos/listado')} sx={{ mr: 2 }}>
-                    Volver
-                </Button>
-                <Typography variant="h4" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                    Horario de Profesores
-                </Typography>
-            </Box>
+            <PageHeader
+                title="Horario de Profesores"
+                icon={<CalendarMonth />}
+                onBack={() => navigate('/cursos/listado')}
+            />
 
             {/* Filtro superior */}
             <Paper

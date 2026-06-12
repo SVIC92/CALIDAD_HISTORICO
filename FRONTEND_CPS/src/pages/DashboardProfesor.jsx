@@ -4,10 +4,7 @@ import {
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   Divider,
-  Avatar,
   Alert,
   CircularProgress,
   Button,
@@ -16,29 +13,14 @@ import SchoolIcon from '@mui/icons-material/School';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SpaceDashboardRoundedIcon from '@mui/icons-material/SpaceDashboardRounded';
 import { useNavigate } from 'react-router-dom';
 import CursoService from '../services/CursoService';
 import ActividadService from '../services/ActividadService';
 import ReporteService from '../services/ReporteService';
 import InscripcionService from '../services/InscripcionService';
-
-const KpiCard = ({ title, value, icon, color }) => (
-  <Card sx={{ height: '100%', boxShadow: 3 }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Avatar sx={{ bgcolor: color, mr: 2 }}>
-          {icon}
-        </Avatar>
-        <Typography variant="h6" color="text.secondary">
-          {title}
-        </Typography>
-      </Box>
-      <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-        {value}
-      </Typography>
-    </CardContent>
-  </Card>
-);
+import PageHeader from '../components/PageHeader';
+import StatCard from '../components/StatCard';
 
 const getUserEmailFromToken = () => {
   try {
@@ -80,10 +62,10 @@ const DashboardProfesor = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [stats, setStats] = useState([
-    { title: 'Cursos Asignados', value: '0', icon: <SchoolIcon />, color: '#1565c0' },
-    { title: 'Actividades Activas', value: '0', icon: <AssignmentIcon />, color: '#2e7d32' },
-    { title: 'Pendientes por Calificar', value: '0', icon: <FactCheckIcon />, color: '#ef6c00' },
-    { title: 'Cumplimiento Semanal', value: '0%', icon: <TrendingUpIcon />, color: '#6a1b9a' },
+    { title: 'Cursos Asignados', value: '0', icon: <SchoolIcon />, color: 'primary' },
+    { title: 'Actividades Activas', value: '0', icon: <AssignmentIcon />, color: 'success' },
+    { title: 'Pendientes por Calificar', value: '0', icon: <FactCheckIcon />, color: 'warning' },
+    { title: 'Cumplimiento Semanal', value: '0%', icon: <TrendingUpIcon />, color: 'secondary' },
   ]);
   const [upcoming, setUpcoming] = useState([]);
   const [alertas, setAlertas] = useState({ pendientesCalificar: 0, solicitudesPendientes: 0 });
@@ -182,10 +164,10 @@ const DashboardProfesor = () => {
         setUpcoming(proximasActividades);
         setAlertas({ pendientesCalificar, solicitudesPendientes });
         setStats([
-          { title: 'Cursos Asignados', value: String(cursos.length), icon: <SchoolIcon />, color: '#1565c0' },
-          { title: 'Actividades Activas', value: String(actividades.length), icon: <AssignmentIcon />, color: '#2e7d32' },
-          { title: 'Pendientes por Calificar', value: String(pendientesCalificar), icon: <FactCheckIcon />, color: '#ef6c00' },
-          { title: 'Cumplimiento Semanal', value: cumplimientoSemanal, icon: <TrendingUpIcon />, color: '#6a1b9a' },
+          { title: 'Cursos Asignados', value: String(cursos.length), icon: <SchoolIcon />, color: 'primary' },
+          { title: 'Actividades Activas', value: String(actividades.length), icon: <AssignmentIcon />, color: 'success' },
+          { title: 'Pendientes por Calificar', value: String(pendientesCalificar), icon: <FactCheckIcon />, color: 'warning' },
+          { title: 'Cumplimiento Semanal', value: cumplimientoSemanal, icon: <TrendingUpIcon />, color: 'secondary' },
         ]);
       } catch (error) {
         const backendMessage = error?.response?.data?.error || error?.response?.data;
@@ -214,9 +196,11 @@ const DashboardProfesor = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'medium' }}>
-        Dashboard de Profesor
-      </Typography>
+      <PageHeader
+        title="Dashboard de Profesor"
+        subtitle="Resumen de tus cursos, actividades y pendientes"
+        icon={<SpaceDashboardRoundedIcon />}
+      />
 
       {errorMsg && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -232,7 +216,7 @@ const DashboardProfesor = () => {
         <Grid container spacing={3}>
           {stats.map((stat) => (
             <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-              <KpiCard {...stat} />
+              <StatCard {...stat} />
             </Grid>
           ))}
 

@@ -27,19 +27,19 @@ public class AdminControlador {
     @Autowired
     private UsuarioServicio usuarioServicio;
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/dashboard")
     public ResponseEntity<?> panelAdministrativo() {
         return ResponseEntity.ok(Map.of("mensaje", "Dashboard admin"));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/usuarios")
     public ResponseEntity<List<UsuarioResumenDto>> listarUsuarios() {
         return ResponseEntity.ok(usuarioServicio.listarUsuarios());
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/usuarios/{id}")
     public ResponseEntity<?> obtenerUsuario(@PathVariable String id) {
         try {
@@ -50,7 +50,7 @@ public class AdminControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/usuarios")
     public ResponseEntity<?> crearUsuario(@RequestBody UsuarioAdminRequestDto request) {
         try {
@@ -68,7 +68,7 @@ public class AdminControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/usuarios/{id}")
     public ResponseEntity<?> actualizarUsuario(@PathVariable String id, @RequestBody UsuarioAdminRequestDto request) {
         try {
@@ -88,7 +88,7 @@ public class AdminControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PatchMapping("/usuarios/{id}/desactivar")
     public ResponseEntity<?> desactivarUsuario(@PathVariable String id) {
         try {
@@ -103,7 +103,7 @@ public class AdminControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PatchMapping("/usuarios/{id}/activar")
     public ResponseEntity<?> activarUsuario(@PathVariable String id) {
         try {

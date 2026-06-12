@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -12,9 +13,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Assignment, Grading, Refresh, AttachFile } from '@mui/icons-material';
+import { Assignment, Grading, Refresh, AttachFile, Assessment } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import CursoService from '../services/CursoService';
 import ActividadService from '../services/ActividadService';
 import ReporteService from '../services/ReporteService';
@@ -482,27 +484,28 @@ const Reportes = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          {titulo}
-        </Typography>
-        <Button variant="outlined" startIcon={<Refresh />} onClick={handleRecargar} disabled={isLoading || !selectedActividadId}>
-          Recargar
-        </Button>
-        {canResponder && (
-          <Button
-            variant="contained"
-            startIcon={<Assignment />}
-            onClick={handleAbrirResponder}
-            disabled={!selectedActividadId || limiteAlcanzado}
-          >
-            {limiteAlcanzado ? 'Límite alcanzado' : `Responder (Quedan ${intentosRestantes})`}
-          </Button>
-        )}
-      </Stack>
+      <PageHeader
+        title={titulo}
+        icon={<Assessment />}
+        onBack={() => navigate('/cursos')}
+        actions={
+          <>
+            <Button variant="outlined" startIcon={<Refresh />} onClick={handleRecargar} disabled={isLoading || !selectedActividadId}>
+              Recargar
+            </Button>
+            {canResponder && (
+              <Button
+                variant="contained"
+                startIcon={<Assignment />}
+                onClick={handleAbrirResponder}
+                disabled={!selectedActividadId || limiteAlcanzado}
+              >
+                {limiteAlcanzado ? 'Límite alcanzado' : `Responder (Quedan ${intentosRestantes})`}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <Stack spacing={2} sx={{ mb: 2 }}>
         <TextField
@@ -554,12 +557,18 @@ const Reportes = () => {
         </Alert>
       )}
 
-      <DataTable
-        columns={columns}
-        data={reportes}
-        actions={actions}
-        exportFileName={`reportes-${selectedActividadId || 'actividad'}`}
-      />
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={reportes}
+          actions={actions}
+          exportFileName={`reportes-${selectedActividadId || 'actividad'}`}
+        />
+      )}
 
       <Dialog open={openRespuesta} onClose={() => !isSavingRespuesta && setOpenRespuesta(false)} fullWidth maxWidth="sm">
         <DialogTitle>Responder Actividad</DialogTitle>
@@ -600,7 +609,7 @@ const Reportes = () => {
         <DialogContent>
           {/* Aquí mostramos el botón del adjunto si existe */}
           {archivoAdjuntoUrl && (
-            <Box sx={{ mb: 3, mt: 1, p: 2, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ mb: 3, mt: 1, p: 2, bgcolor: 'action.hover', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
                 El alumno incluyó un archivo adjunto.
               </Typography>

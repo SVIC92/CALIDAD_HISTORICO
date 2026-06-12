@@ -27,7 +27,7 @@ public class ProfesorControlador {
         return ResponseEntity.ok(Map.of("mensaje", "Dashboard profesor"));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/lista")
     public ResponseEntity<List<ProfesorResumenDto>> listarProfesores() {
         return ResponseEntity.ok(usuarioServicio.listarProfesores());

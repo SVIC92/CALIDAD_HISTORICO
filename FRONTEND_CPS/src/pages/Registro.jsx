@@ -118,7 +118,7 @@ const Registro = () => {
                         <PersonAddAlt1Icon />
                     </Avatar>
 
-                    <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
+                    <Typography component="h1" variant="h5" sx={{ mb: 1, fontWeight: 800 }}>
                         Crear Cuenta
                     </Typography>
 

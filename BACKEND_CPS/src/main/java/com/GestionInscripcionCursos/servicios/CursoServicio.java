@@ -17,7 +17,9 @@ import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import com.GestionInscripcionCursos.repositorios.HorarioSesionRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
-import jakarta.transaction.Transactional;
+import com.GestionInscripcionCursos.dto.CursoRequestDto;
+import com.GestionInscripcionCursos.util.HorarioUtil;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -49,64 +51,48 @@ public class CursoServicio {
     private HorarioSesionRepositorio horarioSesionRepositorio;
 
     @Transactional
-    public void crearCurso(
-            String nombre,
-            String codigoCurso,
-            String descripcion,
-            Integer capacidadMaxima,
-            Integer creditos,
-            Integer ciclo,
-            String modalidad,
-            Date fechaInicio,
-            Date fechaTermino,
-            Integer horasTeoricas,
-            Integer horasPracticas,
-            Integer horasLaboratorio,
-            String estado,
-            String profesorReferencia,
-            String carreraReferencia
-    ) throws MyException {
+    public void crearCurso(CursoRequestDto req) throws MyException {
 
-        String codigoNormalizado = normalizarCodigoCurso(codigoCurso, nombre);
+        String codigoNormalizado = normalizarCodigoCurso(req.codigoCurso(), req.nombre());
         if (cursoRepositorio.existsByCodigoCursoIgnoreCase(codigoNormalizado)) {
             throw new MyException("Ya existe un curso con el codigo " + codigoNormalizado);
         }
 
-        Integer cicloNormalizado = (ciclo == null || ciclo <= 0) ? 1 : ciclo;
-        Date fechaInicioNormalizada = fechaInicio == null ? new Date() : fechaInicio;
+        Integer cicloNormalizado = (req.ciclo() == null || req.ciclo() <= 0) ? 1 : req.ciclo();
+        Date fechaInicioNormalizada = req.fechaInicio() == null ? new Date() : req.fechaInicio();
 
-        Usuario profesor = resolverProfesorSiExiste(profesorReferencia);
-        Carrera carrera = resolverCarreraSiExiste(carreraReferencia);
+        Usuario profesor = resolverProfesorSiExiste(req.profesorReferencia());
+        Carrera carrera = resolverCarreraSiExiste(req.carreraReferencia());
 
-        ModalidadCurso modalidadCurso = parsearModalidad(modalidad);
-        EstadoCurso estadoCurso = parsearEstado(estado);
+        ModalidadCurso modalidadCurso = parsearModalidad(req.modalidad());
+        EstadoCurso estadoCurso = parsearEstado(req.estado());
         validarCurso(
-                nombre,
+                req.nombre(),
                 codigoNormalizado,
-                descripcion,
-                capacidadMaxima,
-                creditos,
+                req.descripcion(),
+                req.capacidadMaxima(),
+                req.creditos(),
                 cicloNormalizado,
                 fechaInicioNormalizada,
-                fechaTermino,
-                horasTeoricas,
-                horasPracticas,
-                horasLaboratorio
+                req.fechaTermino(),
+                req.horasTeoricas(),
+                req.horasPracticas(),
+                req.horasLaboratorio()
         );
 
         Curso curso = new Curso(
-                nombre,
+                req.nombre(),
                 codigoNormalizado,
-                descripcion,
+                req.descripcion(),
                 cicloNormalizado,
                 modalidadCurso,
-                capacidadMaxima,
-                creditos,
+                req.capacidadMaxima(),
+                req.creditos(),
                 fechaInicioNormalizada,
-                fechaTermino,
-                normalizarHoras(horasTeoricas),
-                normalizarHoras(horasPracticas),
-                normalizarHoras(horasLaboratorio),
+                req.fechaTermino(),
+                normalizarHoras(req.horasTeoricas()),
+                normalizarHoras(req.horasPracticas()),
+                normalizarHoras(req.horasLaboratorio()),
                 estadoCurso,
                 profesor,
                 carrera
@@ -128,100 +114,66 @@ public class CursoServicio {
     }
 
     @Transactional
-    public void modificarCurso(
-            String id,
-            String nombre,
-            String codigoCurso,
-            String descripcion,
-            Integer capacidadMaxima,
-            Integer creditos,
-            Integer ciclo,
-            String modalidad,
-            Date fechaInicio,
-            Date fechaTermino,
-            Integer horasTeoricas,
-            Integer horasPracticas,
-            Integer horasLaboratorio,
-            String estado,
-            String profesorReferencia,
-            String carreraReferencia
-    ) throws MyException {
+    public void modificarCurso(String id, CursoRequestDto req) throws MyException {
 
-        Usuario profesor = resolverProfesorSiExiste(profesorReferencia);
-        Carrera carrera = resolverCarreraSiExiste(carreraReferencia);
+        Usuario profesor = resolverProfesorSiExiste(req.profesorReferencia());
+        Carrera carrera = resolverCarreraSiExiste(req.carreraReferencia());
 
-        ModalidadCurso modalidadCurso = parsearModalidad(modalidad);
-        EstadoCurso estadoCurso = parsearEstado(estado);
-        String codigoNormalizado = normalizarCodigoCurso(codigoCurso, nombre);
-        Integer cicloNormalizado = (ciclo == null || ciclo <= 0) ? 1 : ciclo;
-        Date fechaInicioNormalizada = fechaInicio == null ? new Date() : fechaInicio;
+        ModalidadCurso modalidadCurso = parsearModalidad(req.modalidad());
+        EstadoCurso estadoCurso = parsearEstado(req.estado());
+        String codigoNormalizado = normalizarCodigoCurso(req.codigoCurso(), req.nombre());
+        Integer cicloNormalizado = (req.ciclo() == null || req.ciclo() <= 0) ? 1 : req.ciclo();
+        Date fechaInicioNormalizada = req.fechaInicio() == null ? new Date() : req.fechaInicio();
 
         validarCurso(
-                nombre,
+                req.nombre(),
                 codigoNormalizado,
-                descripcion,
-                capacidadMaxima,
-                creditos,
-            cicloNormalizado,
-            fechaInicioNormalizada,
-                fechaTermino,
-                horasTeoricas,
-                horasPracticas,
-                horasLaboratorio
+                req.descripcion(),
+                req.capacidadMaxima(),
+                req.creditos(),
+                cicloNormalizado,
+                fechaInicioNormalizada,
+                req.fechaTermino(),
+                req.horasTeoricas(),
+                req.horasPracticas(),
+                req.horasLaboratorio()
         );
 
-        Optional<Curso> respuesta = cursoRepositorio.findById(id);
+        Curso curso = cursoRepositorio.findById(id)
+                .orElseThrow(() -> new MyException("Curso no encontrado"));
 
-        if (respuesta.isPresent()) {
-
-            Curso curso = respuesta.get();
-
-            if (!curso.getCodigoCurso().equalsIgnoreCase(codigoNormalizado)
-                    && cursoRepositorio.existsByCodigoCursoIgnoreCase(codigoNormalizado)) {
-                throw new MyException("Ya existe otro curso con el codigo " + codigoNormalizado);
-            }
-
-            curso.setNombre(nombre);
-
-            curso.setCodigoCurso(codigoNormalizado);
-
-            curso.setDescripcion(descripcion);
-
-            curso.setCiclo(cicloNormalizado);
-
-            curso.setModalidad(modalidadCurso);
-
-            curso.setCapacidadMaxima(capacidadMaxima);
-
-            curso.setCreditos(creditos);
-
-            curso.setFechaInicio(fechaInicioNormalizada);
-
-            curso.setFechaTermino(fechaTermino);
-
-            curso.setHorasTeoricas(normalizarHoras(horasTeoricas));
-
-            curso.setHorasPracticas(normalizarHoras(horasPracticas));
-
-            curso.setHorasLaboratorio(normalizarHoras(horasLaboratorio));
-
-            curso.setEstado(estadoCurso);
-
-            curso.setCarrera(carrera);
-
-            if (profesor != null) {
-                curso.setProfesorAsignado(profesor);
-            }
-
-            cursoRepositorio.save(curso);
-
+        if (!curso.getCodigoCurso().equalsIgnoreCase(codigoNormalizado)
+                && cursoRepositorio.existsByCodigoCursoIgnoreCase(codigoNormalizado)) {
+            throw new MyException("Ya existe otro curso con el codigo " + codigoNormalizado);
         }
+
+        curso.setNombre(req.nombre());
+        curso.setCodigoCurso(codigoNormalizado);
+        curso.setDescripcion(req.descripcion());
+        curso.setCiclo(cicloNormalizado);
+        curso.setModalidad(modalidadCurso);
+        curso.setCapacidadMaxima(req.capacidadMaxima());
+        curso.setCreditos(req.creditos());
+        curso.setFechaInicio(fechaInicioNormalizada);
+        curso.setFechaTermino(req.fechaTermino());
+        curso.setHorasTeoricas(normalizarHoras(req.horasTeoricas()));
+        curso.setHorasPracticas(normalizarHoras(req.horasPracticas()));
+        curso.setHorasLaboratorio(normalizarHoras(req.horasLaboratorio()));
+        curso.setEstado(estadoCurso);
+        curso.setCarrera(carrera);
+
+        if (profesor != null) {
+            curso.setProfesorAsignado(profesor);
+        }
+
+        cursoRepositorio.save(curso);
     }
 
     @Transactional
     public void eliminarCurso(String id) throws MyException {
 
-        Curso curso = cursoRepositorio.getById(id);
+        Curso curso = cursoRepositorio.findById(id)
+                .orElseThrow(() -> new MyException("Curso no encontrado"));
         curso.setEstado(EstadoCurso.INACTIVO);
         cursoRepositorio.save(curso);
 
@@ -548,11 +500,11 @@ public class CursoServicio {
     }
     @Transactional
     public void inscribirCurso(String idUser, String idCurso) throws MyException {
-        Optional<Usuario> respuesta1 = usuarioRepositorio.findById(idUser);
-        Usuario usuario = respuesta1.get();
+        Usuario usuario = usuarioRepositorio.findById(idUser)
+                .orElseThrow(() -> new MyException("Usuario no encontrado"));
 
-        Optional<Curso> respuesta2 = cursoRepositorio.findById(idCurso);
-        Curso curso = respuesta2.get();
+        Curso curso = cursoRepositorio.findById(idCurso)
+                .orElseThrow(() -> new MyException("Curso no encontrado"));
 
         if (!EstadoCurso.ACTIVO.equals(curso.getEstado())) {
             throw new MyException("Solo puedes inscribirte en cursos con estado ACTIVO");
@@ -615,38 +567,22 @@ public class CursoServicio {
     }
 
     private void validarCruceHorariosAlumno(String idUser, Curso nuevoCurso) throws MyException {
-        
+
         List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
-        
+
         if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
-            return; 
+            return;
         }
 
-        // 2. Obtener los cursos donde el alumno ya está inscrito (y aprobado)
-        List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosAlumno(idUser);
+        // Todos los horarios de los cursos ya inscritos (aprobados/activos) en una sola consulta
+        List<HorarioSesion> horariosExistentes = horarioSesionRepositorio.buscarHorariosPorAlumno(idUser);
 
-        // 3. Comparar horarios buscando solapamientos
-        for (Curso cursoExistente : cursosInscritos) {
-            List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
-
-            for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
-                for (HorarioSesion horarioExistente : horariosExistente) {
-                    
-                    // Si caen en el mismo día de la semana
-                    if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
-                        
-                        // Condición de cruce: (InicioA < FinB) y (FinA > InicioB)
-                        if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
-                            horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
-                            
-                            throw new MyException("Cruce de horarios detectado. El curso '" + nuevoCurso.getNombre() + 
-                                "' choca con tu curso ya inscrito '" + cursoExistente.getNombre() + 
-                                "' los días " + horarioExistente.getDiaSemana() + 
-                                " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin() + ".");
-                        }
-                    }
-                }
-            }
+        HorarioSesion cruce = HorarioUtil.primerCruce(horariosNuevoCurso, horariosExistentes);
+        if (cruce != null) {
+            throw new MyException("Cruce de horarios detectado. El curso '" + nuevoCurso.getNombre()
+                + "' choca con tu curso ya inscrito '" + cruce.getCurso().getNombre()
+                + "' los días " + cruce.getDiaSemana()
+                + " de " + cruce.getHoraInicio() + " a " + cruce.getHoraFin() + ".");
         }
     }
     public List<HorarioSesion> listarHorariosPorAlumno(String alumnoId) {

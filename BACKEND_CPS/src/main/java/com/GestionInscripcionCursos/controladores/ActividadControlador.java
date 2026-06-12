@@ -38,7 +38,7 @@ public class ActividadControlador {
     @Autowired
     private UsuarioServicio usuarioServicio;
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/registrar/{id}")
     public ResponseEntity<?> registrar(@PathVariable String id) {
         return ResponseEntity.ok(cursoServicio.buscarPorId(id));
@@ -89,13 +89,13 @@ public class ActividadControlador {
         return ResponseEntity.ok(Map.of("rol", rol, "actividades", actividades));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/modificar/{id}")
     public ResponseEntity<?> modificar(@PathVariable String id) {
         return ResponseEntity.ok(actividadServicio.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminar(@PathVariable String id) {
 

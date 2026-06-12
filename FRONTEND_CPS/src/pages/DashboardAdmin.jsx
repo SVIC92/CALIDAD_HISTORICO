@@ -4,10 +4,7 @@ import {
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   Divider,
-  Avatar,
   Alert,
   CircularProgress,
   Button,
@@ -16,28 +13,13 @@ import PeopleIcon from '@mui/icons-material/People';
 import BookIcon from '@mui/icons-material/Book';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SpaceDashboardRoundedIcon from '@mui/icons-material/SpaceDashboardRounded';
 import { useNavigate } from 'react-router-dom';
 import UsuarioService from '../services/UsuarioService';
 import CursoService from '../services/CursoService';
 import InscripcionService from '../services/InscripcionService';
-
-const KpiCard = ({ title, value, icon, color }) => (
-  <Card sx={{ height: '100%', boxShadow: 3 }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Avatar sx={{ bgcolor: color, mr: 2 }}>
-          {icon}
-        </Avatar>
-        <Typography variant="h6" color="text.secondary">
-          {title}
-        </Typography>
-      </Box>
-      <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-        {value}
-      </Typography>
-    </CardContent>
-  </Card>
-);
+import PageHeader from '../components/PageHeader';
+import StatCard from '../components/StatCard';
 
 const toDate = (value) => {
   if (!value) return null;
@@ -71,10 +53,10 @@ const DashboardAdmin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [stats, setStats] = useState([
-    { title: 'Total Alumnos', value: '0', icon: <PeopleIcon />, color: '#1976d2' },
-    { title: 'Cursos Activos', value: '0', icon: <BookIcon />, color: '#2e7d32' },
-    { title: 'Inscripciones Hoy', value: '0', icon: <AssignmentTurnedInIcon />, color: '#ed6c02' },
-    { title: 'Tasa de Crecimiento', value: '0%', icon: <TrendingUpIcon />, color: '#9c27b0' },
+    { title: 'Total Alumnos', value: '0', icon: <PeopleIcon />, color: 'primary' },
+    { title: 'Cursos Activos', value: '0', icon: <BookIcon />, color: 'success' },
+    { title: 'Inscripciones Hoy', value: '0', icon: <AssignmentTurnedInIcon />, color: 'warning' },
+    { title: 'Tasa de Crecimiento', value: '0%', icon: <TrendingUpIcon />, color: 'secondary' },
   ]);
   const [actividadReciente, setActividadReciente] = useState([]);
 
@@ -142,10 +124,10 @@ const DashboardAdmin = () => {
 
         setActividadReciente(actividad);
         setStats([
-          { title: 'Total Alumnos', value: String(totalAlumnos), icon: <PeopleIcon />, color: '#1976d2' },
-          { title: 'Cursos Activos', value: String(cursosActivos.length), icon: <BookIcon />, color: '#2e7d32' },
-          { title: 'Inscripciones Hoy', value: String(inscripcionesHoy), icon: <AssignmentTurnedInIcon />, color: '#ed6c02' },
-          { title: 'Tasa de Crecimiento', value: crecimiento, icon: <TrendingUpIcon />, color: '#9c27b0' },
+          { title: 'Total Alumnos', value: String(totalAlumnos), icon: <PeopleIcon />, color: 'primary' },
+          { title: 'Cursos Activos', value: String(cursosActivos.length), icon: <BookIcon />, color: 'success' },
+          { title: 'Inscripciones Hoy', value: String(inscripcionesHoy), icon: <AssignmentTurnedInIcon />, color: 'warning' },
+          { title: 'Tasa de Crecimiento', value: crecimiento, icon: <TrendingUpIcon />, color: 'secondary' },
         ]);
 
         if (usuariosResult.status === 'rejected' || cursosActivosResult.status === 'rejected' || inscripcionesResult.status === 'rejected') {
@@ -172,9 +154,11 @@ const DashboardAdmin = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'medium' }}>
-        Panel de Administración
-      </Typography>
+      <PageHeader
+        title="Panel de Administración"
+        subtitle="Indicadores y actividad general de la plataforma"
+        icon={<SpaceDashboardRoundedIcon />}
+      />
 
       {errorMsg && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -190,7 +174,7 @@ const DashboardAdmin = () => {
         <Grid container spacing={3}>
           {stats.map((stat, index) => (
             <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-              <KpiCard {...stat} />
+              <StatCard {...stat} />
             </Grid>
           ))}
 
@@ -211,7 +195,7 @@ const DashboardAdmin = () => {
                     key={item.mes}
                     sx={{
                       p: 2,
-                      borderRadius: 1,
+                      borderRadius: 2,
                       bgcolor: 'action.hover',
                       border: (theme) => `1px solid ${theme.palette.divider}`,
                       display: 'flex',

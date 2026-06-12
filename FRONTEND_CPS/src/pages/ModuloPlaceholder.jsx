@@ -1,5 +1,7 @@
 import { Box, Typography, Paper, Button } from '@mui/material';
+import { ViewModule } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 
 const ModuloPlaceholder = () => {
   const navigate = useNavigate();
@@ -16,9 +18,12 @@ const ModuloPlaceholder = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'medium', textTransform: 'capitalize' }}>
-        {modulo}
-      </Typography>
+      <PageHeader
+        title={modulo}
+        icon={<ViewModule />}
+        onBack={() => navigate(dashboardPath)}
+        sx={{ textTransform: 'capitalize' }}
+      />
 
       <Paper sx={{ p: 4 }}>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>

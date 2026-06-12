@@ -1,5 +1,7 @@
 import { Box, Paper, Typography, Button } from '@mui/material';
+import { LockOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 
 const NoAutorizado = () => {
   const navigate = useNavigate();
@@ -14,9 +16,10 @@ const NoAutorizado = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'medium' }}>
-        Acceso denegado
-      </Typography>
+      <PageHeader
+        title="Acceso denegado"
+        icon={<LockOutlined />}
+      />
 
       <Paper sx={{ p: 4 }}>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>

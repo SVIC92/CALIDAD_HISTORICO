@@ -1,5 +1,6 @@
 package com.GestionInscripcionCursos.controladores;
 
+import com.GestionInscripcionCursos.dto.CursoRequestDto;
 import com.GestionInscripcionCursos.entidades.Curso;
 import com.GestionInscripcionCursos.entidades.CursoPrerequisito;
 import com.GestionInscripcionCursos.entidades.HorarioSesion;
@@ -36,7 +37,7 @@ public class CursoControlador {
     @Autowired
     private UsuarioServicio usuarioServicio;
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/registrar")
     public ResponseEntity<?> registrar() {
         return ResponseEntity.ok(Map.of("mensaje", "Endpoint para registrar curso"));
@@ -63,7 +64,7 @@ public class CursoControlador {
 
         try {
             String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
-            cursoServicio.crearCurso(
+            cursoServicio.crearCurso(new CursoRequestDto(
                 nombre,
                 codigoCurso,
                 descripcion,
@@ -79,7 +80,7 @@ public class CursoControlador {
                 estado,
                 profesorReferencia,
                 carrera
-            );
+            ));
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("mensaje", "Curso registrado correctamente"));
         } catch (MyException ex) {
@@ -87,7 +88,7 @@ public class CursoControlador {
         }
     }
 
-    //@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    //@PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/lista")
     public ResponseEntity<List<Curso>> listar() {
         return ResponseEntity.ok(cursoServicio.listarCursos());
@@ -103,7 +104,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursoServicio.listarCursosCaducados());
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/modificar/{id}")
     public ResponseEntity<Curso> modificar(@PathVariable String id) {
         return ResponseEntity.ok(cursoServicio.buscarPorId(id));
@@ -131,8 +132,7 @@ public class CursoControlador {
 
         try {
             String profesorReferencia = (profesorId != null && !profesorId.isBlank()) ? profesorId : profesorAsignado;
-            cursoServicio.modificarCurso(
-                    id,
+            cursoServicio.modificarCurso(id, new CursoRequestDto(
                     nombre,
                     codigoCurso,
                     descripcion,
@@ -148,7 +148,7 @@ public class CursoControlador {
                     estado,
                     profesorReferencia,
                     carrera
-            );
+            ));
             return ResponseEntity.ok(cursoServicio.buscarPorId(id));
         } catch (MyException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
@@ -156,7 +156,7 @@ public class CursoControlador {
 
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminar(@PathVariable String id) {
         try {
@@ -167,7 +167,7 @@ public class CursoControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/listaDisponiblesProfesor")
     public ResponseEntity<List<Curso>> listarCursosDisponiblesProfesor() {
 
@@ -181,7 +181,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursos);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/listaInscritosProfesor")
     public ResponseEntity<List<Curso>> listarCursosInscritosProfesor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -194,7 +194,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursos);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ALUMNO')")
     @GetMapping("/listaDisponiblesAlumno")
     public ResponseEntity<List<Curso>> listarCursosDisponiblesAlumno() {
 
@@ -208,7 +208,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursos);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ALUMNO')")
     @GetMapping("/listaInscritosAlumno")
     public ResponseEntity<List<Curso>> listarCursosInscritosAlumno() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -221,7 +221,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursos);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR', 'ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('PROFESOR', 'ALUMNO')")
     @GetMapping("/inscribir/{id}")
     public ResponseEntity<?> inscribirCurso(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -241,7 +241,7 @@ public class CursoControlador {
 
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/{idCurso}/horarios/agregar")
     public ResponseEntity<?> agregarHorario(
             @PathVariable String idCurso,
@@ -264,7 +264,7 @@ public class CursoControlador {
         return ResponseEntity.ok(cursoServicio.listarHorariosCurso(idCurso));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @DeleteMapping("/{idCurso}/horarios/{idHorario}")
     public ResponseEntity<?> eliminarHorario(
             @PathVariable String idCurso,
@@ -278,7 +278,7 @@ public class CursoControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/{idCurso}/prerequisitos/agregar")
     public ResponseEntity<?> agregarPrerequisito(
             @PathVariable String idCurso,
@@ -300,12 +300,12 @@ public class CursoControlador {
     }
 
     @GetMapping("/horarios/profesor/{profesorId}")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     public ResponseEntity<List<HorarioSesion>> listarHorariosProfesor(@PathVariable String profesorId) {
         return ResponseEntity.ok(cursoServicio.listarHorariosPorProfesor(profesorId));
     }
     @GetMapping("/horarios/alumno")
-    @PreAuthorize("hasRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasRole('ALUMNO')")
     public ResponseEntity<List<HorarioSesion>> listarMisHorarios(Authentication authentication) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         return ResponseEntity.ok(cursoServicio.listarHorariosPorAlumno(usuario.getId()));

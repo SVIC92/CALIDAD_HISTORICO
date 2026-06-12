@@ -20,13 +20,13 @@ public class InscripcionControlador {
     @Autowired
     private InscripcionServicio inscripcionServicio;
     
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/listaPendientesProfesor")
     public ResponseEntity<List<Inscripcion>> listaPendientesProfesor() {
         return ResponseEntity.ok(inscripcionServicio.listaPendientesProfesor());
     }
     
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/listaRealizadasProfesor")
     public ResponseEntity<List<Inscripcion>> listaRealizadasProfesor() {
         return ResponseEntity.ok(inscripcionServicio.listaRealizadasProfesor());
@@ -35,13 +35,13 @@ public class InscripcionControlador {
     
     
     
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/listaPendientesAlumno")
     public ResponseEntity<List<Inscripcion>> listaPendientesAlumno() {
         return ResponseEntity.ok(inscripcionServicio.listaPendientesAlumno());
     }
     
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/listaRealizadasAlumno")
     public ResponseEntity<List<Inscripcion>> listaRealizadasAlumno() {
         return ResponseEntity.ok(inscripcionServicio.listaRealizadasAlumno());
@@ -51,7 +51,7 @@ public class InscripcionControlador {
     
     
     
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @GetMapping("/aprobar/{id}")
     public ResponseEntity<?> aprobar(@PathVariable String id) {
         try {
@@ -62,7 +62,7 @@ public class InscripcionControlador {
         }
     }
     
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @GetMapping("/rechazar/{id}")
     public ResponseEntity<?> rechazar(@PathVariable String id) {
         try {
@@ -73,7 +73,7 @@ public class InscripcionControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/aprobarProfesor/{id}")
     public ResponseEntity<?> aprobarProfesor(@PathVariable String id) {
         try {
@@ -84,7 +84,7 @@ public class InscripcionControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/rechazarProfesor/{id}")
     public ResponseEntity<?> rechazarProfesor(@PathVariable String id) {
         try {

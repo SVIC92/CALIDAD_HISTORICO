@@ -14,9 +14,10 @@ import {
   Switch,
   Typography,
 } from '@mui/material';
-import { ArrowBack, RestartAlt } from '@mui/icons-material';
+import { RestartAlt, Settings } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useUISettings } from '../context/UISettingsContext';
+import PageHeader from '../components/PageHeader';
 
 const Configuracion = () => {
   const navigate = useNavigate();
@@ -32,17 +33,16 @@ const Configuracion = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Configuración de Interfaz
-        </Typography>
-        <Button variant="outlined" color="warning" startIcon={<RestartAlt />} onClick={handleRestaurar}>
-          Restaurar
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Configuración de Interfaz"
+        icon={<Settings />}
+        onBack={() => navigate('/dashboard')}
+        actions={(
+          <Button variant="outlined" color="warning" startIcon={<RestartAlt />} onClick={handleRestaurar}>
+            Restaurar
+          </Button>
+        )}
+      />
 
       <Alert severity="info" sx={{ mb: 2 }}>
         Los cambios se aplican automaticamente.

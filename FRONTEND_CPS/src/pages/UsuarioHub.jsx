@@ -1,6 +1,7 @@
 import { Box, Card, CardActionArea, CardContent, Grid, Typography } from '@mui/material';
-import { People, Wifi } from '@mui/icons-material';
+import { People, Wifi, ManageAccounts } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 
 const UsuarioHub = () => {
   const navigate = useNavigate();
@@ -22,12 +23,11 @@ const UsuarioHub = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold' }}>
-        Gestión de Usuarios
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Selecciona el submódulo de usuarios para continuar.
-      </Typography>
+      <PageHeader
+        title="Gestión de Usuarios"
+        subtitle="Selecciona el submódulo de usuarios para continuar."
+        icon={<ManageAccounts />}
+      />
 
       <Grid container spacing={3}>
         {submodulos.map((item) => (

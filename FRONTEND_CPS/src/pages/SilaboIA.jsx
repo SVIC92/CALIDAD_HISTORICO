@@ -10,11 +10,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, AutoStories } from '@mui/icons-material';
+import { AutoStories } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IaService from '../services/IaService';
 import CursoService from '../services/CursoService';
 import CarreraService from '../services/CarreraService';
+import PageHeader from '../components/PageHeader';
 
 const defaultForm = {
   nombreCurso: '',
@@ -167,14 +168,12 @@ const SilaboIA = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/modulo/ia')}>
-          Volver al IAHub
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Generador de Silabo IA
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="Generador de Silabo IA"
+        subtitle="Genera un silabo completo segun el formato del backend."
+        icon={<AutoStories />}
+        onBack={() => navigate('/modulo/ia')}
+      />
 
       {errorMsg && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -183,10 +182,6 @@ const SilaboIA = () => {
       )}
 
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Genera un silabo completo segun el formato del backend.
-        </Typography>
-
         <Stack spacing={1.2}>
           {cursos.length > 0 && (
             <TextField
@@ -289,7 +284,7 @@ const SilaboIA = () => {
         <Paper sx={{ p: 2 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
             <AutoStories color="primary" />
-            <Typography variant="h6">Silabo generado</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>Silabo generado</Typography>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>

@@ -13,9 +13,10 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, ArrowBack, HowToReg, CalendarMonth, DateRange} from '@mui/icons-material';
+import { Add, Edit, Delete, Search, HowToReg, CalendarMonth, DateRange, Book } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import FloatingConfirmModal from '../components/FloatingConfirmModal';
 import FloatingMessageModal from '../components/FloatingMessageModal';
 import CursoService from '../services/CursoService';
@@ -723,32 +724,36 @@ const CursosListado = () => {
     .filter((c) => (c.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()));
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')} sx={{ mr: 2 }}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          {rol === 'ROLE_ADMIN' && 'Listado de Cursos'}
-          {rol === 'ROLE_PROFESOR' && 'Cursos Disponibles para Dictar'}
-          {rol === 'ROLE_ALUMNO' && 'Cursos Disponibles'}
-        </Typography>
-        {canManageCursos && (
-          <Button
-            variant="outlined"
-            color="secondary"
-            startIcon={<CalendarMonth />}
-            onClick={() => navigate('/modulo/horarios-profesor')}
-            sx={{ mr: 2 }}
-          >
-            Ver Horarios por Profesor
-          </Button>
-        )}
-        {canManageCursos && (
-          <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>
-            Nuevo Curso
-          </Button>
-        )}
-      </Box>
+      <PageHeader
+        title={
+          <>
+            {rol === 'ROLE_ADMIN' && 'Listado de Cursos'}
+            {rol === 'ROLE_PROFESOR' && 'Cursos Disponibles para Dictar'}
+            {rol === 'ROLE_ALUMNO' && 'Cursos Disponibles'}
+          </>
+        }
+        icon={<Book />}
+        onBack={() => navigate('/cursos')}
+        actions={
+          <>
+            {canManageCursos && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<CalendarMonth />}
+                onClick={() => navigate('/modulo/horarios-profesor')}
+              >
+                Ver Horarios por Profesor
+              </Button>
+            )}
+            {canManageCursos && (
+              <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>
+                Nuevo Curso
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <TextField
         fullWidth
@@ -1050,7 +1055,7 @@ const CursosListado = () => {
                     gap: 1,
                     mb: 0.75,
                     p: 1,
-                    borderRadius: 1,
+                    borderRadius: 2,
                     bgcolor: 'action.hover',
                   }}
                 >

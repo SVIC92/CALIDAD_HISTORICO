@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Button, InputAdornment, TextField, Typography } from '@mui/material';
-import { ArrowBack, Search } from '@mui/icons-material';
+import { Box, InputAdornment, TextField } from '@mui/material';
+import { MenuBook, Search } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import CursoService from '../services/CursoService';
 
 const getUserEmailFromToken = () => {
@@ -67,14 +68,11 @@ const CursosDictadosProfesor = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')} sx={{ mr: 2 }}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Cursos Aprobados para Dictar
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Cursos Aprobados para Dictar"
+        icon={<MenuBook />}
+        onBack={() => navigate('/cursos')}
+      />
 
       <TextField
         fullWidth

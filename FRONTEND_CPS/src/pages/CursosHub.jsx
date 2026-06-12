@@ -1,7 +1,8 @@
 import { Grid, Card, CardContent, Typography, CardActionArea, Box } from '@mui/material';
-import { ListAlt, PersonAdd, Assessment, Settings, AssignmentTurnedIn, School, Book } from '@mui/icons-material';
+import { ListAlt, PersonAdd, Assessment, Settings, AssignmentTurnedIn, School, Book, MenuBook } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Chat } from '@mui/icons-material'
+import PageHeader from '../components/PageHeader';
 
 const submodulosPorRol = {
   ROLE_ADMIN: [
@@ -128,14 +129,13 @@ const CursosHub = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 1, fontWeight: 'bold' }}>
-        {titulo}
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Seleccione el sub-módulo con el que desea trabajar hoy.
-      </Typography>
+      <PageHeader
+        title={titulo}
+        subtitle="Seleccione el sub-módulo con el que desea trabajar hoy."
+        icon={<MenuBook />}
+      />
 
-      <Grid container spacing={4}>
+      <Grid container spacing={3}>
         {submodulos.map((item) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={item.title}>
             <Card sx={{ height: '100%', textAlign: 'center', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>

@@ -3,16 +3,17 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   MenuItem,
   Stack,
   Tab,
   Tabs,
   TextField,
-  Typography,
 } from '@mui/material';
-import { ArrowBack, CheckCircle, Close, Refresh, ListAlt } from '@mui/icons-material';
+import { CheckCircle, Close, Refresh, ListAlt, AssignmentTurnedIn } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import FloatingMessageModal from '../components/FloatingMessageModal';
 import InscripcionService from '../services/InscripcionService';
 import CursoService from '../services/CursoService';
@@ -238,17 +239,16 @@ const Inscripciones = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          {headersByRole[rol] || 'Inscripciones'}
-        </Typography>
-        <Button variant="outlined" startIcon={<Refresh />} onClick={loadInscripciones} disabled={isLoading}>
-          Recargar
-        </Button>
-      </Stack>
+      <PageHeader
+        title={headersByRole[rol] || 'Inscripciones'}
+        icon={<AssignmentTurnedIn />}
+        onBack={() => navigate('/cursos')}
+        actions={
+          <Button variant="outlined" startIcon={<Refresh />} onClick={loadInscripciones} disabled={isLoading}>
+            Recargar
+          </Button>
+        }
+      />
 
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         {(rol === 'ROLE_ADMIN' || rol === 'ROLE_PROFESOR') && (
@@ -312,18 +312,24 @@ const Inscripciones = () => {
         </Tabs>
       )}
 
-      <DataTable
-        columns={columns}
-        data={tabData}
-        actions={tableActions}
-        exportFileName={
-          rol === 'ROLE_ALUMNO'
-            ? 'mis-cursos-inscritos'
-            : rol === 'ROLE_PROFESOR'
-              ? 'inscripciones-realizadas-profesor'
-              : `inscripciones-${tab}`
-        }
-      />
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={tabData}
+          actions={tableActions}
+          exportFileName={
+            rol === 'ROLE_ALUMNO'
+              ? 'mis-cursos-inscritos'
+              : rol === 'ROLE_PROFESOR'
+                ? 'inscripciones-realizadas-profesor'
+                : `inscripciones-${tab}`
+          }
+        />
+      )}
     </Box>
   );
 };

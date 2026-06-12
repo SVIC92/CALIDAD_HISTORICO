@@ -11,9 +11,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Security, QrCode2, VerifiedUser, Person } from '@mui/icons-material';
+import { Security, QrCode2, VerifiedUser, Person, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
+import PageHeader from '../components/PageHeader';
 
 const PerfilUsuario = () => {
   const navigate = useNavigate();
@@ -141,20 +142,19 @@ const PerfilUsuario = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Perfil de Usuario
-        </Typography>
-        <Chip
-          icon={twoFactorEnabled ? <VerifiedUser /> : <Security />}
-          label={twoFactorEnabled ? '2FA Activo' : '2FA Inactivo'}
-          color={twoFactorEnabled ? 'success' : 'default'}
-          variant={twoFactorEnabled ? 'filled' : 'outlined'}
-        />
-      </Stack>
+      <PageHeader
+        title="Perfil de Usuario"
+        icon={<AccountCircle />}
+        onBack={() => navigate('/dashboard')}
+        actions={(
+          <Chip
+            icon={twoFactorEnabled ? <VerifiedUser /> : <Security />}
+            label={twoFactorEnabled ? '2FA Activo' : '2FA Inactivo'}
+            color={twoFactorEnabled ? 'success' : 'default'}
+            variant={twoFactorEnabled ? 'filled' : 'outlined'}
+          />
+        )}
+      />
 
       {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
       {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}

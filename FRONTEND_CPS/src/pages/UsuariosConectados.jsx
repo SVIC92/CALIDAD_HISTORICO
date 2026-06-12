@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, InputAdornment, TextField, Typography } from '@mui/material';
-import { ArrowBack, Refresh, Search } from '@mui/icons-material';
+import { Alert, Box, Button, InputAdornment, TextField } from '@mui/material';
+import { Refresh, Search, PeopleAlt } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import UsuarioService from '../services/UsuarioService';
 
 const normalizeConectado = (usuario) => ({
@@ -80,17 +81,16 @@ const UsuariosConectados = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/usuarios')} sx={{ mr: 2 }}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Usuarios Conectados En Tiempo Real
-        </Typography>
-        <Button variant="outlined" startIcon={<Refresh />} onClick={cargar} disabled={isLoading || !endpointDisponible}>
-          Recargar
-        </Button>
-      </Box>
+      <PageHeader
+        title="Usuarios Conectados En Tiempo Real"
+        icon={<PeopleAlt />}
+        onBack={() => navigate('/usuarios')}
+        actions={
+          <Button variant="outlined" startIcon={<Refresh />} onClick={cargar} disabled={isLoading || !endpointDisponible}>
+            Recargar
+          </Button>
+        }
+      />
 
       {errorMsg && (
         <Alert severity="warning" sx={{ mb: 2 }}>

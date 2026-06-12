@@ -23,7 +23,7 @@ public class CarreraControlador {
     @Autowired
     private CarreraServicio carreraServicio;
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/registro")
     public ResponseEntity<?> registrar(
             @RequestParam String codigo,
@@ -43,7 +43,7 @@ public class CarreraControlador {
         return ResponseEntity.ok(carreraServicio.listar());
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/modificar/{id}")
     public ResponseEntity<?> modificar(
             @PathVariable String id,
@@ -58,7 +58,7 @@ public class CarreraControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminar(@PathVariable String id) {
         try {

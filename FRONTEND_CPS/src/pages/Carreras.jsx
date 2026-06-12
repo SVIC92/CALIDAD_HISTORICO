@@ -7,13 +7,12 @@ import {
   DialogContent,
   DialogTitle,
   InputAdornment,
-  Stack,
   TextField,
-  Typography,
 } from '@mui/material';
-import { Add, ArrowBack, Delete, Edit, Search } from '@mui/icons-material';
+import { Add, Apartment, Delete, Edit, Search } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import FloatingConfirmModal from '../components/FloatingConfirmModal';
 import FloatingMessageModal from '../components/FloatingMessageModal';
 import CarreraService from '../services/CarreraService';
@@ -223,17 +222,16 @@ const Carreras = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Gestión de Carreras
-        </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
-          Nueva Carrera
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Gestión de Carreras"
+        icon={<Apartment />}
+        onBack={() => navigate('/cursos')}
+        actions={
+          <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
+            Nueva Carrera
+          </Button>
+        }
+      />
 
       <FloatingMessageModal
         open={Boolean(errorMsg)}

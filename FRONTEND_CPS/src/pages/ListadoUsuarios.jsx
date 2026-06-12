@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, TextField, InputAdornment, Button,
+  Box, TextField, InputAdornment, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Stack,
 } from '@mui/material';
-import { ArrowBack, Search, Add, Edit, Block, CheckCircle } from '@mui/icons-material';
+import { Search, Add, Edit, Block, CheckCircle, People } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import FloatingConfirmModal from '../components/FloatingConfirmModal';
 import FloatingMessageModal from '../components/FloatingMessageModal';
 import UsuarioService from '../services/UsuarioService';
@@ -218,17 +219,16 @@ const ListadoUsuarios = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/usuarios')} sx={{ mr: 2 }}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Gestión de Usuarios
-        </Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
-          Nuevo Usuario
-        </Button>
-      </Box>
+      <PageHeader
+        title="Gestión de Usuarios"
+        icon={<People />}
+        onBack={() => navigate('/usuarios')}
+        actions={
+          <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
+            Nuevo Usuario
+          </Button>
+        }
+      />
 
       <FloatingMessageModal
         open={Boolean(errorMsg)}

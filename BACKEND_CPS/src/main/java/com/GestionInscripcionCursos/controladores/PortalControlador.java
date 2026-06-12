@@ -118,7 +118,7 @@ public class PortalControlador {
         return ResponseEntity.ok(Map.of("mensaje", "Login endpoint"));
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO', 'ROLE_PROFESOR', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ALUMNO', 'PROFESOR', 'ADMIN')")
     @GetMapping("/inicio")
     public ResponseEntity<?> inicio(HttpSession session) {
 

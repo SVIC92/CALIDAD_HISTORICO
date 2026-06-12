@@ -163,7 +163,9 @@ export const UISettingsProvider = ({ children }) => {
             filter: 'saturate(85%)',
           },
           'html[data-saturation="normal"] #root': {
-            filter: 'saturate(100%)',
+            // 'none' (no 'saturate(100%)') evita crear un bloque contenedor que
+            // rompa el position: fixed del Navbar/FAB en el modo por defecto.
+            filter: 'none',
           },
           'html[data-saturation="high"] #root': {
             filter: 'saturate(130%)',
@@ -182,7 +184,10 @@ export const UISettingsProvider = ({ children }) => {
             filter: 'saturate(var(--app-saturation, 100%)) contrast(1.12) brightness(1.03)',
           },
           'html[data-contrast-mode="normal"] body': {
-            filter: 'saturate(var(--app-saturation, 100%))',
+            // Sin filtro en modo normal: un filter en <body> crea un bloque
+            // contenedor que descoloca los elementos position: fixed (FAB, AppBar)
+            // al hacer scroll. El filtro solo se aplica en modos de contraste activos.
+            filter: 'none',
           },
           'html[data-contrast="high"] .MuiPaper-root, html[data-contrast="high"] .MuiCard-root, html[data-contrast="high"] .MuiDrawer-paper': {
             borderWidth: '2px !important',

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-    Box, Typography, Button, Paper, CircularProgress, Alert, Card, CardContent
+    Box, Typography, Paper, CircularProgress, Alert, Card, CardContent
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { ArrowBack, AccessTime, ClassOutlined } from '@mui/icons-material';
+import { CalendarMonth, AccessTime, ClassOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 import CursoService from '../services/CursoService';
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -58,14 +59,11 @@ const HorarioAlumno = () => {
             }}
         >
             {/* Cabecera */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard/alumno')} sx={{ mr: 2 }}>
-                    Volver
-                </Button>
-                <Typography variant="h4" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                    Mi Horario de Clases
-                </Typography>
-            </Box>
+            <PageHeader
+                title="Mi Horario de Clases"
+                icon={<CalendarMonth />}
+                onBack={() => navigate('/dashboard/alumno')}
+            />
 
             {errorMsg && <Alert severity="error" sx={{ mb: 3 }}>{errorMsg}</Alert>}
 

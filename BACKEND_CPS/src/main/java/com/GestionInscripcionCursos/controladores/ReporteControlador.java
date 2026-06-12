@@ -40,7 +40,7 @@ public class ReporteControlador {
     @Autowired
     private ArchivoServicio archivoServicio;
 
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ALUMNO')")
     @GetMapping("/registrar/{id}")
     public ResponseEntity<?> registrar(@PathVariable String id) {
 
@@ -64,7 +64,7 @@ public class ReporteControlador {
     }
 
     @PostMapping("/registro/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ALUMNO')")
     public ResponseEntity<?> registro(
             @PathVariable String id, 
             @RequestParam("respuesta") String respuesta,
@@ -88,7 +88,7 @@ public class ReporteControlador {
         }
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','PROFESOR')")
     @GetMapping("/listar/{id}")
     public ResponseEntity<List<Reporte>> listar(@PathVariable String id) {
 
@@ -96,7 +96,7 @@ public class ReporteControlador {
         return ResponseEntity.ok(reportes);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESOR')")
+    @PreAuthorize("hasAnyRole('PROFESOR')")
     @GetMapping("/calificar/{id}")
     public ResponseEntity<Reporte> calificar(@PathVariable String id) {
         return ResponseEntity.ok(reporteServicio.buscarPorId(id));
@@ -118,7 +118,7 @@ public class ReporteControlador {
     }
 
     @GetMapping("/detalle/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_ALUMNO')")
+    @PreAuthorize("hasAnyRole('ALUMNO')")
     public ResponseEntity<?> verDetalle(@PathVariable String id) {
         try {
             String emailUser = SecurityContextHolder.getContext().getAuthentication().getName();

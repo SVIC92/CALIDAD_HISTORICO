@@ -1,6 +1,7 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { ArrowBack, AutoAwesome, AutoStories, Chat, Grading } from '@mui/icons-material';
+import { AutoAwesome, AutoStories, Chat, Grading } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/PageHeader';
 
 const IAHub = () => {
   const navigate = useNavigate();
@@ -31,14 +32,11 @@ const IAHub = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/dashboard')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          IA
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="IA"
+        icon={<AutoAwesome />}
+        onBack={() => navigate('/dashboard')}
+      />
 
       <Paper sx={{ p: 2.5, mb: 2, bgcolor: 'primary.50' }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>

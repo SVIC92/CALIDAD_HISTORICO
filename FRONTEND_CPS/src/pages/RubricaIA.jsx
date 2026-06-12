@@ -10,11 +10,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Description, PictureAsPdf } from '@mui/icons-material';
+import { Description, PictureAsPdf } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import IaService from '../services/IaService';
 import CursoService from '../services/CursoService';
+import PageHeader from '../components/PageHeader';
 
 const defaultForm = {
   tema: '',
@@ -247,14 +248,12 @@ const RubricaIA = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/modulo/ia')}>
-          Volver al IAHub
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Generador de Rúbricas IA
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="Generador de Rúbricas IA"
+        subtitle="Define el contexto y genera una rúbrica de evaluación automáticamente."
+        icon={<Description />}
+        onBack={() => navigate('/modulo/ia')}
+      />
 
       {errorMsg && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -263,10 +262,6 @@ const RubricaIA = () => {
       )}
 
       <Paper sx={{ p: 2 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Define el contexto y genera una rúbrica de evaluación automáticamente.
-        </Typography>
-
         <Stack spacing={1.2}>
           {cursosRubrica.length > 0 && (
             <TextField
@@ -370,7 +365,7 @@ const RubricaIA = () => {
           <Box sx={{ mt: 2 }}>
             <Divider sx={{ mb: 2 }} />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' }, mb: 1 }}>
-              <Typography variant="h6">{rubrica.titulo || 'Rúbrica generada'}</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>{rubrica.titulo || 'Rúbrica generada'}</Typography>
               <Stack direction="row" spacing={1}>
                 <Button startIcon={<PictureAsPdf />} variant="outlined" onClick={exportRubricaPdf}>
                   Exportar PDF

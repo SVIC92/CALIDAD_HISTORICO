@@ -10,9 +10,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Send, SmartToy } from '@mui/icons-material';
+import { Send, SmartToy } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IaService from '../services/IaService';
+import PageHeader from '../components/PageHeader';
 
 const roleLabelByCode = {
   ROLE_ADMIN: 'Administrador',
@@ -125,17 +126,16 @@ const EstudIA = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/modulo/ia')}>
-          Volver al IAHub
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Chat IA
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Rol activo: {rolLabel}
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="Chat IA"
+        icon={<SmartToy />}
+        onBack={() => navigate('/modulo/ia')}
+        actions={(
+          <Typography variant="body2" color="text.secondary">
+            Rol activo: {rolLabel}
+          </Typography>
+        )}
+      />
 
       {errorMsg && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -144,7 +144,7 @@ const EstudIA = () => {
       )}
 
       <Paper sx={{ p: 2, height: '65vh', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ flex: 1, overflowY: 'auto', p: 1, borderRadius: 1, bgcolor: 'background.default' }}>
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 1, borderRadius: 2, bgcolor: 'background.default' }}>
           {loadingHistorial ? (
             <Stack direction="row" spacing={1} sx={{ p: 2, justifyContent: 'center', alignItems: 'center' }}>
               <CircularProgress size={20} />

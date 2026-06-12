@@ -14,10 +14,10 @@ import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
 import com.GestionInscripcionCursos.repositorios.HorarioSesionRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
+import com.GestionInscripcionCursos.util.HorarioUtil;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,18 +37,22 @@ public class InscripcionServicio {
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
 
+    @Transactional(readOnly = true)
     public List<Inscripcion> listaPendientesProfesor() {
         return inscripcionRepositorio.listarPendientesProfesor();
     }
 
+    @Transactional(readOnly = true)
     public List<Inscripcion> listaRealizadasProfesor() {
         return inscripcionRepositorio.listarRealizadasProfesor();
     }
-    
+
+    @Transactional(readOnly = true)
     public List<Inscripcion> listaPendientesAlumno() {
         return inscripcionRepositorio.listarPendientesAlumno();
     }
 
+    @Transactional(readOnly = true)
     public List<Inscripcion> listaRealizadasAlumno() {
         return inscripcionRepositorio.listarRealizadasAlumno();
     }
@@ -65,16 +69,10 @@ public class InscripcionServicio {
         Curso curso = cursoRepositorio.findById(cursoId)
                 .orElseThrow(() -> new MyException("Curso no encontrado"));
 
-        // SOLUCIÓN: Usar el atributo real 'capacidad' de la entidad Curso
-        if (curso.getCapacidadMaxima() != null) { 
-            List<Inscripcion> inscripcionesDelCurso = inscripcionRepositorio.findAll();
-            
-            // Contamos cuántas inscripciones activas ("APROBADO") existen para este curso
-            long alumnosInscritosActualmente = inscripcionesDelCurso.stream()
-                    .filter(i -> i.getCurso().getId().equals(cursoId) && "APROBADO".equals(i.getEstado()))
-                    .count();
+        // Comprobación de aforo: contamos directamente en BD en lugar de cargar toda la tabla
+        if (curso.getCapacidadMaxima() != null) {
+            Long alumnosInscritosActualmente = inscripcionRepositorio.contarAlumnosAprobadosPorCurso(cursoId);
 
-            // Comprobación contra el límite real del curso
             if (alumnosInscritosActualmente >= curso.getCapacidadMaxima()) {
                 throw new MyException("El cupo/aforo del curso ya se encuentra lleno. Capacidad máxima: " + curso.getCapacidadMaxima());
             }
@@ -94,40 +92,27 @@ public class InscripcionServicio {
 
     private void validarCruceHorariosAlumno(Usuario alumno, Curso nuevoCurso) throws MyException {
         List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
-        
+
         if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
-            return; 
+            return;
         }
 
-        // Buscamos todas las inscripciones aprobadas que ya tiene el alumno
-        List<Inscripcion> inscripcionesAlumno = inscripcionRepositorio.listarRealizadasAlumno();
+        // Horarios de los cursos aprobados/activos de ESTE alumno, en una sola consulta
+        List<HorarioSesion> horariosExistentes = horarioSesionRepositorio.buscarHorariosPorAlumno(alumno.getId());
 
-        for (Inscripcion ins : inscripcionesAlumno) {
-            if ("APROBADO".equals(ins.getEstado())) {
-                Curso cursoExistente = ins.getCurso();
-                List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
-
-                for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
-                    for (HorarioSesion horarioExistente : horariosExistente) {
-                        if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
-                            if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
-                                horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
-                                
-                                throw new MyException("Cruce de horarios detectado. El alumno ya está inscrito en el curso '" 
-                                    + cursoExistente.getNombre() + "' los días " + horarioExistente.getDiaSemana() 
-                                    + " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin());
-                            }
-                        }
-                    }
-                }
-            }
+        HorarioSesion cruce = HorarioUtil.primerCruce(horariosNuevoCurso, horariosExistentes);
+        if (cruce != null) {
+            throw new MyException("Cruce de horarios detectado. El alumno ya está inscrito en el curso '"
+                + cruce.getCurso().getNombre() + "' los días " + cruce.getDiaSemana()
+                + " de " + cruce.getHoraInicio() + " a " + cruce.getHoraFin());
         }
     }
 
     @Transactional
     public void aprobar(String id) throws MyException {
 
-        Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+        Inscripcion inscripcion = inscripcionRepositorio.findById(id)
+                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
 
         validarInscripcionAlumno(inscripcion);
 
@@ -140,7 +125,8 @@ public class InscripcionServicio {
     @Transactional
     public void rechazar(String id) throws MyException {
 
-        Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+        Inscripcion inscripcion = inscripcionRepositorio.findById(id)
+                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
 
         validarInscripcionAlumno(inscripcion);
 
@@ -152,7 +138,8 @@ public class InscripcionServicio {
 
     @Transactional
     public void aprobarInscripcionProfesor(String id) throws MyException {
-    Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+    Inscripcion inscripcion = inscripcionRepositorio.findById(id)
+            .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
     validarInscripcionProfesor(inscripcion);
 
     Usuario usuario = inscripcion.getUsuario();
@@ -175,7 +162,8 @@ public class InscripcionServicio {
 
     @Transactional
     public void rechazarInscripcionProfesor(String id) throws MyException {
-        Inscripcion inscripcion = inscripcionRepositorio.getById(id);
+        Inscripcion inscripcion = inscripcionRepositorio.findById(id)
+                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
 
         validarInscripcionProfesor(inscripcion);
 
@@ -196,38 +184,21 @@ public class InscripcionServicio {
     }
 
     private void validarCruceHorarios(Usuario profesor, Curso nuevoCurso) throws MyException {
-    // 1. Obtener los horarios del curso al que el profesor quiere ser asignado
-    List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
-    
-    // Si el curso no tiene horarios aún, no hay cruce posible
-    if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
-        return; 
-    }
+        List<HorarioSesion> horariosNuevoCurso = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(nuevoCurso.getId());
 
-    // 2. Obtener los cursos donde el profesor ya está aprobado/asignado
-    List<Curso> cursosAprobados = cursoRepositorio.buscarCursosInscritosProfesor(profesor.getId());
-
-    // 3. Comparar los horarios para buscar solapamientos
-    for (Curso cursoExistente : cursosAprobados) {
-        List<HorarioSesion> horariosExistente = horarioSesionRepositorio.findByCursoIdOrderByDiaSemanaAscHoraInicioAsc(cursoExistente.getId());
-
-        for (HorarioSesion horarioNuevo : horariosNuevoCurso) {
-            for (HorarioSesion horarioExistente : horariosExistente) {
-                
-                // Si coinciden en el mismo día de la semana
-                if (horarioNuevo.getDiaSemana().equalsIgnoreCase(horarioExistente.getDiaSemana())) {
-                    
-                    // Lógica de solapamiento de tiempo: (InicioA < FinB) && (FinA > InicioB)
-                    if (horarioNuevo.getHoraInicio().isBefore(horarioExistente.getHoraFin()) && 
-                        horarioNuevo.getHoraFin().isAfter(horarioExistente.getHoraInicio())) {
-                        
-                        throw new MyException("Cruce de horarios detectado. El profesor ya dicta el curso '" 
-                            + cursoExistente.getNombre() + "' los días " + horarioExistente.getDiaSemana() 
-                            + " de " + horarioExistente.getHoraInicio() + " a " + horarioExistente.getHoraFin());
-                    }
-                }
-            }
+        // Si el curso no tiene horarios aún, no hay cruce posible
+        if (horariosNuevoCurso == null || horariosNuevoCurso.isEmpty()) {
+            return;
         }
-    }
+
+        // Horarios de los cursos activos que ya dicta el profesor, en una sola consulta
+        List<HorarioSesion> horariosExistentes = horarioSesionRepositorio.buscarHorariosPorProfesor(profesor.getId());
+
+        HorarioSesion cruce = HorarioUtil.primerCruce(horariosNuevoCurso, horariosExistentes);
+        if (cruce != null) {
+            throw new MyException("Cruce de horarios detectado. El profesor ya dicta el curso '"
+                + cruce.getCurso().getNombre() + "' los días " + cruce.getDiaSemana()
+                + " de " + cruce.getHoraInicio() + " a " + cruce.getHoraFin());
+        }
     }
 }

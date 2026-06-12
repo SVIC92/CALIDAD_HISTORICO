@@ -7,13 +7,13 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
-  Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import { Add, ArrowBack, Delete, Edit, Assessment } from '@mui/icons-material';
+import { Add, Delete, Edit, Assessment, AssignmentTurnedIn } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DataTable from '../components/DataTable';
+import PageHeader from '../components/PageHeader';
 import FloatingConfirmModal from '../components/FloatingConfirmModal';
 import FloatingMessageModal from '../components/FloatingMessageModal';
 import ActividadService from '../services/ActividadService';
@@ -342,27 +342,28 @@ const Actividades = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 3, alignItems: 'center' }}>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate('/cursos')}>
-          Volver
-        </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Actividades
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<Assessment />}
-          onClick={() => navigate(`/modulo/reportes?cursoId=${selectedCursoId}`)}
-          disabled={!selectedCursoId}
-        >
-          Ir a Reportes
-        </Button>
-        {canManage && (
-          <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate} disabled={!selectedCursoId}>
-            Nueva Actividad
-          </Button>
-        )}
-      </Stack>
+      <PageHeader
+        title="Actividades"
+        icon={<AssignmentTurnedIn />}
+        onBack={() => navigate('/cursos')}
+        actions={
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<Assessment />}
+              onClick={() => navigate(`/modulo/reportes?cursoId=${selectedCursoId}`)}
+              disabled={!selectedCursoId}
+            >
+              Ir a Reportes
+            </Button>
+            {canManage && (
+              <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate} disabled={!selectedCursoId}>
+                Nueva Actividad
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <TextField
         select

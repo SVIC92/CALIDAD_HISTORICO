@@ -95,7 +95,7 @@ const ResetPassword = () => {
             <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
               <KeyIcon />
             </Avatar>
-            <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
+            <Typography component="h1" variant="h5" sx={{ mb: 1, fontWeight: 800 }}>
               Reestablecer Contraseña
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>

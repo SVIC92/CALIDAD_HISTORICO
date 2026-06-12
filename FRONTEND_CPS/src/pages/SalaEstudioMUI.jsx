@@ -877,7 +877,7 @@ export const SalaEstudioMUI = ({ usuarioAutenticado, listaUsuariosConectados }) 
                         <Typography variant="overline" color="primary.main" sx={{ letterSpacing: 1.8, opacity: 0.9 }}>
                             Videoconferencias
                         </Typography>
-                        <Typography variant="h4" fontWeight="bold">
+                        <Typography variant="h4" sx={{ fontWeight: 800 }}>
                             Salas de estudio y reuniones
                         </Typography>
                         <Typography variant="body1" color="text.secondary">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Avatar, Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Chip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Dashboard, Book, People, Assessment, SmartToy, AssignmentTurnedIn, School, Settings, AccountCircle, Apartment, CalendarMonth, Circle, VideoCall } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -122,12 +123,17 @@ const Sidebar = ({ open }) => {
         width: drawerWidth,
         flexShrink: 0,
         display: open ? 'block' : 'none',
+        // Sticky a altura completa del viewport: el fondo cubre siempre de arriba
+        // a abajo (sin hueco al scrollear) y la navegacion queda fija a la vista.
+        position: 'sticky',
+        top: 0,
         alignSelf: 'flex-start',
+        height: '100vh',
+        overflowY: 'auto',
         bgcolor: 'background.paper',
         boxShadow: '18px 0 40px rgba(15, 23, 42, 0.12)',
         borderRight: 'none',
         boxSizing: 'border-box',
-        minHeight: '100vh',
       }}
     >
       <Toolbar /> {/* Espacio para que no choque con el Navbar */}
@@ -168,9 +174,15 @@ const Sidebar = ({ open }) => {
 
       <Divider />
       <List sx={{ px: 1.5, py: 1 }}>
-        {menuItems.map((item) => (
+        {menuItems.map((item) => {
+          const isActive = item.path === '/'
+            ? location.pathname === '/'
+            : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+
+          return (
           <ListItem disablePadding key={item.text}>
             <ListItemButton
+              selected={isActive}
               onClick={() => {
                 if (location.pathname.startsWith('/videoconferencia') && item.path !== location.pathname) {
                   window.dispatchEvent(new Event('app:leave-videoconference'));
@@ -183,15 +195,24 @@ const Sidebar = ({ open }) => {
                 '&:hover': {
                   bgcolor: 'action.hover',
                 },
+                '&.Mui-selected': {
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.24 : 0.12),
+                  color: 'primary.main',
+                  '& .MuiListItemIcon-root': { color: 'primary.main' },
+                  '&:hover': {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.3 : 0.18),
+                  },
+                },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 38, color: 'text.secondary' }}>{item.icon}</ListItemIcon>
               <ListItemText
-                primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{item.text}</Typography>}
+                primary={<Typography variant="body2" sx={{ fontWeight: isActive ? 800 : 600 }}>{item.text}</Typography>}
               />
             </ListItemButton>
           </ListItem>
-        ))}
+          );
+        })}
       </List>
         </Box>
   );

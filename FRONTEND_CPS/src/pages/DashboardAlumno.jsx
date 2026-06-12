@@ -4,10 +4,7 @@ import {
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   Divider,
-  Avatar,
   Alert,
   CircularProgress,
   Button,
@@ -16,28 +13,13 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import SpaceDashboardRoundedIcon from '@mui/icons-material/SpaceDashboardRounded';
 import { useNavigate } from 'react-router-dom';
 import CursoService from '../services/CursoService';
 import ActividadService from '../services/ActividadService';
 import ReporteService from '../services/ReporteService';
-
-const KpiCard = ({ title, value, icon, color }) => (
-  <Card sx={{ height: '100%', boxShadow: 3 }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Avatar sx={{ bgcolor: color, mr: 2 }}>
-          {icon}
-        </Avatar>
-        <Typography variant="h6" color="text.secondary">
-          {title}
-        </Typography>
-      </Box>
-      <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-        {value}
-      </Typography>
-    </CardContent>
-  </Card>
-);
+import PageHeader from '../components/PageHeader';
+import StatCard from '../components/StatCard';
 
 const normalizeReportesFromDetalle = (detalle) => {
   if (!detalle) return [];
@@ -74,10 +56,10 @@ const DashboardAlumno = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [stats, setStats] = useState([
-    { title: 'Cursos Inscritos', value: '0', icon: <MenuBookIcon />, color: '#1565c0' },
-    { title: 'Inscripciones Aprobadas', value: '0', icon: <CheckCircleIcon />, color: '#2e7d32' },
-    { title: 'Actividades Entregadas', value: '0', icon: <AssignmentTurnedInIcon />, color: '#ef6c00' },
-    { title: 'Promedio General', value: '-', icon: <EmojiEventsIcon />, color: '#6a1b9a' },
+    { title: 'Cursos Inscritos', value: '0', icon: <MenuBookIcon />, color: 'primary' },
+    { title: 'Inscripciones Aprobadas', value: '0', icon: <CheckCircleIcon />, color: 'success' },
+    { title: 'Actividades Entregadas', value: '0', icon: <AssignmentTurnedInIcon />, color: 'warning' },
+    { title: 'Promedio General', value: '-', icon: <EmojiEventsIcon />, color: 'secondary' },
   ]);
   const [upcoming, setUpcoming] = useState([]);
 
@@ -187,10 +169,10 @@ const DashboardAlumno = () => {
 
         setUpcoming(upcomingData);
         setStats([
-          { title: 'Cursos Inscritos', value: String(cursosCount), icon: <MenuBookIcon />, color: '#1565c0' },
-          { title: 'Inscripciones Aprobadas', value: String(inscripcionesAprobadas), icon: <CheckCircleIcon />, color: '#2e7d32' },
-          { title: 'Actividades Entregadas', value: String(entregadas), icon: <AssignmentTurnedInIcon />, color: '#ef6c00' },
-          { title: 'Promedio General', value: String(promedio), icon: <EmojiEventsIcon />, color: '#6a1b9a' },
+          { title: 'Cursos Inscritos', value: String(cursosCount), icon: <MenuBookIcon />, color: 'primary' },
+          { title: 'Inscripciones Aprobadas', value: String(inscripcionesAprobadas), icon: <CheckCircleIcon />, color: 'success' },
+          { title: 'Actividades Entregadas', value: String(entregadas), icon: <AssignmentTurnedInIcon />, color: 'warning' },
+          { title: 'Promedio General', value: String(promedio), icon: <EmojiEventsIcon />, color: 'secondary' },
         ]);
       } catch (error) {
         const backendMessage = error?.response?.data?.error || error?.response?.data;
@@ -213,9 +195,11 @@ const DashboardAlumno = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'medium' }}>
-        Dashboard de Alumno
-      </Typography>
+      <PageHeader
+        title="Dashboard de Alumno"
+        subtitle="Tu progreso académico y próximas entregas"
+        icon={<SpaceDashboardRoundedIcon />}
+      />
 
       {errorMsg && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -231,7 +215,7 @@ const DashboardAlumno = () => {
         <Grid container spacing={3}>
           {stats.map((stat) => (
             <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-              <KpiCard {...stat} />
+              <StatCard {...stat} />
             </Grid>
           ))}
 

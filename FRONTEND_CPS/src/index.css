@@ -73,7 +73,9 @@ html[data-contrast-mode='luz-alta'] body {
 }
 
 html[data-contrast-mode='normal'] body {
-  filter: saturate(var(--app-saturation, 100%));
+  /* 'none' en modo normal: evita que un filter en <body> rompa position: fixed
+     (Navbar/FAB se descolocaban al hacer scroll). */
+  filter: none;
 }
 
 html[data-spacing-mode='low'] body {
