@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -52,7 +54,7 @@ public class InscripcionControlador {
     
     
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
-    @GetMapping("/aprobar/{id}")
+    @PostMapping("/aprobar/{id}")
     public ResponseEntity<?> aprobar(@PathVariable String id) {
         try {
             inscripcionServicio.aprobar(id);
@@ -61,9 +63,9 @@ public class InscripcionControlador {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
     }
-    
+
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
-    @GetMapping("/rechazar/{id}")
+    @PostMapping("/rechazar/{id}")
     public ResponseEntity<?> rechazar(@PathVariable String id) {
         try {
             inscripcionServicio.rechazar(id);
@@ -74,7 +76,7 @@ public class InscripcionControlador {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
-    @GetMapping("/aprobarProfesor/{id}")
+    @PostMapping("/aprobarProfesor/{id}")
     public ResponseEntity<?> aprobarProfesor(@PathVariable String id) {
         try {
             inscripcionServicio.aprobarInscripcionProfesor(id);
@@ -85,7 +87,7 @@ public class InscripcionControlador {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
-    @GetMapping("/rechazarProfesor/{id}")
+    @PostMapping("/rechazarProfesor/{id}")
     public ResponseEntity<?> rechazarProfesor(@PathVariable String id) {
         try {
             inscripcionServicio.rechazarInscripcionProfesor(id);
@@ -94,6 +96,19 @@ public class InscripcionControlador {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }
     }
-    
-    
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PostMapping("/inscribirAlumnoDirecto")
+    public ResponseEntity<?> inscribirAlumnoDirecto(
+            @RequestParam String usuarioId,
+            @RequestParam String cursoId) {
+        try {
+            inscripcionServicio.inscribirAlumnoDirecto(usuarioId, cursoId);
+            return ResponseEntity.ok(Map.of("mensaje", "Alumno inscrito directamente al curso"));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+
 }

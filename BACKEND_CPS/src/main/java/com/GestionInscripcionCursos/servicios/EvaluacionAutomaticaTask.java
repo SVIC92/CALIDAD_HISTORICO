@@ -6,7 +6,7 @@ import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.ReporteRepositorio;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

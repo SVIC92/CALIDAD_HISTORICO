@@ -41,6 +41,10 @@ public class CohereServicio {
         return apiKey != null && !apiKey.isBlank();
     }
 
+    public String getModelo() {
+        return (modelo == null || modelo.isBlank()) ? "command-r" : modelo;
+    }
+
     public String generarTexto(String prompt) {
         if (!estaConfigurado()) {
             throw new IllegalStateException("Cohere API key no configurada");
@@ -85,7 +89,11 @@ public class CohereServicio {
 
             return textNode.asText();
 
-        } catch (IOException | InterruptedException ex) {
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            LOGGER.error("Comunicación con Cohere interrumpida");
+            throw new IllegalStateException("Comunicación con Cohere interrumpida", ex);
+        } catch (IOException ex) {
             LOGGER.error("Error comunicando con Cohere: {}", ex.getMessage());
             throw new IllegalStateException("Error al comunicarse con Cohere", ex);
         }

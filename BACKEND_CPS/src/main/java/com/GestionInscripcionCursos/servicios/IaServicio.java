@@ -1,7 +1,10 @@
 package com.GestionInscripcionCursos.servicios;
 
 import com.GestionInscripcionCursos.dto.IaChatResponseDto;
+import com.GestionInscripcionCursos.dto.IaConversacionDto;
 import com.GestionInscripcionCursos.dto.IaHistorialDto;
+import com.GestionInscripcionCursos.dto.IaMensajeDto;
+import com.GestionInscripcionCursos.dto.IaSugerenciasDto;
 import com.GestionInscripcionCursos.dto.CriterioRubricaDto;
 import com.GestionInscripcionCursos.dto.NivelRubricaDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
@@ -21,7 +24,7 @@ import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.SilaboRepositorio;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -45,6 +48,21 @@ public class IaServicio {
     private static final Logger LOGGER = LoggerFactory.getLogger(IaServicio.class);
 
     private static final String URL_GROQ = "https://api.groq.com/openai/v1/chat/completions";
+
+    private static final String ESQUEMA_RUBRICA =
+            "{\"titulo\":\"...\",\"descripcion\":\"...\",\"tema\":\"...\",\"nivelEducativo\":\"...\","
+            + "\"asignatura\":\"...\",\"tipoTarea\":\"...\",\"puntajeMaximo\":0,"
+            + "\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":0,"
+            + "\"niveles\":[{\"nombre\":\"...\",\"puntaje\":0,\"descriptor\":\"...\"}]}]}";
+
+    private static final String ESQUEMA_SILABO =
+            "{\"informacionGeneral\":{\"curso\":\"...\",\"carrera\":\"...\",\"ciclo\":0,\"creditos\":0},"
+            + "\"competenciasGenerales\":[\"...\"],\"competenciasEspecificas\":[\"...\"],"
+            + "\"sumilla\":\"...\",\"logroCurso\":\"...\","
+            + "\"unidades\":[{\"tituloUnidad\":\"...\",\"logroUnidad\":\"...\","
+            + "\"semanas\":[{\"numeroSemana\":1,\"temas\":\"...\","
+            + "\"actividadesPracticas\":\"...\",\"evaluacion\":\"...\"}]}],"
+            + "\"sistemaEvaluacion\":\"...\"}";
 
     private final UsuarioServicio usuarioServicio;
     private final IaHistorialRepositorio iaHistorialRepositorio;
@@ -80,8 +98,11 @@ public class IaServicio {
         this.cohereServicio = cohereServicio;
     }
 
+    private static final int MAX_MENSAJES_CONTEXTO = 10;
+    private static final int MAX_MENSAJES_HISTORIAL = 50;
+
     // ==========================================
-    // CHAT EXCLUSIVO CON GROQ
+    // CHAT EXCLUSIVO CON GROQ (multi-turno)
     // ==========================================
     @Transactional
     public IaChatResponseDto chatearSegunRol(String email, String rol, String mensaje) {
@@ -92,6 +113,8 @@ public class IaServicio {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
 
+        IaHistorial historial = iaHistorialRepositorio.findByUsuario(usuario).orElseGet(IaHistorial::new);
+
         String respuesta;
         String modeloRespuesta;
 
@@ -101,11 +124,13 @@ public class IaServicio {
             modeloRespuesta = "fallback-local";
         } else {
             String promptSistema = construirPromptSistema(rol, usuario);
-            respuesta = llamarGroq(promptSistema, mensaje);
+            List<Map<String, Object>> historialPrevio = cargarUltimosMensajes(historial, MAX_MENSAJES_CONTEXTO);
+            respuesta = llamarGroq(promptSistema, mensaje, historialPrevio);
             modeloRespuesta = modeloPorDefecto;
         }
 
-        IaHistorial historial = iaHistorialRepositorio.findByUsuario(usuario).orElseGet(IaHistorial::new);
+        actualizarHistorialConversacion(historial, mensaje, respuesta);
+
         historial.setUsuario(usuario);
         historial.setUltimoMensaje(mensaje);
         historial.setUltimaRespuesta(respuesta);
@@ -117,6 +142,7 @@ public class IaServicio {
         return new IaChatResponseDto(respuesta, rol, modeloRespuesta, Instant.now());
     }
 
+    @Transactional(readOnly = true)
     public Optional<IaHistorialDto> obtenerUltimoHistorial(String email) {
         Usuario usuario = usuarioServicio.buscarEmail(email);
         if (usuario == null) {
@@ -133,59 +159,202 @@ public class IaServicio {
                 ));
     }
 
+    @Transactional(readOnly = true)
+    public IaConversacionDto obtenerConversacion(String email) {
+        Usuario usuario = usuarioServicio.buscarEmail(email);
+        if (usuario == null) {
+            return new IaConversacionDto(List.of(), 0);
+        }
+        return iaHistorialRepositorio.findByUsuario(usuario)
+                .map(h -> {
+                    List<IaMensajeDto> mensajes = parsearConversacion(h.getHistorialConversacion());
+                    return new IaConversacionDto(mensajes, mensajes.size());
+                })
+                .orElseGet(() -> new IaConversacionDto(List.of(), 0));
+    }
+
+    @Transactional
+    public void limpiarHistorial(String email) {
+        Usuario usuario = usuarioServicio.buscarEmail(email);
+        if (usuario == null) {
+            return;
+        }
+        iaHistorialRepositorio.findByUsuario(usuario).ifPresent(h -> {
+            h.setHistorialConversacion(null);
+            h.setUltimoMensaje("Historial limpiado por el usuario");
+            h.setUltimaRespuesta("El historial de conversacion ha sido reiniciado.");
+            h.setFechaActualizacion(Instant.now());
+            iaHistorialRepositorio.save(h);
+        });
+    }
+
+    public IaSugerenciasDto obtenerSugerencias(String rol) {
+        List<String> sugerencias = switch (rol) {
+            case "ADMIN" -> List.of(
+                "¿Cuántos cursos activos hay actualmente en el sistema?",
+                "¿Cuántas inscripciones están pendientes de aprobación?",
+                "¿Cuáles son los cursos con mayor demanda de inscritos?",
+                "¿Cómo puedo generar un reporte de inscripciones?",
+                "¿Qué acciones administrativas puedo realizar hoy?"
+            );
+            case "PROFESOR" -> List.of(
+                "¿En qué cursos estoy inscrito como profesor?",
+                "¿Cómo creo una actividad para mis alumnos?",
+                "¿Cómo genero una rúbrica de evaluación con IA?",
+                "¿Cómo creo un sílabo con ayuda de la IA?",
+                "¿Qué herramientas de evaluación tengo disponibles?"
+            );
+            case "ALUMNO" -> List.of(
+                "¿En qué cursos estoy matriculado?",
+                "¿Qué cursos están disponibles para inscribirme?",
+                "¿Cómo me inscribo en un nuevo curso?",
+                "¿Cuáles son mis actividades pendientes?",
+                "¿Cómo puedo ver mi progreso académico?"
+            );
+            default -> List.of(
+                "¿Qué funciones tiene el sistema?",
+                "¿Cómo inicio sesión?",
+                "¿Cómo recupero mi contraseña?"
+            );
+        };
+        return new IaSugerenciasDto(rol, sugerencias);
+    }
+
+    private List<Map<String, Object>> cargarUltimosMensajes(IaHistorial historial, int limite) {
+        if (historial == null || historial.getHistorialConversacion() == null
+                || historial.getHistorialConversacion().isBlank()) {
+            return List.of();
+        }
+        try {
+            JsonNode array = objectMapper.readTree(historial.getHistorialConversacion());
+            if (!array.isArray()) {
+                return List.of();
+            }
+            List<Map<String, Object>> mensajes = new ArrayList<>();
+            array.forEach(nodo -> {
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("role", nodo.path("role").asText("user"));
+                msg.put("content", nodo.path("content").asText(""));
+                mensajes.add(msg);
+            });
+            int desde = Math.max(0, mensajes.size() - limite);
+            return mensajes.subList(desde, mensajes.size());
+        } catch (Exception e) {
+            LOGGER.warn("No se pudo deserializar el historial de conversacion: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private void actualizarHistorialConversacion(IaHistorial historial, String mensaje, String respuesta) {
+        List<Map<String, Object>> conversacion = new ArrayList<>(cargarUltimosMensajes(historial, MAX_MENSAJES_HISTORIAL));
+
+        Map<String, Object> msgUsuario = new LinkedHashMap<>();
+        msgUsuario.put("role", "user");
+        msgUsuario.put("content", mensaje);
+        conversacion.add(msgUsuario);
+
+        Map<String, Object> msgAsistente = new LinkedHashMap<>();
+        msgAsistente.put("role", "assistant");
+        msgAsistente.put("content", respuesta);
+        conversacion.add(msgAsistente);
+
+        if (conversacion.size() > MAX_MENSAJES_HISTORIAL) {
+            conversacion = conversacion.subList(conversacion.size() - MAX_MENSAJES_HISTORIAL, conversacion.size());
+        }
+
+        try {
+            historial.setHistorialConversacion(objectMapper.writeValueAsString(conversacion));
+        } catch (IOException e) {
+            LOGGER.warn("No se pudo serializar el historial de conversacion: {}", e.getMessage());
+        }
+    }
+
+    private List<IaMensajeDto> parsearConversacion(String historialJson) {
+        if (historialJson == null || historialJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            JsonNode array = objectMapper.readTree(historialJson);
+            if (!array.isArray()) {
+                return List.of();
+            }
+            List<IaMensajeDto> mensajes = new ArrayList<>();
+            array.forEach(nodo -> mensajes.add(new IaMensajeDto(
+                    nodo.path("role").asText("user"),
+                    nodo.path("content").asText("")
+            )));
+            return mensajes;
+        } catch (Exception e) {
+            LOGGER.warn("Error parseando conversacion guardada: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     // ==========================================
     // RÚBRICAS EXCLUSIVAS CON COHERE
     // ==========================================
     public RubricaGeneradaDto generarRubrica(String email, RubricaGeneracionRequestDto request) {
-        try {
-            Usuario usuario = usuarioServicio.buscarEmail(email);
-            if (usuario == null) {
-                throw new IllegalArgumentException("Usuario no encontrado");
-            }
-
-            if (request == null || request.tema() == null || request.tema().isBlank()) {
-                throw new IllegalArgumentException("El tema es obligatorio para generar la rubrica");
-            }
-
-            String tema = request.tema().trim();
-            String nivel = valorPorDefecto(request.nivelEducativo(), "Secundaria");
-            String asignatura = valorPorDefecto(request.asignatura(), "General");
-            String tipoTarea = valorPorDefecto(request.tipoTarea(), "Trabajo escrito");
-            int cantidadCriterios = normalizarEntero(request.cantidadCriterios(), 4, 3, 8);
-            int cantidadNiveles = normalizarEntero(request.cantidadNiveles(), 4, 3, 5);
-            int puntajeMaximo = normalizarEntero(request.puntajeMaximo(), 20, 10, 100);
-
-            if (cohereServicio.estaConfigurado()) {
-                try {
-                    LOGGER.info("Intentando generar rúbrica con Cohere");
-                    String esquema = "{\"titulo\":\"...\",\"descripcion\":\"...\",\"tema\":\"...\",\"nivelEducativo\":\"...\",\"asignatura\":\"...\",\"tipoTarea\":\"...\",\"puntajeMaximo\":0,\"criterios\":[{\"nombre\":\"...\",\"descripcion\":\"...\",\"peso\":0,\"niveles\":[{\"nombre\":\"...\",\"puntaje\":0,\"descriptor\":\"...\"}]}]}";
-                    String prompt = String.format(
-                        "Eres un experto en evaluacion educativa. Genera una rubrica completa y devuelve SOLO JSON valido, sin markdown ni texto adicional. "
-                            + "Si no puedes completar un campo, usa un valor razonable por defecto. "
-                            + "Usa este esquema exacto: %s. "
-                            + "Datos: tema='%s', nivelEducativo='%s', asignatura='%s', tipoTarea='%s', cantidadCriterios=%d, cantidadNiveles=%d, puntajeMaximo=%d.",
-                        esquema, tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo
-                    );
-                    return generarRubricaConCohere(prompt);
-                } catch (Exception e) {
-                    LOGGER.warn("Error generando rúbrica con Cohere: {}. Usando fallback local.", extraerMensajeRaiz(e));
-                    return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
-                }
-            } else {
-                LOGGER.info("CohereServicio no disponible o no configurado, usando fallback local para rúbrica");
-                return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
-            }
-
-        } catch (Exception ex) {
-            LOGGER.error("Error fatal en generarRubrica: {}", extraerMensajeRaiz(ex));
-            throw new IllegalStateException("Error al generar rúbrica: " + extraerMensajeRaiz(ex), ex);
+        if (usuarioServicio.buscarEmail(email) == null) {
+            throw new IllegalArgumentException("Usuario no encontrado");
         }
+        if (request == null || request.tema() == null || request.tema().isBlank()) {
+            throw new IllegalArgumentException("El tema es obligatorio para generar la rubrica");
+        }
+
+        String tema = request.tema().trim();
+        String nivel = valorPorDefecto(request.nivelEducativo(), "Secundaria");
+        String asignatura = valorPorDefecto(request.asignatura(), "General");
+        String tipoTarea = valorPorDefecto(request.tipoTarea(), "Trabajo escrito");
+        int cantidadCriterios = normalizarEntero(request.cantidadCriterios(), 4, 3, 8);
+        int cantidadNiveles = normalizarEntero(request.cantidadNiveles(), 4, 3, 5);
+        int puntajeMaximo = normalizarEntero(request.puntajeMaximo(), 20, 10, 100);
+
+        if (cohereServicio.estaConfigurado()) {
+            try {
+                LOGGER.info("Intentando generar rúbrica con Cohere");
+                String prompt = construirPromptRubrica(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
+                return generarRubricaConCohere(prompt);
+            } catch (Exception e) {
+                LOGGER.warn("Error generando rúbrica con Cohere: {}. Usando fallback local.", extraerMensajeRaiz(e));
+            }
+        } else {
+            LOGGER.info("CohereServicio no disponible, usando fallback local para rúbrica");
+        }
+        return construirRubricaFallback(tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo);
+    }
+
+    private String construirPromptRubrica(String tema, String nivel, String asignatura, String tipoTarea,
+                                          int cantidadCriterios, int cantidadNiveles, int puntajeMaximo) {
+        return String.format(
+            "Eres un experto en evaluacion educativa. Genera una rubrica completa y devuelve SOLO JSON valido, "
+                + "sin markdown ni texto adicional. "
+                + "Si no puedes completar un campo, usa un valor razonable por defecto. "
+                + "Usa este esquema exacto: %s. "
+                + "Datos: tema='%s', nivelEducativo='%s', asignatura='%s', tipoTarea='%s', "
+                + "cantidadCriterios=%d, cantidadNiveles=%d, puntajeMaximo=%d.",
+            ESQUEMA_RUBRICA, tema, nivel, asignatura, tipoTarea, cantidadCriterios, cantidadNiveles, puntajeMaximo
+        );
     }
 
     public RubricaGeneradaDto generarRubricaConCohere(String prompt) {
         try {
             String respuesta = cohereServicio.generarTexto(prompt);
-            return parsearJsonIa(respuesta, RubricaGeneradaDto.class);
+            RubricaGeneradaDto parsed = parsearJsonIa(respuesta, RubricaGeneradaDto.class);
+            // Cohere no incluye generadaPorIa ni modelo en su JSON de salida;
+            // hay que fijarlos explícitamente después de parsear.
+            return new RubricaGeneradaDto(
+                    parsed.titulo(),
+                    parsed.descripcion(),
+                    parsed.tema(),
+                    parsed.nivelEducativo(),
+                    parsed.asignatura(),
+                    parsed.tipoTarea(),
+                    parsed.puntajeMaximo(),
+                    parsed.criterios(),
+                    true,
+                    cohereServicio.getModelo(),
+                    Instant.now()
+            );
         } catch (Exception e) {
             LOGGER.warn("Error parseando respuesta de Cohere: {}", extraerMensajeRaiz(e));
             throw new IllegalStateException("No se pudo generar o parsear la rúbrica con Cohere", e);
@@ -215,7 +384,6 @@ public class IaServicio {
 
         if (cohereServicio.estaConfigurado()) {
             try {
-                String esquema = "{\"informacionGeneral\":{\"curso\":\"...\",\"carrera\":\"...\",\"ciclo\":0,\"creditos\":0},\"competenciasGenerales\":[\"...\"],\"competenciasEspecificas\":[\"...\"],\"sumilla\":\"...\",\"logroCurso\":\"...\",\"unidades\":[{\"tituloUnidad\":\"...\",\"logroUnidad\":\"...\",\"semanas\":[{\"numeroSemana\":1,\"temas\":\"...\",\"actividadesPracticas\":\"...\",\"evaluacion\":\"...\"}]}],\"sistemaEvaluacion\":\"...\"}";
                 String prompt = String.format(
                     "Eres un director academico experto en diseno curricular. Genera un silabo completo y devuelve SOLO JSON valido, sin markdown ni texto adicional. "
                         + "Si falta algun dato, completa con una propuesta razonable. "
@@ -223,7 +391,7 @@ public class IaServicio {
                         + "Datos: curso='%s', carrera='%s', ciclo=%d, creditos=%d, total_semanas=%d, descripcion='%s'. "
                         + "REGLA CRÍTICA Y OBLIGATORIA: El curso dura exactamente %d semanas. DEBES generar un desglose detallado para EXACTAMENTE %d semanas en el JSON. "
                         + "Bajo ninguna circunstancia puedes generar menos semanas. No resumas, no omitas, ni saltes números. Escribe desde la semana 1 hasta la semana %d.",
-                    esquema,
+                    ESQUEMA_SILABO,
                     nombreCurso,
                     valorPorDefecto(request.carrera(), "Ingenieria"),
                     ciclo,
@@ -365,27 +533,38 @@ public class IaServicio {
     }
 
     private String construirPromptSistema(String rol, Usuario usuario) {
+        String nombreUsuario = (usuario.getNombre() != null && !usuario.getNombre().isBlank())
+                ? usuario.getNombre() : "usuario";
         String contextoDatos = construirContextoDatosUsuario(rol, usuario);
-        String base = "Eres un asistente del sistema de Gestion de Inscripcion de Cursos. "
-                + "Responde de forma clara y breve en espanol. "
-            + "No inventes datos de base de datos. Si no hay datos suficientes, dilo. "
-            + "Si preguntan por cursos o inscripciones, usa solo el contexto adjunto. "
-            + "Siempre saludar e indicar el rol.";
 
-        return switch (rol) {
-            case "ADMIN" -> base
-                + " Puedes sugerir acciones administrativas, gestion de usuarios, cursos y reportes.\n\n"
-                + contextoDatos;
-            case "PROFESOR" -> base
-                + " Solo puedes orientar sobre cursos, actividades, evaluacion y seguimiento academico.\n\n"
-                + contextoDatos;
-            case "ALUMNO" -> base
-                + " Solo puedes orientar sobre inscripciones, actividades, requisitos y progreso del alumno.\n\n"
-                + contextoDatos;
-            default -> base
-                + " Si el rol no es reconocido, limita la respuesta a orientacion general del sistema.\n\n"
-                + contextoDatos;
+        String base = String.format(
+            "Eres GCI-Asistente, el asistente inteligente del Sistema de Gestion de Inscripcion de Cursos (GCI+). "
+            + "El usuario conectado se llama '%s' y tiene el rol %s. "
+            + "Responde SIEMPRE en espanol, de forma clara, concisa y amigable. "
+            + "Usa viñetas o numeracion para listas. "
+            + "No inventes datos que no esten en el contexto adjunto; si no tienes un dato, dilo. "
+            + "Recuerda el contexto de la conversacion anterior para dar respuestas coherentes y personalizadas.",
+            nombreUsuario, rol
+        );
+
+        String instruccionesRol = switch (rol) {
+            case "ADMIN" ->
+                " Como ADMIN puedes: gestionar usuarios, aprobar/rechazar inscripciones, "
+                + "administrar cursos y carreras, generar reportes y ver estadisticas. "
+                + "Sugiere acciones concretas del panel administrativo cuando corresponda.";
+            case "PROFESOR" ->
+                " Como PROFESOR puedes: ver tus cursos asignados, crear y gestionar actividades, "
+                + "evaluar alumnos, generar rubricas con IA, crear silabos y acceder al chat de aula. "
+                + "Da instrucciones claras sobre como usar las herramientas del sistema.";
+            case "ALUMNO" ->
+                " Como ALUMNO puedes: ver tus cursos inscritos, consultar actividades pendientes, "
+                + "inscribirte en cursos disponibles, ver tu progreso academico y acceder al chat de aula. "
+                + "Orienta al alumno sobre sus proximos pasos y oportunidades academicas.";
+            default ->
+                " Brinda orientacion general sobre las funciones del sistema segun el perfil del usuario.";
         };
+
+        return base + instruccionesRol + "\n\n" + contextoDatos;
     }
 
     private void validarEntrada(String mensaje) {
@@ -399,13 +578,12 @@ public class IaServicio {
 
     private String construirRespuestaFallback(String rol, String mensaje, Usuario usuario) {
         String contextoDatos = construirContextoDatosUsuario(rol, usuario);
-        String recomendacion;
-        switch (rol) {
-            case "ADMIN" -> recomendacion = "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
-            case "PROFESOR" -> recomendacion = "Puedes revisar cursos, actividades, evaluacion y seguimiento academico del aula.";
-            case "ALUMNO" -> recomendacion = "Puedes revisar tus inscripciones, actividades pendientes, requisitos y progreso academico.";
-            default -> recomendacion = "Puedes revisar las opciones disponibles dentro del sistema segun tu perfil.";
-        }
+        String recomendacion = switch (rol) {
+            case "ADMIN" -> "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
+            case "PROFESOR" -> "Puedes revisar cursos, actividades, evaluacion y seguimiento academico del aula.";
+            case "ALUMNO" -> "Puedes revisar tus inscripciones, actividades pendientes, requisitos y progreso academico.";
+            default -> "Puedes revisar las opciones disponibles dentro del sistema segun tu perfil.";
+        };
 
         return "En este momento el asistente IA externo no esta disponible. "
                 + "Recibi tu consulta: '" + mensaje.trim() + "'. "
@@ -702,17 +880,23 @@ public class IaServicio {
     // ==========================================
     // METODO PARA EL CHAT CON GROQ
     // ==========================================
-    private String llamarGroq(String promptSistema, String mensajeUsuario) {
+    private String llamarGroq(String promptSistema, String mensajeUsuario, List<Map<String, Object>> historialPrevio) {
         try {
+            List<Map<String, Object>> mensajes = new ArrayList<>();
+
             Map<String, Object> mensajeDelSistema = new LinkedHashMap<>();
             mensajeDelSistema.put("role", "system");
             mensajeDelSistema.put("content", promptSistema);
+            mensajes.add(mensajeDelSistema);
+
+            if (historialPrevio != null && !historialPrevio.isEmpty()) {
+                mensajes.addAll(historialPrevio);
+            }
 
             Map<String, Object> mensajeDelUsuario = new LinkedHashMap<>();
             mensajeDelUsuario.put("role", "user");
             mensajeDelUsuario.put("content", mensajeUsuario);
-
-            List<Map<String, Object>> mensajes = List.of(mensajeDelSistema, mensajeDelUsuario);
+            mensajes.add(mensajeDelUsuario);
 
             Map<String, Object> cuerpoRequest = new LinkedHashMap<>();
             cuerpoRequest.put("model", modeloPorDefecto);
@@ -739,7 +923,7 @@ public class IaServicio {
             JsonNode raiz = objectMapper.readTree(respuesta.body());
             JsonNode choices = raiz.path("choices");
             
-            if (choices.isEmpty() || choices.size() == 0) {
+            if (choices.isEmpty()) {
                 throw new IllegalStateException("No se encontraron resultados en la respuesta de Groq");
             }
             
@@ -751,7 +935,11 @@ public class IaServicio {
 
             return contenido.asText();
 
-        } catch (IOException | InterruptedException ex) {
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            LOGGER.error("Comunicación con Groq interrumpida");
+            throw new IllegalStateException("Comunicación con Groq interrumpida", ex);
+        } catch (IOException ex) {
             LOGGER.error("Error comunicando con Groq: {}", extraerMensajeRaiz(ex));
             throw new IllegalStateException("No se pudo comunicar con Groq", ex);
         }

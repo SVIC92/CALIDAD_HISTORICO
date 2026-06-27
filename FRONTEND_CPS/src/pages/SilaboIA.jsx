@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Divider,
   MenuItem,
   Paper,
@@ -10,12 +11,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { AutoStories } from '@mui/icons-material';
+import { AutoAwesome, AutoStories } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IaService from '../services/IaService';
 import CursoService from '../services/CursoService';
 import CarreraService from '../services/CarreraService';
 import PageHeader from '../components/PageHeader';
+import useIaGeneracionStore from '../store/useIaGeneracionStore';
 
 const defaultForm = {
   nombreCurso: '',
@@ -26,142 +28,127 @@ const defaultForm = {
   descripcionBreve: '',
 };
 
-const resolveCarreraNombre = (carreraValue, nombreCarreraFallback = '') => {
+const resolveCarreraNombre = (carreraValue, fallback = '') => {
   if (typeof carreraValue === 'string') return carreraValue;
   if (carreraValue && typeof carreraValue === 'object') {
-    return carreraValue?.nombre || carreraValue?.name || nombreCarreraFallback;
+    return carreraValue?.nombre || carreraValue?.name || fallback;
   }
-  return nombreCarreraFallback;
+  return fallback;
 };
 
 const SilaboIA = () => {
   const navigate = useNavigate();
   const rol = localStorage.getItem('rol') || 'ROLE_ALUMNO';
-  const canGenerateSilabo = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ADMIN';
+  const canGenerate = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ADMIN';
 
-  const [errorMsg, setErrorMsg] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [silabo, setSilabo] = useState(null);
   const [cursos, setCursos] = useState([]);
   const [carreras, setCarreras] = useState([]);
   const [cursoId, setCursoId] = useState('');
   const [form, setForm] = useState(defaultForm);
+  const [validacionError, setValidacionError] = useState('');
+
+  const { silabo, iniciarSilabo, completarSilabo, fallarSilabo, limpiarSilabo, marcarSilaboVisto } =
+    useIaGeneracionStore();
+
+  const cargando = silabo.estado === 'cargando';
+  const listo = silabo.estado === 'listo';
+  const conError = silabo.estado === 'error';
+
+  // Marcar como visto al entrar a la página si ya estaba listo
+  useEffect(() => {
+    if ((listo || conError) && !silabo.notificacionVista) {
+      marcarSilaboVisto();
+    }
+  }, [listo, conError, silabo.notificacionVista, marcarSilaboVisto]);
 
   useEffect(() => {
-    if (!canGenerateSilabo) return;
-
+    if (!canGenerate) return;
     let active = true;
 
     const cargarCursos = async () => {
       try {
         let data = [];
-        if (rol === 'ROLE_PROFESOR') {
-          data = await CursoService.listarInscritosProfesor();
-        } else if (rol === 'ROLE_ADMIN') {
-          data = await CursoService.listarActivos();
-        }
-
-        const normalizados = Array.isArray(data) ? data : [];
+        if (rol === 'ROLE_PROFESOR') data = await CursoService.listarInscritosProfesor();
+        else if (rol === 'ROLE_ADMIN') data = await CursoService.listarActivos();
         if (!active) return;
-
-        setCursos(normalizados);
-
-        if (normalizados.length > 0) {
-          const firstId = normalizados[0]?.id || normalizados[0]?._id || '';
-          setCursoId(firstId);
-        }
+        const norm = Array.isArray(data) ? data : [];
+        setCursos(norm);
+        if (norm.length > 0) setCursoId(norm[0]?.id || norm[0]?._id || '');
       } catch {
-        if (!active) return;
-        setCursos([]);
-        setCursoId('');
+        if (active) { setCursos([]); setCursoId(''); }
       }
     };
 
     const cargarCarreras = async () => {
       try {
         const data = await CarreraService.listar();
-        const normalizadas = Array.isArray(data)
+        const norm = Array.isArray(data)
           ? data
-            .map((item) => ({
-              id: item?.id || item?._id || item?.codigo || item?.nombre,
-              nombre: item?.nombre || '',
-            }))
-            .filter((item) => item.nombre)
+              .map((item) => ({
+                id: item?.id || item?._id || item?.codigo || item?.nombre,
+                nombre: item?.nombre || '',
+              }))
+              .filter((item) => item.nombre)
           : [];
-
         if (!active) return;
-
-        setCarreras(normalizadas);
-        setForm((prev) => ({
-          ...prev,
-          carrera: prev.carrera || normalizadas[0]?.nombre || '',
-        }));
+        setCarreras(norm);
+        setForm((prev) => ({ ...prev, carrera: prev.carrera || norm[0]?.nombre || '' }));
       } catch {
-        if (!active) return;
-        setCarreras([]);
+        if (active) setCarreras([]);
       }
     };
 
     cargarCursos();
     cargarCarreras();
-
-    return () => {
-      active = false;
-    };
-  }, [canGenerateSilabo, rol]);
+    return () => { active = false; };
+  }, [canGenerate, rol]);
 
   useEffect(() => {
-    if (!canGenerateSilabo || !cursoId) return;
-
-    const cursoSeleccionado = cursos.find((c) => (c?.id || c?._id) === cursoId);
-    if (!cursoSeleccionado) return;
-
+    if (!canGenerate || !cursoId) return;
+    const curso = cursos.find((c) => (c?.id || c?._id) === cursoId);
+    if (!curso) return;
     setForm((prev) => ({
       ...prev,
-      nombreCurso: cursoSeleccionado?.nombre || prev.nombreCurso,
-      carrera: resolveCarreraNombre(cursoSeleccionado?.carrera, cursoSeleccionado?.nombreCarrera) || prev.carrera,
-      ciclo: Number(cursoSeleccionado?.ciclo ?? prev.ciclo),
-      creditos: Number(cursoSeleccionado?.creditos ?? prev.creditos),
-      descripcionBreve: cursoSeleccionado?.descripcion || prev.descripcionBreve,
+      nombreCurso: curso?.nombre || prev.nombreCurso,
+      carrera: resolveCarreraNombre(curso?.carrera, curso?.nombreCarrera) || prev.carrera,
+      ciclo: Number(curso?.ciclo ?? prev.ciclo),
+      creditos: Number(curso?.creditos ?? prev.creditos),
+      descripcionBreve: curso?.descripcion || prev.descripcionBreve,
     }));
-  }, [canGenerateSilabo, cursoId, cursos]);
+  }, [canGenerate, cursoId, cursos]);
 
-  const handleGenerate = async () => {
-    if (!canGenerateSilabo) return;
-
+  const handleGenerar = () => {
+    if (!canGenerate) return;
     if (!form.nombreCurso.trim() || !form.descripcionBreve.trim()) {
-      setErrorMsg('Completa al menos Nombre del curso y Descripcion breve.');
+      setValidacionError('Completa al menos Nombre del curso y Descripción breve.');
       return;
     }
+    setValidacionError('');
 
-    try {
-      setLoading(true);
-      setErrorMsg('');
+    const payload = {
+      cursoId: cursoId || undefined,
+      nombreCurso: form.nombreCurso.trim(),
+      carrera: form.carrera.trim(),
+      ciclo: Number(form.ciclo),
+      creditos: Number(form.creditos),
+      semanas: Number(form.semanas),
+      descripcionBreve: form.descripcionBreve.trim(),
+    };
 
-      const payload = {
-        cursoId: cursoId || undefined,
-        nombreCurso: form.nombreCurso.trim(),
-        carrera: form.carrera.trim(),
-        ciclo: Number(form.ciclo),
-        creditos: Number(form.creditos),
-        semanas: Number(form.semanas),
-        descripcionBreve: form.descripcionBreve.trim(),
-      };
+    iniciarSilabo();
 
-      const result = await IaService.generarSilabo(payload);
-      setSilabo(result || null);
-    } catch (error) {
-      const backendMessage = error?.response?.data?.error || error?.response?.data?.mensaje || error?.message;
-      setErrorMsg(backendMessage || 'No se pudo generar el silabo por IA.');
-    } finally {
-      setLoading(false);
-    }
+    IaService.generarSilabo(payload)
+      .then((result) => completarSilabo(result))
+      .catch((err) => {
+        const msg = err?.response?.data?.error || err?.response?.data?.mensaje || err?.message || 'Error al generar el sílabo.';
+        fallarSilabo(msg);
+      });
   };
 
-  if (!canGenerateSilabo) {
+  if (!canGenerate) {
     return (
       <Alert severity="info">
-        El generador de silabo esta disponible para perfiles Profesor y Administrador.
+        El generador de sílabo está disponible para perfiles Profesor y Administrador.
       </Alert>
     );
   }
@@ -169,15 +156,33 @@ const SilaboIA = () => {
   return (
     <Box>
       <PageHeader
-        title="Generador de Silabo IA"
-        subtitle="Genera un silabo completo segun el formato del backend."
+        title="Generador de Sílabo IA"
+        subtitle="Genera un sílabo completo según el formato del backend."
         icon={<AutoStories />}
         onBack={() => navigate('/modulo/ia')}
       />
 
-      {errorMsg && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {String(errorMsg)}
+      {/* Banner de generación en segundo plano */}
+      {cargando && (
+        <Alert
+          severity="info"
+          icon={<CircularProgress size={18} />}
+          sx={{ mb: 2 }}
+        >
+          Tu sílabo se está generando en segundo plano. Puedes navegar por el sistema
+          con normalidad y recibirás una notificación cuando esté listo.
+        </Alert>
+      )}
+
+      {conError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={limpiarSilabo}>
+          {silabo.error || 'No se pudo generar el sílabo. Intenta nuevamente.'}
+        </Alert>
+      )}
+
+      {validacionError && (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setValidacionError('')}>
+          {validacionError}
         </Alert>
       )}
 
@@ -205,7 +210,7 @@ const SilaboIA = () => {
           <TextField
             label="Nombre del curso"
             value={form.nombreCurso}
-            onChange={(e) => setForm((prev) => ({ ...prev, nombreCurso: e.target.value }))}
+            onChange={(e) => setForm((p) => ({ ...p, nombreCurso: e.target.value }))}
             fullWidth
           />
 
@@ -214,13 +219,13 @@ const SilaboIA = () => {
               select
               label="Carrera"
               value={form.carrera}
-              onChange={(e) => setForm((prev) => ({ ...prev, carrera: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, carrera: e.target.value }))}
               helperText={carreras.length === 0 ? 'No hay carreras registradas.' : ''}
               fullWidth
             >
-              {carreras.map((carrera) => (
-                <MenuItem key={carrera.id} value={carrera.nombre}>
-                  {carrera.nombre}
+              {carreras.map((c) => (
+                <MenuItem key={c.id} value={c.nombre}>
+                  {c.nombre}
                 </MenuItem>
               ))}
             </TextField>
@@ -228,15 +233,15 @@ const SilaboIA = () => {
               type="number"
               label="Ciclo"
               value={form.ciclo}
-              onChange={(e) => setForm((prev) => ({ ...prev, ciclo: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, ciclo: e.target.value }))}
               slotProps={{ htmlInput: { min: 1, max: 15 } }}
               fullWidth
             />
             <TextField
               type="number"
-              label="Creditos"
+              label="Créditos"
               value={form.creditos}
-              onChange={(e) => setForm((prev) => ({ ...prev, creditos: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, creditos: e.target.value }))}
               slotProps={{ htmlInput: { min: 1, max: 10 } }}
               fullWidth
             />
@@ -244,75 +249,79 @@ const SilaboIA = () => {
               type="number"
               label="Semanas"
               value={form.semanas}
-              onChange={(e) => setForm((prev) => ({ ...prev, semanas: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, semanas: e.target.value }))}
               slotProps={{ htmlInput: { min: 4, max: 20 } }}
               fullWidth
             />
           </Stack>
 
           <TextField
-            label="Descripcion breve"
+            label="Descripción breve"
             value={form.descripcionBreve}
-            onChange={(e) => setForm((prev) => ({ ...prev, descripcionBreve: e.target.value }))}
+            onChange={(e) => setForm((p) => ({ ...p, descripcionBreve: e.target.value }))}
             multiline
             minRows={3}
             fullWidth
           />
 
           <Stack direction="row" spacing={1}>
-            <Button variant="contained" onClick={handleGenerate} disabled={loading}>
-              {loading ? 'Generando...' : 'Generar Silabo'}
-            </Button>
+            {listo && (
+              <Button variant="outlined" onClick={limpiarSilabo}>
+                Generar otro
+              </Button>
+            )}
             <Button
-              variant="outlined"
-              onClick={() => {
-                setForm((prev) => ({
-                  ...defaultForm,
-                  carrera: carreras[0]?.nombre || '',
-                }));
-                setSilabo(null);
-                setErrorMsg('');
-              }}
+              variant="contained"
+              onClick={handleGenerar}
+              disabled={cargando}
+              startIcon={cargando ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
             >
-              Limpiar
+              {cargando ? 'Generando...' : 'Generar Sílabo'}
             </Button>
           </Stack>
         </Stack>
       </Paper>
 
-      {silabo && (
+      {/* Resultado */}
+      {listo && silabo.datos && (
         <Paper sx={{ p: 2 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
             <AutoStories color="primary" />
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>Silabo generado</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Sílabo generado
+            </Typography>
+            <AutoAwesome color="primary" fontSize="small" />
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
-            Curso: {silabo?.informacionGeneral?.curso || '-'} | Carrera: {silabo?.informacionGeneral?.carrera || '-'} | Ciclo: {silabo?.informacionGeneral?.ciclo ?? '-'} | Creditos: {silabo?.informacionGeneral?.creditos ?? '-'}
+            Curso: {silabo.datos?.informacionGeneral?.curso || '-'} | Carrera:{' '}
+            {silabo.datos?.informacionGeneral?.carrera || '-'} | Ciclo:{' '}
+            {silabo.datos?.informacionGeneral?.ciclo ?? '-'} | Créditos:{' '}
+            {silabo.datos?.informacionGeneral?.creditos ?? '-'}
           </Typography>
 
           <Typography variant="subtitle2">Sumilla</Typography>
           <Typography variant="body2" sx={{ mb: 1.2, whiteSpace: 'pre-wrap' }}>
-            {silabo?.sumilla || '-'}
+            {silabo.datos?.sumilla || '-'}
           </Typography>
 
           <Typography variant="subtitle2">Logro del curso</Typography>
           <Typography variant="body2" sx={{ mb: 1.2, whiteSpace: 'pre-wrap' }}>
-            {silabo?.logroCurso || '-'}
+            {silabo.datos?.logroCurso || '-'}
           </Typography>
 
           <Typography variant="subtitle2">Competencias generales</Typography>
           <Box component="ul" sx={{ mt: 0.5, mb: 1.2 }}>
-            {(silabo?.competenciasGenerales || []).map((item, idx) => (
+            {(silabo.datos?.competenciasGenerales || []).map((item, idx) => (
               <Typography component="li" variant="body2" key={`cg-${idx}`}>
                 {item}
               </Typography>
             ))}
           </Box>
 
-          <Typography variant="subtitle2">Competencias especificas</Typography>
+          <Typography variant="subtitle2">Competencias específicas</Typography>
           <Box component="ul" sx={{ mt: 0.5, mb: 1.2 }}>
-            {(silabo?.competenciasEspecificas || []).map((item, idx) => (
+            {(silabo.datos?.competenciasEspecificas || []).map((item, idx) => (
               <Typography component="li" variant="body2" key={`ce-${idx}`}>
                 {item}
               </Typography>
@@ -326,7 +335,7 @@ const SilaboIA = () => {
           </Typography>
 
           <Stack spacing={1.5}>
-            {(silabo?.unidades || []).map((unidad, idxUnidad) => (
+            {(silabo.datos?.unidades || []).map((unidad, idxUnidad) => (
               <Paper key={`unidad-${idxUnidad}`} variant="outlined" sx={{ p: 1.2 }}>
                 <Typography variant="subtitle2">
                   Unidad {idxUnidad + 1}: {unidad?.tituloUnidad || '-'}
@@ -339,9 +348,15 @@ const SilaboIA = () => {
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       Semana {semana?.numeroSemana ?? idxSemana + 1}
                     </Typography>
-                    <Typography variant="caption" display="block">Temas: {semana?.temas || '-'}</Typography>
-                    <Typography variant="caption" display="block">Actividades: {semana?.actividadesPracticas || '-'}</Typography>
-                    <Typography variant="caption" display="block">Evaluacion: {semana?.evaluacion || '-'}</Typography>
+                    <Typography variant="caption" display="block">
+                      Temas: {semana?.temas || '-'}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      Actividades: {semana?.actividadesPracticas || '-'}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      Evaluación: {semana?.evaluacion || '-'}
+                    </Typography>
                   </Box>
                 ))}
               </Paper>
@@ -349,9 +364,9 @@ const SilaboIA = () => {
           </Stack>
 
           <Divider sx={{ my: 1.5 }} />
-          <Typography variant="subtitle2">Sistema de evaluacion</Typography>
+          <Typography variant="subtitle2">Sistema de evaluación</Typography>
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-            {silabo?.sistemaEvaluacion || '-'}
+            {silabo.datos?.sistemaEvaluacion || '-'}
           </Typography>
         </Paper>
       )}

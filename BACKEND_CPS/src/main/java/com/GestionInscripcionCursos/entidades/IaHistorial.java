@@ -57,4 +57,8 @@ public class IaHistorial {
     @Column(name = "fecha_actualizacion", nullable = false)
     @NotNull(message = "La fecha de actualizacion es obligatoria")
     private Instant fechaActualizacion;
+
+    // Historial de conversación serializado como JSON array de {role, content}
+    @Column(name = "historial_conversacion", columnDefinition = "TEXT")
+    private String historialConversacion;
 }

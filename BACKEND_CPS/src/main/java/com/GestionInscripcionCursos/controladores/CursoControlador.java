@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +44,7 @@ public class CursoControlador {
         return ResponseEntity.ok(Map.of("mensaje", "Endpoint para registrar curso"));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/registro")
     public ResponseEntity<?> registro(
             @RequestParam String nombre,
@@ -110,7 +112,8 @@ public class CursoControlador {
         return ResponseEntity.ok(cursoServicio.buscarPorId(id));
     }
 
-    @PostMapping("/modificar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/modificar/{id}")
     public ResponseEntity<?> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
@@ -157,7 +160,7 @@ public class CursoControlador {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
-    @GetMapping("/eliminar/{id}")
+    @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminar(@PathVariable String id) {
         try {
             cursoServicio.eliminarCurso(id);
@@ -222,7 +225,7 @@ public class CursoControlador {
     }
 
     @PreAuthorize("hasAnyRole('PROFESOR', 'ALUMNO')")
-    @GetMapping("/inscribir/{id}")
+    @PostMapping("/inscribir/{id}")
     public ResponseEntity<?> inscribirCurso(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

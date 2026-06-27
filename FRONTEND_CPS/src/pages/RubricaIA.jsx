@@ -3,6 +3,8 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
+  CircularProgress,
   Divider,
   MenuItem,
   Paper,
@@ -10,12 +12,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Description, PictureAsPdf } from '@mui/icons-material';
+import { AutoAwesome, Description, PictureAsPdf } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import IaService from '../services/IaService';
 import CursoService from '../services/CursoService';
 import PageHeader from '../components/PageHeader';
+import useIaGeneracionStore from '../store/useIaGeneracionStore';
 
 const defaultForm = {
   tema: '',
@@ -27,110 +30,101 @@ const defaultForm = {
   puntajeMaximo: 20,
 };
 
-const escapeHtml = (value) => String(value || '')
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;')
-  .replaceAll("'", '&#39;');
+const escapeHtml = (value) =>
+  String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
 const RubricaIA = () => {
   const navigate = useNavigate();
   const rol = localStorage.getItem('rol') || 'ROLE_ALUMNO';
-  const canGenerateRubric = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ADMIN';
+  const canGenerate = rol === 'ROLE_PROFESOR' || rol === 'ROLE_ADMIN';
 
-  const [errorMsg, setErrorMsg] = useState('');
-  const [rubricLoading, setRubricLoading] = useState(false);
-  const [rubrica, setRubrica] = useState(null);
   const [cursosRubrica, setCursosRubrica] = useState([]);
   const [cursoRubricaId, setCursoRubricaId] = useState('');
   const [rubricaForm, setRubricaForm] = useState(defaultForm);
+  const [validacionError, setValidacionError] = useState('');
+
+  const { rubrica, iniciarRubrica, completarRubrica, fallarRubrica, limpiarRubrica, marcarRubricaVista } =
+    useIaGeneracionStore();
+
+  const cargando = rubrica.estado === 'cargando';
+  const lista = rubrica.estado === 'listo';
+  const conError = rubrica.estado === 'error';
+
+  // Marcar como vista al entrar a la página si ya estaba lista
+  useEffect(() => {
+    if ((lista || conError) && !rubrica.notificacionVista) {
+      marcarRubricaVista();
+    }
+  }, [lista, conError, rubrica.notificacionVista, marcarRubricaVista]);
 
   useEffect(() => {
-    if (!canGenerateRubric) return;
-
+    if (!canGenerate) return;
     let active = true;
 
-    const cargarCursosParaRubrica = async () => {
+    const cargar = async () => {
       try {
         let data = [];
-        if (rol === 'ROLE_PROFESOR') {
-          data = await CursoService.listarInscritosProfesor();
-        } else if (rol === 'ROLE_ADMIN') {
-          data = await CursoService.listarActivos();
-        }
-
-        const normalizados = Array.isArray(data) ? data : [];
+        if (rol === 'ROLE_PROFESOR') data = await CursoService.listarInscritosProfesor();
+        else if (rol === 'ROLE_ADMIN') data = await CursoService.listarActivos();
         if (!active) return;
-
-        setCursosRubrica(normalizados);
-
-        if (normalizados.length > 0) {
-          const firstId = normalizados[0]?.id || normalizados[0]?._id || '';
-          setCursoRubricaId(firstId);
-        }
+        const norm = Array.isArray(data) ? data : [];
+        setCursosRubrica(norm);
+        if (norm.length > 0) setCursoRubricaId(norm[0]?.id || norm[0]?._id || '');
       } catch {
-        if (active) {
-          setCursosRubrica([]);
-          setCursoRubricaId('');
-        }
+        if (active) { setCursosRubrica([]); setCursoRubricaId(''); }
       }
     };
 
-    cargarCursosParaRubrica();
-
-    return () => {
-      active = false;
-    };
-  }, [canGenerateRubric, rol]);
+    cargar();
+    return () => { active = false; };
+  }, [canGenerate, rol]);
 
   useEffect(() => {
-    if (!canGenerateRubric || !cursoRubricaId) return;
-
+    if (!canGenerate || !cursoRubricaId) return;
     const curso = cursosRubrica.find((c) => (c?.id || c?._id) === cursoRubricaId);
-    const nombreCurso = curso?.nombre || '';
-    if (!nombreCurso) return;
-
+    if (!curso) return;
     setRubricaForm((prev) => ({
       ...prev,
-      tema: nombreCurso,
-      asignatura: prev.asignatura?.trim() ? prev.asignatura : nombreCurso,
+      tema: curso.nombre || prev.tema,
+      asignatura: prev.asignatura?.trim() ? prev.asignatura : (curso.nombre || prev.asignatura),
     }));
-  }, [canGenerateRubric, cursoRubricaId, cursosRubrica]);
+  }, [canGenerate, cursoRubricaId, cursosRubrica]);
 
-  const handleGenerateRubric = async () => {
-    if (!canGenerateRubric) return;
-
+  const handleGenerar = () => {
+    if (!canGenerate) return;
     if (!rubricaForm.tema.trim() || !rubricaForm.asignatura.trim()) {
-      setErrorMsg('Para generar la rúbrica debes completar Tema y Asignatura.');
+      setValidacionError('Completa Tema y Asignatura para continuar.');
       return;
     }
+    setValidacionError('');
 
-    try {
-      setRubricLoading(true);
-      setErrorMsg('');
+    const payload = {
+      ...rubricaForm,
+      tema: rubricaForm.tema.trim(),
+      asignatura: rubricaForm.asignatura.trim(),
+      cantidadCriterios: Number(rubricaForm.cantidadCriterios),
+      cantidadNiveles: Number(rubricaForm.cantidadNiveles),
+      puntajeMaximo: Number(rubricaForm.puntajeMaximo),
+    };
 
-      const payload = {
-        ...rubricaForm,
-        tema: rubricaForm.tema.trim(),
-        asignatura: rubricaForm.asignatura.trim(),
-        cantidadCriterios: Number(rubricaForm.cantidadCriterios),
-        cantidadNiveles: Number(rubricaForm.cantidadNiveles),
-        puntajeMaximo: Number(rubricaForm.puntajeMaximo),
-      };
+    iniciarRubrica();
 
-      const generated = await IaService.generarRubrica(payload);
-      setRubrica(generated || null);
-    } catch (error) {
-      const backendMessage = error?.response?.data?.error || error?.response?.data?.mensaje || error?.message;
-      setErrorMsg(backendMessage || 'No se pudo generar la rúbrica por IA.');
-    } finally {
-      setRubricLoading(false);
-    }
+    IaService.generarRubrica(payload)
+      .then((result) => completarRubrica(result))
+      .catch((err) => {
+        const msg = err?.response?.data?.error || err?.message || 'Error al generar la rúbrica.';
+        fallarRubrica(msg);
+      });
   };
 
-  const exportRubricaPdf = () => {
-    if (!rubrica) return;
+  const exportPdf = () => {
+    const r = rubrica.datos;
+    if (!r) return;
 
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const margin = 42;
@@ -140,15 +134,11 @@ const RubricaIA = () => {
     let y = margin;
 
     const ensureSpace = (needed = 18) => {
-      if (y + needed > pageHeight - margin) {
-        doc.addPage();
-        y = margin;
-      }
+      if (y + needed > pageHeight - margin) { doc.addPage(); y = margin; }
     };
-
-    const addLine = (text, size = 11, isBold = false, extra = 6) => {
+    const addLine = (text, size = 11, bold = false, extra = 6) => {
       const safeText = String(text || '-');
-      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(size);
       const lines = doc.splitTextToSize(safeText, maxWidth);
       const height = lines.length * (size + 1) + extra;
@@ -157,88 +147,69 @@ const RubricaIA = () => {
       y += height;
     };
 
-    addLine(rubrica.titulo || 'Rúbrica generada por IA', 16, true, 10);
-    addLine(`Descripción: ${rubrica.descripcion || '-'}`, 10, false, 8);
-    addLine(`Modelo: ${rubrica.modelo || '-'} | Generada por IA: ${rubrica.generadaPorIa ? 'Sí' : 'No'}`, 10, false, 12);
+    addLine(r.titulo || 'Rúbrica generada por IA', 16, true, 10);
+    addLine(`Descripción: ${r.descripcion || '-'}`, 10, false, 8);
+    addLine(`Modelo: ${r.modelo || '-'} | Generada por IA: ${r.generadaPorIa ? 'Sí' : 'No'}`, 10, false, 12);
 
-    (rubrica.criterios || []).forEach((criterio, index) => {
+    (r.criterios || []).forEach((criterio, index) => {
       addLine(`${index + 1}. ${criterio?.nombre || 'Criterio'} (Peso: ${criterio?.peso ?? 0})`, 12, true, 4);
       addLine(`Descripción: ${criterio?.descripcion || '-'}`, 10, false, 6);
-
-      (criterio?.niveles || []).forEach((nivel, idxNivel) => {
-        addLine(`- ${nivel?.nombre || `Nivel ${idxNivel + 1}`} (${nivel?.puntaje ?? 0} pts): ${nivel?.descriptor || '-'}`, 10, false, 4);
+      (criterio?.niveles || []).forEach((nivel, i) => {
+        addLine(`- ${nivel?.nombre || `Nivel ${i + 1}`} (${nivel?.puntaje ?? 0} pts): ${nivel?.descriptor || '-'}`, 10, false, 4);
       });
-
       y += 6;
     });
 
-    const fileName = `${(rubrica.titulo || 'rubrica-ia').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.pdf`;
-    doc.save(fileName);
+    doc.save(`${(r.titulo || 'rubrica-ia').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.pdf`);
   };
 
-  const exportRubricaWord = () => {
-    if (!rubrica) return;
+  const exportWord = () => {
+    const r = rubrica.datos;
+    if (!r) return;
 
-    const rows = (rubrica.criterios || [])
+    const rows = (r.criterios || [])
       .map((criterio, index) => {
         const niveles = (criterio?.niveles || [])
-          .map((nivel) => `
-            <li><b>${escapeHtml(nivel?.nombre || 'Nivel')}</b> (${escapeHtml(nivel?.puntaje ?? 0)} pts): ${escapeHtml(nivel?.descriptor || '-')}</li>
-          `)
+          .map((n) => `<li><b>${escapeHtml(n?.nombre || 'Nivel')}</b> (${escapeHtml(n?.puntaje ?? 0)} pts): ${escapeHtml(n?.descriptor || '-')}</li>`)
           .join('');
-
-        return `
-          <tr>
-            <td style="border:1px solid #d0d7de; padding:8px; vertical-align:top;">${index + 1}</td>
-            <td style="border:1px solid #d0d7de; padding:8px; vertical-align:top;">${escapeHtml(criterio?.nombre || 'Criterio')}</td>
-            <td style="border:1px solid #d0d7de; padding:8px; vertical-align:top;">${escapeHtml(criterio?.descripcion || '-')}</td>
-            <td style="border:1px solid #d0d7de; padding:8px; vertical-align:top;">${escapeHtml(criterio?.peso ?? 0)}</td>
-            <td style="border:1px solid #d0d7de; padding:8px; vertical-align:top;"><ul>${niveles}</ul></td>
-          </tr>
-        `;
+        return `<tr>
+          <td style="border:1px solid #d0d7de;padding:8px;vertical-align:top;">${index + 1}</td>
+          <td style="border:1px solid #d0d7de;padding:8px;vertical-align:top;">${escapeHtml(criterio?.nombre || 'Criterio')}</td>
+          <td style="border:1px solid #d0d7de;padding:8px;vertical-align:top;">${escapeHtml(criterio?.descripcion || '-')}</td>
+          <td style="border:1px solid #d0d7de;padding:8px;vertical-align:top;">${escapeHtml(criterio?.peso ?? 0)}</td>
+          <td style="border:1px solid #d0d7de;padding:8px;vertical-align:top;"><ul>${niveles}</ul></td>
+        </tr>`;
       })
       .join('');
 
-    const html = `
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>${escapeHtml(rubrica.titulo || 'Rúbrica IA')}</title>
-        </head>
-        <body style="font-family:Arial,sans-serif;">
-          <h1>${escapeHtml(rubrica.titulo || 'Rúbrica generada por IA')}</h1>
-          <p><b>Descripción:</b> ${escapeHtml(rubrica.descripcion || '-')}</p>
-          <p><b>Modelo:</b> ${escapeHtml(rubrica.modelo || '-')} | <b>Generada por IA:</b> ${rubrica.generadaPorIa ? 'Sí' : 'No'}</p>
-          <table style="border-collapse:collapse; width:100%;">
-            <thead>
-              <tr>
-                <th style="border:1px solid #d0d7de; padding:8px; text-align:left;">#</th>
-                <th style="border:1px solid #d0d7de; padding:8px; text-align:left;">Criterio</th>
-                <th style="border:1px solid #d0d7de; padding:8px; text-align:left;">Descripción</th>
-                <th style="border:1px solid #d0d7de; padding:8px; text-align:left;">Peso</th>
-                <th style="border:1px solid #d0d7de; padding:8px; text-align:left;">Niveles</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
+    const html = `<html><head><meta charset="utf-8"/><title>${escapeHtml(r.titulo || 'Rúbrica IA')}</title></head>
+      <body style="font-family:Arial,sans-serif;">
+        <h1>${escapeHtml(r.titulo || 'Rúbrica generada por IA')}</h1>
+        <p><b>Descripción:</b> ${escapeHtml(r.descripcion || '-')}</p>
+        <p><b>Modelo:</b> ${escapeHtml(r.modelo || '-')} | <b>Generada por IA:</b> ${r.generadaPorIa ? 'Sí' : 'No'}</p>
+        <table style="border-collapse:collapse;width:100%;">
+          <thead><tr>
+            <th style="border:1px solid #d0d7de;padding:8px;text-align:left;">#</th>
+            <th style="border:1px solid #d0d7de;padding:8px;text-align:left;">Criterio</th>
+            <th style="border:1px solid #d0d7de;padding:8px;text-align:left;">Descripción</th>
+            <th style="border:1px solid #d0d7de;padding:8px;text-align:left;">Peso</th>
+            <th style="border:1px solid #d0d7de;padding:8px;text-align:left;">Niveles</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body></html>`;
 
     const blob = new Blob([html], { type: 'application/msword;charset=utf-8' });
-    const fileName = `${(rubrica.titulo || 'rubrica-ia').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.doc`;
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = fileName;
+    link.download = `${(r.titulo || 'rubrica-ia').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   };
 
-  if (!canGenerateRubric) {
+  if (!canGenerate) {
     return (
       <Alert severity="info">
         El generador de rúbricas está disponible para perfiles Profesor y Administrador.
@@ -255,9 +226,27 @@ const RubricaIA = () => {
         onBack={() => navigate('/modulo/ia')}
       />
 
-      {errorMsg && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {String(errorMsg)}
+      {/* Banner de generación en segundo plano */}
+      {cargando && (
+        <Alert
+          severity="info"
+          icon={<CircularProgress size={18} />}
+          sx={{ mb: 2 }}
+        >
+          Tu rúbrica se está generando en segundo plano. Puedes navegar por el sistema
+          con normalidad y recibirás una notificación cuando esté lista.
+        </Alert>
+      )}
+
+      {conError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={limpiarRubrica}>
+          {rubrica.error || 'No se pudo generar la rúbrica. Intenta nuevamente.'}
+        </Alert>
+      )}
+
+      {validacionError && (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setValidacionError('')}>
+          {validacionError}
         </Alert>
       )}
 
@@ -272,9 +261,9 @@ const RubricaIA = () => {
               onChange={(e) => setCursoRubricaId(e.target.value)}
             >
               {cursosRubrica.map((curso) => {
-                const cursoId = curso?.id || curso?._id;
+                const id = curso?.id || curso?._id;
                 return (
-                  <MenuItem key={cursoId} value={cursoId}>
+                  <MenuItem key={id} value={id}>
                     {curso?.nombre || 'Curso'}
                   </MenuItem>
                 );
@@ -285,7 +274,7 @@ const RubricaIA = () => {
           <TextField
             label="Tema"
             value={rubricaForm.tema}
-            onChange={(e) => setRubricaForm((prev) => ({ ...prev, tema: e.target.value }))}
+            onChange={(e) => setRubricaForm((p) => ({ ...p, tema: e.target.value }))}
             fullWidth
           />
 
@@ -295,7 +284,7 @@ const RubricaIA = () => {
               fullWidth
               label="Nivel educativo"
               value={rubricaForm.nivelEducativo}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, nivelEducativo: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, nivelEducativo: e.target.value }))}
             >
               <MenuItem value="Primaria">Primaria</MenuItem>
               <MenuItem value="Secundaria">Secundaria</MenuItem>
@@ -307,7 +296,7 @@ const RubricaIA = () => {
               fullWidth
               label="Asignatura"
               value={rubricaForm.asignatura}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, asignatura: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, asignatura: e.target.value }))}
             />
           </Stack>
 
@@ -317,7 +306,7 @@ const RubricaIA = () => {
               fullWidth
               label="Tipo de tarea"
               value={rubricaForm.tipoTarea}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, tipoTarea: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, tipoTarea: e.target.value }))}
             >
               <MenuItem value="Proyecto">Proyecto</MenuItem>
               <MenuItem value="Ensayo">Ensayo</MenuItem>
@@ -329,63 +318,90 @@ const RubricaIA = () => {
             <TextField
               type="number"
               fullWidth
-              label="Cantidad de criterios"
+              label="Criterios"
               value={rubricaForm.cantidadCriterios}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, cantidadCriterios: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, cantidadCriterios: e.target.value }))}
               slotProps={{ htmlInput: { min: 2, max: 10 } }}
             />
 
             <TextField
               type="number"
               fullWidth
-              label="Cantidad de niveles"
+              label="Niveles"
               value={rubricaForm.cantidadNiveles}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, cantidadNiveles: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, cantidadNiveles: e.target.value }))}
               slotProps={{ htmlInput: { min: 2, max: 6 } }}
             />
 
             <TextField
               type="number"
               fullWidth
-              label="Puntaje máximo"
+              label="Puntaje máx."
               value={rubricaForm.puntajeMaximo}
-              onChange={(e) => setRubricaForm((prev) => ({ ...prev, puntajeMaximo: e.target.value }))}
+              onChange={(e) => setRubricaForm((p) => ({ ...p, puntajeMaximo: e.target.value }))}
               slotProps={{ htmlInput: { min: 1, max: 100 } }}
             />
           </Stack>
 
-          <Stack direction="row" justifyContent="flex-end">
-            <Button variant="contained" onClick={handleGenerateRubric} disabled={rubricLoading}>
-              {rubricLoading ? 'Generando...' : 'Generar Rúbrica'}
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            {lista && (
+              <Button variant="outlined" onClick={limpiarRubrica}>
+                Generar otra
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              onClick={handleGenerar}
+              disabled={cargando}
+              startIcon={cargando ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
+            >
+              {cargando ? 'Generando...' : 'Generar Rúbrica'}
             </Button>
           </Stack>
         </Stack>
 
-        {rubrica && (
+        {/* Resultado */}
+        {lista && rubrica.datos && (
           <Box sx={{ mt: 2 }}>
             <Divider sx={{ mb: 2 }} />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' }, mb: 1 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>{rubrica.titulo || 'Rúbrica generada'}</Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' }, mb: 1 }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  {rubrica.datos.titulo || 'Rúbrica generada'}
+                </Typography>
+                {rubrica.datos.generadaPorIa && (
+                  <Chip label="IA" size="small" color="primary" icon={<AutoAwesome />} />
+                )}
+              </Stack>
               <Stack direction="row" spacing={1}>
-                <Button startIcon={<PictureAsPdf />} variant="outlined" onClick={exportRubricaPdf}>
-                  Exportar PDF
+                <Button startIcon={<PictureAsPdf />} variant="outlined" onClick={exportPdf}>
+                  PDF
                 </Button>
-                <Button startIcon={<Description />} variant="outlined" onClick={exportRubricaWord}>
-                  Exportar Word
+                <Button startIcon={<Description />} variant="outlined" onClick={exportWord}>
+                  Word
                 </Button>
               </Stack>
             </Stack>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {rubrica.descripcion}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              {rubrica.datos.descripcion}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Modelo: {rubrica.modelo || '-'} | Generada por IA: {rubrica.generadaPorIa ? 'Sí' : 'No'}
+              Modelo: {rubrica.datos.modelo || '-'} | Generada por IA:{' '}
+              {rubrica.datos.generadaPorIa ? 'Sí' : 'No'}
             </Typography>
 
             <Stack spacing={1.5} sx={{ mt: 2 }}>
-              {(rubrica.criterios || []).map((criterio, index) => (
-                <Paper key={`${criterio?.nombre || 'criterio'}-${index}`} variant="outlined" sx={{ p: 1.5 }}>
+              {(rubrica.datos.criterios || []).map((criterio, index) => (
+                <Paper
+                  key={`${criterio?.nombre || 'criterio'}-${index}`}
+                  variant="outlined"
+                  sx={{ p: 1.5 }}
+                >
                   <Typography variant="subtitle2">
                     {index + 1}. {criterio?.nombre || 'Criterio'} (Peso: {criterio?.peso ?? 0})
                   </Typography>
@@ -393,9 +409,14 @@ const RubricaIA = () => {
                     {criterio?.descripcion || '-'}
                   </Typography>
                   <Stack spacing={0.6}>
-                    {(criterio?.niveles || []).map((nivel, idxNivel) => (
-                      <Typography key={`${nivel?.nombre || 'nivel'}-${idxNivel}`} variant="caption" color="text.secondary">
-                        - {nivel?.nombre || 'Nivel'} ({nivel?.puntaje ?? 0} pts): {nivel?.descriptor || '-'}
+                    {(criterio?.niveles || []).map((nivel, i) => (
+                      <Typography
+                        key={`${nivel?.nombre || 'nivel'}-${i}`}
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        - {nivel?.nombre || 'Nivel'} ({nivel?.puntaje ?? 0} pts):{' '}
+                        {nivel?.descriptor || '-'}
                       </Typography>
                     ))}
                   </Stack>

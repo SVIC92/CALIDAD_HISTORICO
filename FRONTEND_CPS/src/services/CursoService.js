@@ -78,7 +78,7 @@ const CursoService = {
     const codigoCurso = payload.codigoCurso?.trim?.() || payload.codigoCurso;
     const carrera = payload.carrera?.trim?.() || payload.carrera;
 
-    const respuesta = await axios.post(`/curso/modificar/${id}`, null, {
+    const respuesta = await axios.put(`/curso/modificar/${id}`, null, {
       params: {
         nombre: payload.nombre,
         codigoCurso: codigoCurso || undefined,
@@ -102,7 +102,7 @@ const CursoService = {
   },
 
   eliminar: async (id) => {
-    const respuesta = await axios.get(`/curso/eliminar/${id}`);
+    const respuesta = await axios.delete(`/curso/eliminar/${id}`);
     return respuesta.data;
   },
 
@@ -127,7 +127,7 @@ const CursoService = {
   },
 
   inscribirCurso: async (id) => {
-    const respuesta = await axios.get(`/curso/inscribir/${id}`);
+    const respuesta = await axios.post(`/curso/inscribir/${id}`);
     return respuesta.data;
   },
   agregarHorario: async (cursoId, horarioData) => {

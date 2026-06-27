@@ -18,6 +18,7 @@ import com.GestionInscripcionCursos.util.HorarioUtil;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -83,9 +84,10 @@ public class InscripcionServicio {
 
         // Registro automático de la inscripción
         Inscripcion nuevaInscripcion = new Inscripcion();
+        nuevaInscripcion.setFechaCreacion(new Date());
         nuevaInscripcion.setUsuario(alumno);
         nuevaInscripcion.setCurso(curso);
-        nuevaInscripcion.setEstado("APROBADO");  
+        nuevaInscripcion.setEstado("APROBADO");
 
         inscripcionRepositorio.save(nuevaInscripcion);
     }

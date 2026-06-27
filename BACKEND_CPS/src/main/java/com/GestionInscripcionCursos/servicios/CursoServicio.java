@@ -278,7 +278,7 @@ public class CursoServicio {
         return profesor;
     }
 
-    private Carrera resolverCarreraSiExiste(String carreraReferencia) {
+    private Carrera resolverCarreraSiExiste(String carreraReferencia) throws MyException {
         if (carreraReferencia == null || carreraReferencia.isBlank()) {
             return null;
         }
@@ -289,45 +289,8 @@ public class CursoServicio {
         }
 
         return carreraRepositorio.findByNombreIgnoreCase(carreraReferencia)
-                .orElseGet(() -> {
-                    Carrera nuevaCarrera = new Carrera();
-                    nuevaCarrera.setNombre(carreraReferencia.trim());
-                    nuevaCarrera.setCodigo(generarCodigoCarreraUnico(carreraReferencia));
-                    nuevaCarrera.setDescripcion("Programa academico generado automaticamente");
-                    return carreraRepositorio.save(nuevaCarrera);
-                });
-    }
-
-    private String generarCodigoCarreraUnico(String carreraReferencia) {
-        String base = generarCodigoCarrera(carreraReferencia);
-        String candidato = base;
-        int indice = 1;
-        while (carreraRepositorio.findByCodigoIgnoreCase(candidato).isPresent()) {
-            candidato = (base + indice);
-            if (candidato.length() > 10) {
-                candidato = candidato.substring(0, 10);
-            }
-            indice++;
-        }
-        return candidato;
-    }
-
-    private String generarCodigoCarrera(String carreraReferencia) {
-        String texto = carreraReferencia.trim().toUpperCase().replaceAll("[^A-Z0-9 ]", "");
-        String[] partes = texto.split("\\s+");
-        StringBuilder codigo = new StringBuilder();
-        for (String parte : partes) {
-            if (!parte.isBlank()) {
-                codigo.append(parte.charAt(0));
-            }
-            if (codigo.length() == 6) {
-                break;
-            }
-        }
-        if (codigo.length() < 3) {
-            codigo.append("CAR");
-        }
-        return codigo.substring(0, Math.min(codigo.length(), 10));
+                .orElseThrow(() -> new MyException(
+                        "Carrera no encontrada: \"" + carreraReferencia + "\". Créela primero desde la gestión de carreras."));
     }
 
     private String normalizarCodigoCurso(String codigoCurso, String nombreCurso) {

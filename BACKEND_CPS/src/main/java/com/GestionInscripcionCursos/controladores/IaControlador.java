@@ -2,6 +2,8 @@ package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.dto.IaChatRequestDto;
 import com.GestionInscripcionCursos.dto.IaChatResponseDto;
+import com.GestionInscripcionCursos.dto.IaConversacionDto;
+import com.GestionInscripcionCursos.dto.IaSugerenciasDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneracionRequestDto;
 import com.GestionInscripcionCursos.dto.RubricaGeneradaDto;
 import com.GestionInscripcionCursos.dto.SilaboGeneracionRequestDto;
@@ -15,10 +17,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -59,13 +63,43 @@ public class IaControlador {
                 .orElseGet(() -> ResponseEntity.ok(Map.of("mensaje", "No hay historial disponible")));
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/historial/conversacion")
+    public ResponseEntity<IaConversacionDto> conversacion(Authentication auth) {
+        IaConversacionDto conversacion = iaServicio.obtenerConversacion(auth.getName());
+        return ResponseEntity.ok(conversacion);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/historial")
+    public ResponseEntity<?> limpiarHistorial(Authentication auth) {
+        iaServicio.limpiarHistorial(auth.getName());
+        return ResponseEntity.ok(Map.of("mensaje", "Historial de conversacion eliminado correctamente"));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/sugerencias")
+    public ResponseEntity<IaSugerenciasDto> sugerencias(@RequestParam String rol) {
+        String rolNormalizado = rol != null ? rol.toUpperCase() : "";
+        IaSugerenciasDto sugerencias = iaServicio.obtenerSugerencias(rolNormalizado);
+        return ResponseEntity.ok(sugerencias);
+    }
+
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @PostMapping("/rubricas/generar")
-    public ResponseEntity<RubricaGeneradaDto> generarRubrica(
+    public ResponseEntity<?> generarRubrica(
             @RequestBody RubricaGeneracionRequestDto request,
             Authentication auth
     ) {
-        return ResponseEntity.ok(iaServicio.generarRubrica(auth.getName(), request));
+        try {
+            return ResponseEntity.ok(iaServicio.generarRubrica(auth.getName(), request));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            LOGGER.error("Error generando rúbrica", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno al generar la rúbrica"));
+        }
     }
     @PostMapping("/silabo/generar")
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")

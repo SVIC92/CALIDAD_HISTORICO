@@ -8,11 +8,15 @@ import {
   Alert,
   CircularProgress,
   Button,
+  Chip,
+  Stack,
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import SpaceDashboardRoundedIcon from '@mui/icons-material/SpaceDashboardRounded';
 import { useNavigate } from 'react-router-dom';
 import CursoService from '../services/CursoService';
@@ -22,33 +26,6 @@ import InscripcionService from '../services/InscripcionService';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
 
-const getUserEmailFromToken = () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) return '';
-    const [, payloadBase64] = token.split('.');
-    if (!payloadBase64) return '';
-
-    const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
-    const payload = JSON.parse(window.atob(padded));
-    return (payload?.sub || payload?.email || '').toLowerCase();
-  } catch {
-    return '';
-  }
-};
-
-const hasProfesorAsignado = (curso, email) => {
-  const profesor = curso?.profesorAsignado;
-  if (!profesor || !email) return false;
-
-  if (typeof profesor === 'string') {
-    return profesor.toLowerCase() === email;
-  }
-
-  return (profesor?.email || '').toLowerCase() === email;
-};
-
 const normalizeReportes = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -57,16 +34,27 @@ const normalizeReportes = (data) => {
   return [data];
 };
 
+const getSaludo = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 18) return 'Buenas tardes';
+  return 'Buenas noches';
+};
+
+const chipUrgencia = (diffDias) => {
+  if (diffDias === 0) return { label: 'Vence hoy', color: 'error' };
+  if (diffDias === 1) return { label: 'Mañana', color: 'warning' };
+  if (diffDias <= 3) return { label: `En ${diffDias} días`, color: 'warning' };
+  return { label: `En ${diffDias} días`, color: 'default' };
+};
+
 const DashboardProfesor = () => {
   const navigate = useNavigate();
+  const nombre = localStorage.getItem('nombre') || '';
+
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [stats, setStats] = useState([
-    { title: 'Cursos Asignados', value: '0', icon: <SchoolIcon />, color: 'primary' },
-    { title: 'Actividades Activas', value: '0', icon: <AssignmentIcon />, color: 'success' },
-    { title: 'Pendientes por Calificar', value: '0', icon: <FactCheckIcon />, color: 'warning' },
-    { title: 'Cumplimiento Semanal', value: '0%', icon: <TrendingUpIcon />, color: 'secondary' },
-  ]);
+  const [kpis, setKpis] = useState({ cursos: 0, actividades: 0, pendientesCalificar: 0, cumplimiento: 100 });
   const [upcoming, setUpcoming] = useState([]);
   const [alertas, setAlertas] = useState({ pendientesCalificar: 0, solicitudesPendientes: 0 });
 
@@ -84,20 +72,14 @@ const DashboardProfesor = () => {
             const cursoId = curso?.id || curso?._id;
             if (!cursoId) return [];
             try {
-              const actividadesData = await ActividadService.listar(cursoId);
-              const actividades = Array.isArray(actividadesData)
-                ? actividadesData
-                : Array.isArray(actividadesData?.actividades)
-                  ? actividadesData.actividades
+              const data = await ActividadService.listar(cursoId);
+              const actividades = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.actividades)
+                  ? data.actividades
                   : [];
-
-              return actividades.map((actividad) => ({
-                ...actividad,
-                cursoNombre: curso?.nombre || 'Curso',
-              }));
-            } catch {
-              return [];
-            }
+              return actividades.map((a) => ({ ...a, cursoNombre: curso?.nombre || 'Curso' }));
+            } catch { return []; }
           })
         );
 
@@ -107,71 +89,52 @@ const DashboardProfesor = () => {
           actividades.map(async (actividad) => {
             const actividadId = actividad?.id || actividad?._id;
             if (!actividadId) return [];
-            try {
-              const listData = await ReporteService.listar(actividadId);
-              return normalizeReportes(listData);
-            } catch {
-              return [];
-            }
+            try { return normalizeReportes(await ReporteService.listar(actividadId)); }
+            catch { return []; }
           })
         );
 
         const reportes = reportesPorActividad.flat();
 
-        const pendientesCalificar = reportes.filter((reporte) => {
-          const estado = String(reporte?.estado || '').toUpperCase();
-          if (estado.includes('PENDIENTE')) return true;
-          if (estado.includes('ENTREGADO')) return true;
-          return reporte?.nota === null || reporte?.nota === undefined;
+        const pendientesCalificar = reportes.filter((r) => {
+          const estado = String(r?.estado || '').toUpperCase();
+          return estado.includes('PENDIENTE') || estado.includes('ENTREGADO') || r?.nota == null;
         }).length;
 
-        const totalReportes = reportes.length;
-        const calificados = totalReportes - pendientesCalificar;
-        const cumplimientoSemanal = totalReportes > 0
-          ? `${Math.round((calificados / totalReportes) * 100)}%`
-          : '0%';
+        const calificados = reportes.length - pendientesCalificar;
+        const cumplimiento = reportes.length > 0
+          ? Math.round((calificados / reportes.length) * 100)
+          : 100;
 
         const now = new Date();
         const proximasActividades = actividades
-          .map((actividad) => {
-            const rawDate = actividad?.fechaVencimiento || actividad?.fechaEntrega || actividad?.fechaLimite;
+          .map((a) => {
+            const rawDate = a?.fechaVencimiento || a?.fechaEntrega || a?.fechaLimite;
             const fecha = rawDate ? new Date(rawDate) : null;
             if (!fecha || Number.isNaN(fecha.getTime())) return null;
-
-            const diffMs = fecha.getTime() - now.getTime();
-            const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
+            const diffDias = Math.ceil((fecha.getTime() - now.getTime()) / 86400000);
             return {
-              id: actividad?.id || actividad?._id,
-              nombre: actividad?.nombre || 'Actividad',
-              cursoNombre: actividad?.cursoNombre || 'Curso',
-              fecha,
+              id: a?.id || a?._id,
+              nombre: a?.nombre || 'Actividad',
+              cursoNombre: a?.cursoNombre || 'Curso',
               diffDias,
             };
           })
           .filter((item) => item && item.diffDias >= 0)
-          .sort((a, b) => a.fecha - b.fecha)
-          .slice(0, 4);
+          .sort((a, b) => a.diffDias - b.diffDias)
+          .slice(0, 5);
 
         let solicitudesPendientes = 0;
         try {
-          const pendientesInscripcion = await InscripcionService.listaPendientesAlumno();
-          solicitudesPendientes = Array.isArray(pendientesInscripcion) ? pendientesInscripcion.length : 0;
-        } catch {
-          solicitudesPendientes = 0;
-        }
+          const pend = await InscripcionService.listaPendientesAlumno();
+          solicitudesPendientes = Array.isArray(pend) ? pend.length : 0;
+        } catch { /* silent */ }
 
         setUpcoming(proximasActividades);
         setAlertas({ pendientesCalificar, solicitudesPendientes });
-        setStats([
-          { title: 'Cursos Asignados', value: String(cursos.length), icon: <SchoolIcon />, color: 'primary' },
-          { title: 'Actividades Activas', value: String(actividades.length), icon: <AssignmentIcon />, color: 'success' },
-          { title: 'Pendientes por Calificar', value: String(pendientesCalificar), icon: <FactCheckIcon />, color: 'warning' },
-          { title: 'Cumplimiento Semanal', value: cumplimientoSemanal, icon: <TrendingUpIcon />, color: 'secondary' },
-        ]);
+        setKpis({ cursos: cursos.length, actividades: actividades.length, pendientesCalificar, cumplimiento });
       } catch (error) {
-        const backendMessage = error?.response?.data?.error || error?.response?.data;
-        setErrorMsg(backendMessage || 'No se pudieron cargar los datos del dashboard de profesor.');
+        setErrorMsg(error?.response?.data?.error || 'No se pudieron cargar los datos del dashboard.');
       } finally {
         setIsLoading(false);
       }
@@ -180,25 +143,49 @@ const DashboardProfesor = () => {
     loadDashboard();
   }, []);
 
-  const resumenAlertas = useMemo(() => {
-    const mensajes = [];
-    if (alertas.pendientesCalificar > 0) {
-      mensajes.push(`${alertas.pendientesCalificar} reporte(s) pendientes de calificacion.`);
-    }
-    if (alertas.solicitudesPendientes > 0) {
-      mensajes.push(`${alertas.solicitudesPendientes} solicitud(es) de inscripcion en espera.`);
-    }
-    if (mensajes.length === 0) {
-      mensajes.push('No tienes alertas pendientes por el momento.');
-    }
-    return mensajes;
-  }, [alertas]);
+  const stats = useMemo(() => [
+    {
+      title: 'Cursos Asignados',
+      value: String(kpis.cursos),
+      icon: <SchoolIcon />,
+      color: 'primary',
+      subtitle: 'a tu cargo',
+      onClick: () => navigate('/cursos/dictados'),
+    },
+    {
+      title: 'Actividades',
+      value: String(kpis.actividades),
+      icon: <AssignmentIcon />,
+      color: 'success',
+      subtitle: 'en todos tus cursos',
+      onClick: () => navigate('/modulo/actividades'),
+    },
+    {
+      title: 'Por Calificar',
+      value: String(kpis.pendientesCalificar),
+      icon: <FactCheckIcon />,
+      color: kpis.pendientesCalificar > 0 ? 'warning' : 'success',
+      subtitle: 'reportes pendientes',
+      onClick: () => navigate('/modulo/reportes'),
+    },
+    {
+      title: 'Cumplimiento',
+      value: `${kpis.cumplimiento}%`,
+      icon: <AutoGraphIcon />,
+      color: kpis.cumplimiento >= 80 ? 'success' : 'warning',
+      subtitle: 'reportes calificados',
+    },
+  ], [kpis, navigate]);
 
   return (
     <Box>
       <PageHeader
         title="Dashboard de Profesor"
-        subtitle="Resumen de tus cursos, actividades y pendientes"
+        subtitle={
+          nombre
+            ? `${getSaludo()}, ${nombre.split(' ')[0]}. Resumen de tus cursos y pendientes.`
+            : 'Resumen de tus cursos, actividades y pendientes'
+        }
         icon={<SpaceDashboardRoundedIcon />}
       />
 
@@ -220,58 +207,168 @@ const DashboardProfesor = () => {
             </Grid>
           ))}
 
+          {/* Actividades Próximas */}
           <Grid size={{ xs: 12, md: 7 }}>
-            <Paper sx={{ p: 3, height: '360px', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" gutterBottom>
-                  Actividades Proximas
-                </Typography>
+            <Paper sx={{ p: 3, minHeight: 320 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6">Actividades Próximas</Typography>
                 <Button size="small" onClick={() => navigate('/modulo/actividades')}>
-                  Ver actividades
+                  Ver todas
                 </Button>
               </Box>
               <Divider sx={{ mb: 2 }} />
 
               {upcoming.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No hay actividades proximas por vencer.
-                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'success.900' : 'success.50',
+                    border: 1,
+                    borderColor: (theme) => `${theme.palette.success.main}40`,
+                  }}
+                >
+                  <CheckCircleOutlinedIcon color="success" />
+                  <Typography variant="body2">No hay actividades próximas por vencer.</Typography>
+                </Box>
               ) : (
-                upcoming.map((item) => (
-                  <Box key={item.id} sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {item.nombre}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Curso {item.cursoNombre} - Vence en {item.diffDias} dia(s)
-                    </Typography>
-                  </Box>
-                ))
+                <Stack spacing={1.5}>
+                  {upcoming.map((item) => {
+                    const chip = chipUrgencia(item.diffDias);
+                    return (
+                      <Box
+                        key={item.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: chip.color === 'error' ? 'error.main' : chip.color === 'warning' ? 'warning.main' : 'divider',
+                          borderLeftWidth: 3,
+                          bgcolor: 'background.paper',
+                        }}
+                      >
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                            {item.nombre}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {item.cursoNombre}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={chip.label}
+                          color={chip.color}
+                          size="small"
+                          sx={{ flexShrink: 0 }}
+                        />
+                      </Box>
+                    );
+                  })}
+                </Stack>
               )}
             </Paper>
           </Grid>
 
+          {/* Alertas y Acciones */}
           <Grid size={{ xs: 12, md: 5 }}>
-            <Paper sx={{ p: 3, height: '360px', display: 'flex', flexDirection: 'column' }}>
+            <Paper sx={{ p: 3, minHeight: 320, display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" gutterBottom>
-                Alertas
+                Alertas y Acciones
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1 }}>
-                {resumenAlertas.map((alerta, idx) => (
-                  <Typography key={idx} variant="body2" color="text.secondary">
-                    {alerta}
+
+              <Stack spacing={1.5} sx={{ flexGrow: 1 }}>
+                {alertas.pendientesCalificar > 0 ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: (theme) => `${theme.palette.warning.main}50`,
+                      bgcolor: (theme) => `${theme.palette.warning.main}12`,
+                    }}
+                  >
+                    <FactCheckIcon color="warning" />
+                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                      Reportes pendientes de calificación
+                    </Typography>
+                    <Chip label={alertas.pendientesCalificar} color="warning" size="small" />
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: (theme) => `${theme.palette.success.main}50`,
+                      bgcolor: (theme) => `${theme.palette.success.main}12`,
+                    }}
+                  >
+                    <CheckCircleOutlinedIcon color="success" />
+                    <Typography variant="body2">
+                      Sin reportes pendientes. ¡Al día con tus calificaciones!
+                    </Typography>
+                  </Box>
+                )}
+
+                {alertas.solicitudesPendientes > 0 && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: (theme) => `${theme.palette.info.main}50`,
+                      bgcolor: (theme) => `${theme.palette.info.main}12`,
+                    }}
+                  >
+                    <GroupAddIcon color="info" />
+                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                      Solicitudes de inscripción pendientes
+                    </Typography>
+                    <Chip label={alertas.solicitudesPendientes} color="info" size="small" />
+                  </Box>
+                )}
+
+                {alertas.pendientesCalificar === 0 && alertas.solicitudesPendientes === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    No tienes alertas pendientes por el momento.
                   </Typography>
-                ))}
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                <Button size="small" variant="outlined" onClick={() => navigate('/modulo/inscripciones')}>
-                  Ver inscripciones
+                )}
+              </Stack>
+
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => navigate('/modulo/inscripciones')}
+                >
+                  Inscripciones
                 </Button>
-                <Button size="small" variant="outlined" onClick={() => navigate('/modulo/reportes')}>
-                  Ver reportes
+                <Button
+                  size="small"
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => navigate('/modulo/reportes')}
+                >
+                  Reportes
                 </Button>
-              </Box>
+              </Stack>
             </Paper>
           </Grid>
         </Grid>

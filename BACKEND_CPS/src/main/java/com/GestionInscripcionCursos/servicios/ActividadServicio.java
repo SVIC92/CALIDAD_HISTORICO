@@ -9,7 +9,7 @@ import com.GestionInscripcionCursos.entidades.Curso;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;

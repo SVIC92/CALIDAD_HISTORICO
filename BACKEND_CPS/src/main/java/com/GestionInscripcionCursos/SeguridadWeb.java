@@ -53,14 +53,22 @@ public class SeguridadWeb {
             .cors().and()
             .csrf().disable()
             .authorizeRequests()
-                .requestMatchers("/api/auth/login").permitAll() // La ruta de login es pública
-                .requestMatchers("/api/subtitulos/interno").permitAll()
-                .requestMatchers("/api/**").permitAll() // TEMPORALMENTE abierto para que sigas probando
+                // Endpoints públicos (sin token)
+                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/api/auth/forgot-password").permitAll()
+                .requestMatchers("/api/auth/reset-password").permitAll()
+                .requestMatchers("/api/portal/registro").permitAll()
+                .requestMatchers("/api/portal/registrar").permitAll()
+                .requestMatchers("/api/portal/login").permitAll()
+                .requestMatchers("/api/portal/").permitAll()
+                .requestMatchers("/api/carrera/lista").permitAll()   // necesario en la pantalla de Registro
+                .requestMatchers("/api/subtitulos/interno").permitAll()  // webhook del microservicio de transcripción
+                .requestMatchers("/ws-chat/**").permitAll()          // WebSocket STOMP (auth via JWT en CONNECT)
+                // Todo lo demás requiere autenticación
+                .requestMatchers("/api/**").authenticated()
             .and()
-            // Configuramos la gestión de sesiones como STATELESS (sin estado)
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-        // Agregamos nuestro filtro ANTES del filtro estándar de Spring
         http.addFilterBefore(jwtFiltro, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

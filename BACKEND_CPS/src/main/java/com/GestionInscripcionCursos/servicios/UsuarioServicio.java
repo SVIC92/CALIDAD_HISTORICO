@@ -9,7 +9,7 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.CarreraRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 
 import java.util.Date;
@@ -157,7 +157,7 @@ public class UsuarioServicio implements UserDetailsService {
     }
 
     public Usuario getOne(String id) {
-        return usuarioRepositorio.getOne(id);
+        return usuarioRepositorio.findById(id).orElse(null);
     }
 
     @Override

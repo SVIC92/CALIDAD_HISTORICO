@@ -1,10 +1,15 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { AutoAwesome, AutoStories, Chat, Grading } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 
 const IAHub = () => {
   const navigate = useNavigate();
+  const rol = localStorage.getItem('rol');
+
+  if (rol === 'ROLE_ALUMNO') {
+    return <Navigate to="/modulo/ia/chat" replace />;
+  }
 
   const modules = [
     {

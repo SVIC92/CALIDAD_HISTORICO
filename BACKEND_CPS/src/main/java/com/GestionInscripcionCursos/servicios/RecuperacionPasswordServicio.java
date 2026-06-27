@@ -5,7 +5,7 @@ import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.PasswordResetTokenRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;

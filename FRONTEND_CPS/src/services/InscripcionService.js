@@ -22,22 +22,29 @@ const InscripcionService = {
     },
 
     aprobar: async (inscripcionId) => {
-        const respuesta = await axios.get(`/inscripcion/aprobar/${inscripcionId}`);
+        const respuesta = await axios.post(`/inscripcion/aprobar/${inscripcionId}`);
         return respuesta.data;
     },
 
     rechazar: async (inscripcionId) => {
-        const respuesta = await axios.get(`/inscripcion/rechazar/${inscripcionId}`);
+        const respuesta = await axios.post(`/inscripcion/rechazar/${inscripcionId}`);
         return respuesta.data;
     },
 
     aprobarProfesor: async (inscripcionId) => {
-        const respuesta = await axios.get(`/inscripcion/aprobarProfesor/${inscripcionId}`);
+        const respuesta = await axios.post(`/inscripcion/aprobarProfesor/${inscripcionId}`);
         return respuesta.data;
     },
 
     rechazarProfesor: async (inscripcionId) => {
-        const respuesta = await axios.get(`/inscripcion/rechazarProfesor/${inscripcionId}`);
+        const respuesta = await axios.post(`/inscripcion/rechazarProfesor/${inscripcionId}`);
+        return respuesta.data;
+    },
+
+    inscribirAlumnoDirecto: async (usuarioId, cursoId) => {
+        const respuesta = await axios.post('/inscripcion/inscribirAlumnoDirecto', null, {
+            params: { usuarioId, cursoId },
+        });
         return respuesta.data;
     },
 };

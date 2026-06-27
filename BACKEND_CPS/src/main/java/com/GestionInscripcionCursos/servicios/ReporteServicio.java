@@ -7,7 +7,7 @@ import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.ReporteRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;

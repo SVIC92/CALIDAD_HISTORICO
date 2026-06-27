@@ -3,13 +3,13 @@ package com.GestionInscripcionCursos.controladores;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
-import jakarta.servlet.http.HttpSession;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -120,22 +120,27 @@ public class PortalControlador {
 
     @PreAuthorize("hasAnyRole('ALUMNO', 'PROFESOR', 'ADMIN')")
     @GetMapping("/inicio")
-    public ResponseEntity<?> inicio(HttpSession session) {
+    public ResponseEntity<?> inicio(Authentication authentication) {
 
-        Usuario logueado = (Usuario) session.getAttribute("usuariosession");
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No hay usuario autenticado"));
+        }
+
+        Usuario logueado = usuarioServicio.buscarEmail(authentication.getName());
 
         if (logueado == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "No hay usuario autenticado en sesión"));
+                    .body(Map.of("error", "No hay usuario autenticado"));
         }
-        
+
         if (logueado.getRol().toString().equals("ADMIN")) {
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Logueo exitoso",
                     "rol", logueado.getRol(),
                     "redirectTo", "/admin/dashboard"));
         }
-        
+
         if (logueado.getRol().toString().equals("PROFESOR")) {
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Logueo exitoso",

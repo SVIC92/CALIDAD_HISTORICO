@@ -8,11 +8,19 @@ import {
   Alert,
   CircularProgress,
   Button,
+  Chip,
+  Stack,
+  Avatar,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import PeopleIcon from '@mui/icons-material/People';
 import BookIcon from '@mui/icons-material/Book';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SchoolIcon from '@mui/icons-material/School';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import SpaceDashboardRoundedIcon from '@mui/icons-material/SpaceDashboardRounded';
 import { useNavigate } from 'react-router-dom';
 import UsuarioService from '../services/UsuarioService';
@@ -23,8 +31,8 @@ import StatCard from '../components/StatCard';
 
 const toDate = (value) => {
   if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 };
 
 const isToday = (date) => {
@@ -37,27 +45,41 @@ const isToday = (date) => {
   );
 };
 
-const formatRelativeMinutes = (date) => {
-  if (!date) return 'Fecha no disponible';
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.max(1, Math.floor(diffMs / 60000));
-  if (minutes < 60) return `Hace ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  return `Hace ${days} d`;
+const formatRelativo = (date) => {
+  if (!date) return '';
+  const min = Math.max(1, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (min < 60) return `Hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `Hace ${h} h`;
+  return `Hace ${Math.floor(h / 24)} d`;
 };
+
+const getSaludo = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 18) return 'Buenas tardes';
+  return 'Buenas noches';
+};
+
+const ACCIONES = [
+  { label: 'Usuarios', descripcion: 'Gestionar usuarios y roles', icono: <ManageAccountsIcon />, path: '/usuarios/listado', color: 'primary' },
+  { label: 'Cursos', descripcion: 'Administrar cursos activos', icono: <BookIcon />, path: '/cursos/listado', color: 'success' },
+  { label: 'Carreras', descripcion: 'Programas académicos', icono: <AccountBalanceIcon />, path: '/carreras', color: 'info' },
+  { label: 'Inscripciones', descripcion: 'Solicitudes pendientes', icono: <AssignmentTurnedInIcon />, path: '/modulo/inscripciones', color: 'warning' },
+];
 
 const DashboardAdmin = () => {
   const navigate = useNavigate();
+  const nombre = localStorage.getItem('nombre') || '';
+
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [stats, setStats] = useState([
-    { title: 'Total Alumnos', value: '0', icon: <PeopleIcon />, color: 'primary' },
-    { title: 'Cursos Activos', value: '0', icon: <BookIcon />, color: 'success' },
-    { title: 'Inscripciones Hoy', value: '0', icon: <AssignmentTurnedInIcon />, color: 'warning' },
-    { title: 'Tasa de Crecimiento', value: '0%', icon: <TrendingUpIcon />, color: 'secondary' },
-  ]);
+  const [kpis, setKpis] = useState({
+    totalAlumnos: 0,
+    totalProfesores: 0,
+    cursosActivos: 0,
+    inscripcionesPendientes: 0,
+  });
   const [actividadReciente, setActividadReciente] = useState([]);
 
   useEffect(() => {
@@ -66,76 +88,52 @@ const DashboardAdmin = () => {
         setIsLoading(true);
         setErrorMsg('');
 
-        const [usuariosResult, cursosActivosResult, inscripcionesResult] = await Promise.allSettled([
+        const [usuariosResult, cursosResult, pendientesResult, realizadasResult] = await Promise.allSettled([
           UsuarioService.listar(),
           CursoService.listarActivos(),
+          InscripcionService.listaPendientesProfesor(),
           InscripcionService.listaRealizadasProfesor(),
         ]);
 
         const usuarios = usuariosResult.status === 'fulfilled' && Array.isArray(usuariosResult.value)
-          ? usuariosResult.value
-          : [];
-
-        const cursosActivos = cursosActivosResult.status === 'fulfilled' && Array.isArray(cursosActivosResult.value)
-          ? cursosActivosResult.value
-          : [];
-
-        const inscripciones = inscripcionesResult.status === 'fulfilled' && Array.isArray(inscripcionesResult.value)
-          ? inscripcionesResult.value
-          : [];
+          ? usuariosResult.value : [];
+        const cursos = cursosResult.status === 'fulfilled' && Array.isArray(cursosResult.value)
+          ? cursosResult.value : [];
+        const pendientes = pendientesResult.status === 'fulfilled' && Array.isArray(pendientesResult.value)
+          ? pendientesResult.value : [];
+        const realizadas = realizadasResult.status === 'fulfilled' && Array.isArray(realizadasResult.value)
+          ? realizadasResult.value : [];
 
         const totalAlumnos = usuarios.filter((u) => String(u?.rol || '').includes('ALUMNO')).length;
+        const totalProfesores = usuarios.filter((u) => String(u?.rol || '').includes('PROFESOR')).length;
 
-        const inscripcionesHoy = inscripciones.filter((i) => isToday(toDate(i?.fechaCreacion))).length;
+        const inscripcionesHoy = realizadas.filter((i) => isToday(toDate(i?.fechaCreacion))).length;
 
-        const now = new Date();
-        const startCurrent = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startPrevious = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endPrevious = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-
-        const currentMonthUsers = usuarios.filter((u) => {
-          const d = toDate(u?.fechaCreacion);
-          return d && d >= startCurrent;
-        }).length;
-
-        const previousMonthUsers = usuarios.filter((u) => {
-          const d = toDate(u?.fechaCreacion);
-          return d && d >= startPrevious && d <= endPrevious;
-        }).length;
-
-        let crecimiento = '0%';
-        if (previousMonthUsers > 0) {
-          const rate = ((currentMonthUsers - previousMonthUsers) / previousMonthUsers) * 100;
-          const sign = rate > 0 ? '+' : '';
-          crecimiento = `${sign}${Math.round(rate)}%`;
-        } else if (currentMonthUsers > 0) {
-          crecimiento = '+100%';
-        }
-
-        const actividad = inscripciones
+        const actividad = realizadas
           .map((i) => ({
-            id: i?.id || Math.random().toString(36),
-            titulo: `${i?.usuario?.nombre || 'Usuario'} ${String(i?.estado || '').toUpperCase() === 'APROBADO' ? 'inscrito' : 'registrado'} en curso`,
-            detalle: `${formatRelativeMinutes(toDate(i?.fechaCreacion))} - Curso: ${i?.curso?.nombre || '-'}`,
+            id: i?.id || String(Math.random()),
+            titulo: `${i?.usuario?.nombre || 'Usuario'} inscrito en "${i?.curso?.nombre || '-'}"`,
+            tiempo: formatRelativo(toDate(i?.fechaCreacion)),
             fecha: toDate(i?.fechaCreacion),
           }))
+          .filter((a) => a.fecha)
           .sort((a, b) => (b.fecha?.getTime?.() || 0) - (a.fecha?.getTime?.() || 0))
-          .slice(0, 6);
+          .slice(0, 8);
 
         setActividadReciente(actividad);
-        setStats([
-          { title: 'Total Alumnos', value: String(totalAlumnos), icon: <PeopleIcon />, color: 'primary' },
-          { title: 'Cursos Activos', value: String(cursosActivos.length), icon: <BookIcon />, color: 'success' },
-          { title: 'Inscripciones Hoy', value: String(inscripcionesHoy), icon: <AssignmentTurnedInIcon />, color: 'warning' },
-          { title: 'Tasa de Crecimiento', value: crecimiento, icon: <TrendingUpIcon />, color: 'secondary' },
-        ]);
+        setKpis({
+          totalAlumnos,
+          totalProfesores,
+          cursosActivos: cursos.length,
+          inscripcionesPendientes: pendientes.length,
+          inscripcionesHoy,
+        });
 
-        if (usuariosResult.status === 'rejected' || cursosActivosResult.status === 'rejected' || inscripcionesResult.status === 'rejected') {
-          setErrorMsg('Algunos indicadores no pudieron cargarse por cambios o errores en backend.');
+        if ([usuariosResult, cursosResult].some((r) => r.status === 'rejected')) {
+          setErrorMsg('Algunos indicadores no pudieron cargarse.');
         }
       } catch (error) {
-        const backendMessage = error?.response?.data?.error || error?.response?.data;
-        setErrorMsg(backendMessage || 'No se pudo cargar el dashboard de administración.');
+        setErrorMsg(error?.response?.data?.error || 'No se pudo cargar el dashboard.');
       } finally {
         setIsLoading(false);
       }
@@ -144,19 +142,50 @@ const DashboardAdmin = () => {
     loadDashboard();
   }, []);
 
-  const resumenMensual = useMemo(() => {
-    return [
-      { mes: 'Cursos activos', valor: stats[1]?.value || '0' },
-      { mes: 'Inscripciones hoy', valor: stats[2]?.value || '0' },
-      { mes: 'Crecimiento', valor: stats[3]?.value || '0%' },
-    ];
-  }, [stats]);
+  const stats = useMemo(() => [
+    {
+      title: 'Total Alumnos',
+      value: String(kpis.totalAlumnos),
+      icon: <PeopleIcon />,
+      color: 'primary',
+      subtitle: 'estudiantes registrados',
+      onClick: () => navigate('/usuarios/listado'),
+    },
+    {
+      title: 'Total Profesores',
+      value: String(kpis.totalProfesores),
+      icon: <SchoolIcon />,
+      color: 'info',
+      subtitle: 'docentes activos',
+      onClick: () => navigate('/usuarios/listado'),
+    },
+    {
+      title: 'Cursos Activos',
+      value: String(kpis.cursosActivos),
+      icon: <BookIcon />,
+      color: 'success',
+      subtitle: 'en oferta académica',
+      onClick: () => navigate('/cursos/listado'),
+    },
+    {
+      title: 'Inscripciones Pendientes',
+      value: String(kpis.inscripcionesPendientes),
+      icon: <PendingActionsIcon />,
+      color: kpis.inscripcionesPendientes > 0 ? 'warning' : 'secondary',
+      subtitle: 'por revisar',
+      onClick: () => navigate('/modulo/inscripciones'),
+    },
+  ], [kpis, navigate]);
 
   return (
     <Box>
       <PageHeader
         title="Panel de Administración"
-        subtitle="Indicadores y actividad general de la plataforma"
+        subtitle={
+          nombre
+            ? `${getSaludo()}, ${nombre.split(' ')[0]}. Aquí tienes el resumen de la plataforma.`
+            : 'Indicadores y actividad general de la plataforma'
+        }
         icon={<SpaceDashboardRoundedIcon />}
       />
 
@@ -172,71 +201,104 @@ const DashboardAdmin = () => {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {stats.map((stat, index) => (
-            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+          {stats.map((stat) => (
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
               <StatCard {...stat} />
             </Grid>
           ))}
 
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Paper sx={{ p: 3, height: '400px', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" gutterBottom>
-                  Resumen Operativo
-                </Typography>
-                <Button size="small" onClick={() => navigate('/usuarios/listado')}>
-                  Ver usuarios
-                </Button>
-              </Box>
+          {/* Acciones Rápidas */}
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Paper sx={{ p: 3, height: '100%' }}>
+              <Typography variant="h6" gutterBottom>
+                Acciones Rápidas
+              </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
-                {resumenMensual.map((item) => (
-                  <Box
-                    key={item.mes}
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      bgcolor: 'action.hover',
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {item.mes}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.valor}
-                    </Typography>
-                  </Box>
+              <Grid container spacing={2}>
+                {ACCIONES.map((accion) => (
+                  <Grid size={{ xs: 12, sm: 6 }} key={accion.label}>
+                    <Paper
+                      variant="outlined"
+                      onClick={() => navigate(accion.path)}
+                      sx={{
+                        p: 2,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                          boxShadow: 3,
+                          borderColor: `${accion.color}.main`,
+                          transform: 'translateY(-2px)',
+                        },
+                      }}
+                    >
+                      <Avatar
+                        variant="rounded"
+                        sx={{
+                          bgcolor: (theme) => alpha(theme.palette[accion.color === 'info' ? 'info' : accion.color].main, 0.14),
+                          color: `${accion.color}.main`,
+                          width: 44,
+                          height: 44,
+                        }}
+                      >
+                        {accion.icono}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                          {accion.label}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {accion.descripcion}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
                 ))}
-              </Box>
+              </Grid>
+
+              {kpis.inscripcionesHoy > 0 && (
+                <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip label={`${kpis.inscripcionesHoy} inscripción(es) hoy`} size="small" color="success" variant="outlined" />
+                </Box>
+              )}
             </Paper>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Paper sx={{ p: 3, height: '400px', overflowY: 'auto' }}>
-              <Typography variant="h6" gutterBottom>
-                Actividad Reciente
-              </Typography>
+          {/* Actividad Reciente */}
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Paper sx={{ p: 3, height: '100%', maxHeight: 380, overflowY: 'auto' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6">Actividad Reciente</Typography>
+                <Button size="small" onClick={() => navigate('/modulo/inscripciones')}>
+                  Ver más
+                </Button>
+              </Box>
               <Divider sx={{ mb: 2 }} />
+
               {actividadReciente.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No hay actividad reciente para mostrar.
+                  No hay actividad reciente registrada.
                 </Typography>
               ) : (
-                actividadReciente.map((item) => (
-                  <Box key={item.id} sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {item.titulo}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {item.detalle}
-                    </Typography>
-                    <Divider sx={{ mt: 1 }} />
-                  </Box>
-                ))
+                <Stack spacing={1.5}>
+                  {actividadReciente.map((item) => (
+                    <Box key={item.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                      <FiberManualRecordIcon
+                        sx={{ fontSize: 10, mt: 0.75, color: 'primary.main', flexShrink: 0 }}
+                      />
+                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Typography variant="body2" noWrap title={item.titulo}>
+                          {item.titulo}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {item.tiempo}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
               )}
             </Paper>
           </Grid>

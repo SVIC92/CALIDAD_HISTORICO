@@ -22,10 +22,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthControlador {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthControlador.class);
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -50,8 +54,8 @@ public class AuthControlador {
                     new UsernamePasswordAuthenticationToken(credenciales.get("email"), credenciales.get("password"))
             );
         } catch (Exception e) {
-            e.printStackTrace(); 
-            return ResponseEntity.status(401).body("Credenciales incorrectas: " + e.getMessage());
+            log.warn("Intento de login fallido para el email: {}", credenciales.get("email"));
+            return ResponseEntity.status(401).body(Map.of("error", "Credenciales incorrectas"));
         }
 
         // Si es correcto, generamos el token
@@ -71,10 +75,10 @@ public class AuthControlador {
         final String jwt = jwtUtil.generateToken(userDetails);
 
         // Preparamos la respuesta para React
-        Map<String, String> respuesta = new HashMap<>();
+        Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("token", jwt);
         respuesta.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
-        respuesta.put("twoFactorEnabled", String.valueOf(usuario != null && usuario.isTwoFactorEnabled()));
+        respuesta.put("twoFactorEnabled", usuario != null && usuario.isTwoFactorEnabled());
         
         return ResponseEntity.ok(respuesta);
     }
