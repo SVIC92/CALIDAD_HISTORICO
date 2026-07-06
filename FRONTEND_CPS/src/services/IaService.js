@@ -23,6 +23,13 @@ const IaService = {
     return respuesta.data;
   },
 
+  guardarRubrica: async (rubricaDto, cursoId) => {
+    const respuesta = await axios.post('/rubricas', rubricaDto, {
+      params: { cursoId },
+    });
+    return respuesta.data;
+  },
+
   generarSilabo: async (payload) => {
     const respuesta = await axios.post('/ia/silabo/generar', payload);
     return respuesta.data;

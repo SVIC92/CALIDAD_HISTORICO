@@ -66,7 +66,11 @@ public class Actividad {
     @JoinColumn(name = "curso_id", nullable = false)
     @NotNull(message = "El curso de la actividad es obligatorio")
     private Curso curso;
-    
+
+    @ManyToOne
+    @JoinColumn(name = "rubrica_id")
+    private Rubrica rubrica;
+
     @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Reporte> reportes;

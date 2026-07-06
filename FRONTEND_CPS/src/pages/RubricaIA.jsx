@@ -12,7 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { AutoAwesome, Description, PictureAsPdf } from '@mui/icons-material';
+import { AutoAwesome, Description, PictureAsPdf, Save } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import IaService from '../services/IaService';
@@ -47,6 +47,9 @@ const RubricaIA = () => {
   const [cursoRubricaId, setCursoRubricaId] = useState('');
   const [rubricaForm, setRubricaForm] = useState(defaultForm);
   const [validacionError, setValidacionError] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+  const [guardarError, setGuardarError] = useState('');
 
   const { rubrica, iniciarRubrica, completarRubrica, fallarRubrica, limpiarRubrica, marcarRubricaVista } =
     useIaGeneracionStore();
@@ -102,6 +105,8 @@ const RubricaIA = () => {
       return;
     }
     setValidacionError('');
+    setGuardadoOk(false);
+    setGuardarError('');
 
     const payload = {
       ...rubricaForm,
@@ -120,6 +125,20 @@ const RubricaIA = () => {
         const msg = err?.response?.data?.error || err?.message || 'Error al generar la rúbrica.';
         fallarRubrica(msg);
       });
+  };
+
+  const handleGuardarRubrica = async () => {
+    if (!cursoRubricaId || !rubrica.datos) return;
+    setGuardando(true);
+    setGuardarError('');
+    try {
+      await IaService.guardarRubrica(rubrica.datos, cursoRubricaId);
+      setGuardadoOk(true);
+    } catch (err) {
+      setGuardarError(err?.response?.data?.error || 'No se pudo guardar la rúbrica.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const exportPdf = () => {
@@ -378,6 +397,17 @@ const RubricaIA = () => {
                 )}
               </Stack>
               <Stack direction="row" spacing={1}>
+                {canGenerate && (
+                  <Button
+                    startIcon={<Save />}
+                    variant={guardadoOk ? 'outlined' : 'contained'}
+                    color={guardadoOk ? 'success' : 'primary'}
+                    disabled={guardando || guardadoOk || !cursoRubricaId}
+                    onClick={handleGuardarRubrica}
+                  >
+                    {guardando ? 'Guardando...' : guardadoOk ? 'Guardada' : 'Guardar en el curso'}
+                  </Button>
+                )}
                 <Button startIcon={<PictureAsPdf />} variant="outlined" onClick={exportPdf}>
                   PDF
                 </Button>
@@ -386,6 +416,17 @@ const RubricaIA = () => {
                 </Button>
               </Stack>
             </Stack>
+
+            {guardarError && (
+              <Alert severity="error" sx={{ mb: 1 }} onClose={() => setGuardarError('')}>
+                {guardarError}
+              </Alert>
+            )}
+            {guardadoOk && (
+              <Alert severity="success" sx={{ mb: 1 }}>
+                Rúbrica guardada. Ya puedes asignarla a una actividad del curso.
+              </Alert>
+            )}
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
               {rubrica.datos.descripcion}

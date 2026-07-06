@@ -3,6 +3,7 @@ package com.GestionInscripcionCursos.servicios;
 import com.GestionInscripcionCursos.entidades.Actividad;
 import com.GestionInscripcionCursos.entidades.Reporte;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.enumeraciones.EstadoEntrega;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.ReporteRepositorio;
@@ -41,12 +42,12 @@ public class EvaluacionAutomaticaTask {
                 // Si el alumno no envió ningún reporte (0 intentos usados), se le asigna 00 automáticamente
                 if (cantidadReportes == 0) {
                     Reporte reporteAuto = new Reporte(
-                        "No entregado (Cierre automático)", 
-                        "00", 
-                        "Actividad vencida. Calificación asignada por el sistema.", 
-                        "CALIFICADO", 
-                        ahora, 
-                        alumno, 
+                        "No entregado (Cierre automático)",
+                        "00",
+                        "Actividad vencida. Calificación asignada por el sistema.",
+                        EstadoEntrega.CALIFICADO,
+                        ahora,
+                        alumno,
                         actividad
                     );
                     reporteRepositorio.save(reporteAuto);

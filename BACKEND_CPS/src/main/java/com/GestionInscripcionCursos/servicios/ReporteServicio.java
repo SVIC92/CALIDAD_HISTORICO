@@ -1,16 +1,28 @@
 package com.GestionInscripcionCursos.servicios;
 
+import com.GestionInscripcionCursos.dto.RendimientoAlumnoDto;
 import com.GestionInscripcionCursos.entidades.Actividad;
+import com.GestionInscripcionCursos.entidades.CriterioRubrica;
+import com.GestionInscripcionCursos.entidades.Curso;
+import com.GestionInscripcionCursos.entidades.PuntajeCriterio;
 import com.GestionInscripcionCursos.entidades.Reporte;
+import com.GestionInscripcionCursos.entidades.Rubrica;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.enumeraciones.EstadoEntrega;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
+import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
+import com.GestionInscripcionCursos.repositorios.InscripcionRepositorio;
 import com.GestionInscripcionCursos.repositorios.ReporteRepositorio;
 import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,26 +34,32 @@ public class ReporteServicio {
 
     @Autowired
     private ReporteRepositorio reporteRepositorio;
-    
+
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
+
+    @Autowired
+    private CursoRepositorio cursoRepositorio;
+
+    @Autowired
+    private InscripcionRepositorio inscripcionRepositorio;
 
     @Transactional
     public void crearReporte(String respuesta, String idActividad, String idUser, String archivoUrl) throws MyException {
         validarLimitesReporte(idUser, idActividad);
         validarReporte(respuesta);
-        
+
         Actividad actividad = actividadRepositorio.findById(idActividad).get();
         Usuario usuario = usuarioRepositorio.findById(idUser).get();
         Date ahora = new Date();
 
         Reporte reporte;
-        
+
         // Evaluar si es un envío atrasado
         if (ahora.after(actividad.getFechaVencimiento())) {
-            reporte = new Reporte(respuesta, "00", "Entrega fuera de plazo.", "ATRASADO", ahora, usuario, actividad);
+            reporte = new Reporte(respuesta, "00", "Entrega fuera de plazo.", EstadoEntrega.ATRASADO, ahora, usuario, actividad);
         } else {
-            reporte = new Reporte(respuesta, "Por Calificar", "Ningun Comentario", "ENVIADO", ahora, usuario, actividad);
+            reporte = new Reporte(respuesta, "Por Calificar", "Ningun Comentario", EstadoEntrega.ENVIADO, ahora, usuario, actividad);
         }
 
         reporte.setArchivoUrl(archivoUrl);
@@ -51,12 +69,12 @@ public class ReporteServicio {
     public List<Reporte> listarReportesPorIdActividad(String idActividad) {
         return reporteRepositorio.buscarReportesPorIdActividad(idActividad);
     }
-    
-    
+
+
     public void validarLimitesReporte(String idUser, String idActividad) throws MyException {
         Actividad actividad = actividadRepositorio.findById(idActividad).get();
         Long totalReportes = reporteRepositorio.contarReportesPorUsuarioYActividad(idUser, idActividad);
-        
+
         if (totalReportes >= actividad.getIntentosPermitidos()) {
             throw new MyException("Has alcanzado el límite máximo de " + actividad.getIntentosPermitidos() + " intento(s) para esta actividad.");
         }
@@ -71,7 +89,7 @@ public class ReporteServicio {
     public Reporte buscarPorId(String id) {
         return reporteRepositorio.buscarPorId(id);
     }
-    
+
     public Reporte buscarPorIdCategoriaIdUsuario(String idUser, String idActividad) {
         return reporteRepositorio.buscarReportePorIdUserIdActividad(idUser,idActividad);
     }
@@ -83,9 +101,9 @@ public class ReporteServicio {
         }
 
     }
-    
-    
-    
+
+
+
     @Transactional
     public void calificarReporte(String id, String nota, String comentario) throws MyException {
 
@@ -97,20 +115,20 @@ public class ReporteServicio {
         if (respuesta1.isPresent()) {
 
             Reporte reporte = respuesta1.get();
-            
+
             reporte.setNota(nota);
-            
+
             reporte.setComentario(comentario);
-            
-            reporte.setEstado("CALIFICADO");
-            
-           
+
+            reporte.setEstado(EstadoEntrega.CALIFICADO);
+
+
 
             reporteRepositorio.save(reporte);
 
         }
     }
-    
+
     private void validarReporte( String nota, String comentario) throws MyException {
 
 
@@ -121,5 +139,98 @@ public class ReporteServicio {
             throw new MyException("El comentario no puede ser nulo o estar vacio");
         }
 
+    }
+
+    /**
+     * Califica una entrega usando la rubrica asignada a su actividad (RF-09):
+     * recibe el puntaje obtenido por criterio, valida que este dentro del
+     * rango permitido y calcula la nota total como la suma de los puntajes.
+     */
+    @Transactional
+    public Reporte calificarConRubrica(String idReporte, Map<String, Integer> puntajesPorCriterioId, String comentario) throws MyException {
+        Reporte reporte = reporteRepositorio.findById(idReporte)
+                .orElseThrow(() -> new MyException("Reporte no encontrado"));
+
+        Rubrica rubrica = reporte.getActividad().getRubrica();
+        if (rubrica == null) {
+            throw new MyException("La actividad de este reporte no tiene una rúbrica asignada");
+        }
+
+        int total = 0;
+        List<PuntajeCriterio> nuevosPuntajes = new ArrayList<>();
+        for (CriterioRubrica criterio : rubrica.getCriterios()) {
+            Integer puntaje = puntajesPorCriterioId != null ? puntajesPorCriterioId.get(criterio.getId()) : null;
+            if (puntaje == null) {
+                throw new MyException("Falta el puntaje del criterio '" + criterio.getNombre() + "'");
+            }
+            int maximo = criterio.puntajeMaximoCriterio();
+            if (puntaje < 0 || puntaje > maximo) {
+                throw new MyException("El puntaje del criterio '" + criterio.getNombre() + "' debe estar entre 0 y " + maximo);
+            }
+            nuevosPuntajes.add(new PuntajeCriterio(reporte, criterio, puntaje));
+            total += puntaje;
+        }
+
+        reporte.getPuntajesCriterio().clear();
+        reporte.getPuntajesCriterio().addAll(nuevosPuntajes);
+        reporte.setNota(String.valueOf(total));
+        reporte.setComentario(comentario);
+        reporte.setEstado(EstadoEntrega.CALIFICADO);
+
+        return reporteRepositorio.save(reporte);
+    }
+
+    /**
+     * Reporte academico agregado por curso (RF-12): para cada alumno inscrito
+     * calcula cuantas actividades tiene pendientes, entregadas, atrasadas o
+     * calificadas, y su promedio de notas numericas.
+     */
+    public List<RendimientoAlumnoDto> calcularRendimientoCurso(String cursoId) throws MyException {
+        Curso curso = cursoRepositorio.findById(cursoId)
+                .orElseThrow(() -> new MyException("Curso no encontrado"));
+
+        List<Actividad> actividades = actividadRepositorio.buscarActividadesPorIdCurso(curso.getId());
+        List<Usuario> alumnos = inscripcionRepositorio.buscarAlumnosAprobadosPorCurso(curso.getId());
+
+        List<RendimientoAlumnoDto> resultado = new ArrayList<>();
+        for (Usuario alumno : alumnos) {
+            Set<String> actividadesConEntrega = new HashSet<>();
+            int atrasadas = 0;
+            int calificadas = 0;
+            double sumaNotas = 0;
+            int cantidadNotas = 0;
+
+            for (Actividad actividad : actividades) {
+                List<Reporte> intentos = reporteRepositorio.buscarReportesPorUsuarioYActividad(alumno.getId(), actividad.getId());
+                if (intentos.isEmpty()) {
+                    continue;
+                }
+
+                actividadesConEntrega.add(actividad.getId());
+                Reporte ultimoIntento = intentos.get(0);
+
+                if (ultimoIntento.getEstado() == EstadoEntrega.ATRASADO) {
+                    atrasadas++;
+                } else if (ultimoIntento.getEstado() == EstadoEntrega.CALIFICADO) {
+                    calificadas++;
+                    try {
+                        sumaNotas += Double.parseDouble(ultimoIntento.getNota());
+                        cantidadNotas++;
+                    } catch (NumberFormatException ignorado) {
+                        // Notas no numericas (p.ej. "Por Calificar") no participan del promedio
+                    }
+                }
+            }
+
+            int entregadas = actividadesConEntrega.size();
+            int pendientes = actividades.size() - entregadas;
+            Double promedio = cantidadNotas > 0 ? sumaNotas / cantidadNotas : null;
+
+            resultado.add(new RendimientoAlumnoDto(
+                    alumno.getId(), alumno.getNombre(), alumno.getEmail(),
+                    actividades.size(), entregadas, pendientes, atrasadas, calificadas, promedio));
+        }
+
+        return resultado;
     }
 }

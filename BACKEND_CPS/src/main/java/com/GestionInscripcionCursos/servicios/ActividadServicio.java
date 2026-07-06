@@ -6,9 +6,11 @@ package com.GestionInscripcionCursos.servicios;
 
 import com.GestionInscripcionCursos.entidades.Actividad;
 import com.GestionInscripcionCursos.entidades.Curso;
+import com.GestionInscripcionCursos.entidades.Rubrica;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.ActividadRepositorio;
 import com.GestionInscripcionCursos.repositorios.CursoRepositorio;
+import com.GestionInscripcionCursos.repositorios.RubricaRepositorio;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -26,6 +28,9 @@ public class ActividadServicio {
 
     @Autowired
     private CursoRepositorio cursoRepositorio;
+
+    @Autowired
+    private RubricaRepositorio rubricaRepositorio;
 
     @Transactional
     public void crearActividad(String nombre, String descripcion, Date fechaVencimiento, Integer intentosPermitidos, String idCurso) throws MyException {
@@ -72,6 +77,21 @@ public class ActividadServicio {
 
     public Actividad buscarPorId(String id) {
         return actividadRepositorio.buscarPorId(id);
+    }
+
+    @Transactional
+    public void asignarRubrica(String actividadId, String rubricaId) throws MyException {
+        Actividad actividad = actividadRepositorio.findById(actividadId)
+                .orElseThrow(() -> new MyException("Actividad no encontrada"));
+        Rubrica rubrica = rubricaRepositorio.findById(rubricaId)
+                .orElseThrow(() -> new MyException("Rúbrica no encontrada"));
+
+        if (!rubrica.getCurso().getId().equals(actividad.getCurso().getId())) {
+            throw new MyException("La rúbrica pertenece a otro curso distinto al de la actividad");
+        }
+
+        actividad.setRubrica(rubrica);
+        actividadRepositorio.save(actividad);
     }
 
     private void validarActividad(String nombre, String descripcion, Date fechaVencimiento) throws MyException {

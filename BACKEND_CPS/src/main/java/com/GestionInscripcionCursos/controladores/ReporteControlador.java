@@ -1,5 +1,6 @@
 package com.GestionInscripcionCursos.controladores;
 
+import com.GestionInscripcionCursos.dto.RendimientoAlumnoDto;
 import com.GestionInscripcionCursos.entidades.Actividad;
 import com.GestionInscripcionCursos.entidades.Reporte;
 import com.GestionInscripcionCursos.entidades.Usuario;
@@ -19,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -128,6 +130,31 @@ public class ReporteControlador {
             return ResponseEntity.ok(reportes);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
+    @PostMapping("/calificar-rubrica/{id}")
+    public ResponseEntity<?> calificarConRubrica(
+            @PathVariable String id,
+            @RequestBody Map<String, Integer> puntajesPorCriterioId,
+            @RequestParam(required = false, defaultValue = "") String comentario) {
+        try {
+            Reporte reporte = reporteServicio.calificarConRubrica(id, puntajesPorCriterioId, comentario);
+            return ResponseEntity.ok(reporte);
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
+    @GetMapping("/rendimiento/curso/{cursoId}")
+    public ResponseEntity<?> rendimientoPorCurso(@PathVariable String cursoId) {
+        try {
+            List<RendimientoAlumnoDto> rendimiento = reporteServicio.calcularRendimientoCurso(cursoId);
+            return ResponseEntity.ok(rendimiento);
+        } catch (MyException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
         }
     }
 
