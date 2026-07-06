@@ -127,8 +127,12 @@ public class UsuarioServicio implements UserDetailsService {
         if (email == null || email.isBlank()) {
             throw new MyException("El email no puede ser nulo o estar vacío");
         }
-        
-        String regex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+
+        if (email.length() > 255) {
+            throw new MyException("El email o las contraseñas no debe pasar de 255 caracteres");
+        }
+
+        String regex = "^[a-zA-Z0-9_+&*-]{1,64}(?:\\.[a-zA-Z0-9_+&*-]{1,64}){0,10}@(?:[a-zA-Z0-9-]{1,63}\\.){1,10}[a-zA-Z]{2,24}$";
 
         if (!email.matches(regex)) {
             throw new MyException("El email no tiene un formato válido");
@@ -151,8 +155,8 @@ public class UsuarioServicio implements UserDetailsService {
         if (!password.equals(password2)) {
             throw new MyException("Las contraseñas ingresadas deben ser iguales");
         }
-        if (email.length() > 255 || password.length() > 255 || password2.length() > 255) {
-            throw new MyException("El email o las contraseñas no debe pasar de 255 caracteres");
+        if (password.length() > 255 || password2.length() > 255) {
+            throw new MyException("La contraseña no debe pasar de 255 caracteres");
         }
     }
 

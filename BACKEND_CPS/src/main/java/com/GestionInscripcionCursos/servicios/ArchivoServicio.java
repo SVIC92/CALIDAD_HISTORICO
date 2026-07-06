@@ -2,6 +2,8 @@ package com.GestionInscripcionCursos.servicios;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @Service
 public class ArchivoServicio {
+    private static final Logger log = LoggerFactory.getLogger(ArchivoServicio.class);
+
     private final Cloudinary cloudinary;
 
     public ArchivoServicio(
@@ -44,8 +48,8 @@ public class ArchivoServicio {
             return resultado.get("secure_url").toString();
         } finally {
             // 3. Eliminar el archivo temporal del servidor para no consumir espacio
-            if (archivoTemporal.exists()) {
-                archivoTemporal.delete();
+            if (archivoTemporal.exists() && !archivoTemporal.delete()) {
+                log.warn("No se pudo eliminar el archivo temporal: {}", archivoTemporal.getAbsolutePath());
             }
         }
     }

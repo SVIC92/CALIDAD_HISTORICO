@@ -64,7 +64,7 @@ public class RecuperacionPasswordServicio {
             correoServicio.enviarCorreoRecuperacion(usuario.getEmail(), usuario.getNombre(), link);
         } catch (MailException ex) {
             Throwable cause = ex.getMostSpecificCause();
-            String detalle = cause != null ? cause.getMessage() : ex.getMessage();
+            String detalle = cause.getMessage();
             throw new MyException("No se pudo enviar el correo de recuperacion. "
                     + "Verifica MAIL_USERNAME, MAIL_PASSWORD y MAIL_FROM en Render. "
                     + "Detalle SMTP: " + (detalle != null ? detalle : "sin detalle"));

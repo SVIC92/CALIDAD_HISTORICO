@@ -2,8 +2,11 @@ package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.dto.VideoconferenciaParticipanteDto;
 import com.GestionInscripcionCursos.entidades.*;
+import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.repositorios.VideoconferenciaRepositorio;
+import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import com.GestionInscripcionCursos.servicios.VideoconferenciaServicio;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +22,9 @@ public class VideoconferenciaControlador {
     @Autowired
     private VideoconferenciaRepositorio videoRepo;
 
+    @Autowired
+    private UsuarioServicio usuarioServicio;
+
     @GetMapping("/publicas")
     public List<Videoconferencia> listarPublicasDisponibles() {
         return videoRepo.findSalasPublicasDisponibles();
@@ -31,8 +37,13 @@ public class VideoconferenciaControlador {
 
     // Aquí puedes capturar el usuario actual autenticado desde tu lógica de sesión o JWT
     @PostMapping("/crear")
-    public ResponseEntity<Videoconferencia> crear(@RequestParam String titulo, @RequestParam int capacidad, @RequestParam boolean esPublica, @RequestBody Usuario creador) {
-        return ResponseEntity.ok(videoServicio.crearSala(titulo, capacidad, esPublica, creador));
+    public ResponseEntity<?> crear(@RequestParam String titulo, @RequestParam int capacidad, @RequestParam boolean esPublica, @RequestParam String creadorId) {
+        try {
+            Usuario creador = usuarioServicio.buscarPorId(creadorId);
+            return ResponseEntity.ok(videoServicio.crearSala(titulo, capacidad, esPublica, creador));
+        } catch (MyException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @PostMapping("/{salaUuid}/invitar")

@@ -7,21 +7,12 @@ const VideoconferenciaService = {
   },
 
   crearSala: async ({ titulo, capacidad, esPublica, creador }) => {
-    const creadorMinimo = creador
-      ? {
-          id: creador.id,
-          nombre: creador.nombre,
-          email: creador.email,
-          rol: String(creador.rol || '').replace('ROLE_', ''),
-          activo: creador.activo ?? true,
-        }
-      : {};
-
-    const respuesta = await axios.post('/videoconferencias/crear', creadorMinimo, {
+    const respuesta = await axios.post('/videoconferencias/crear', null, {
       params: {
         titulo,
         capacidad,
         esPublica,
+        creadorId: creador?.id,
       },
     });
     return respuesta.data;
