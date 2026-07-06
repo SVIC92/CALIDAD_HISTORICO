@@ -11,6 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 
 @Service
@@ -48,8 +50,12 @@ public class ArchivoServicio {
             return resultado.get("secure_url").toString();
         } finally {
             // 3. Eliminar el archivo temporal del servidor para no consumir espacio
-            if (archivoTemporal.exists() && !archivoTemporal.delete()) {
-                log.warn("No se pudo eliminar el archivo temporal: {}", archivoTemporal.getAbsolutePath());
+            try {
+                Files.delete(archivoTemporal.toPath());
+            } catch (NoSuchFileException ex) {
+                // ya no existe, nada que hacer
+            } catch (IOException ex) {
+                log.warn("No se pudo eliminar el archivo temporal: {}", archivoTemporal.getAbsolutePath(), ex);
             }
         }
     }

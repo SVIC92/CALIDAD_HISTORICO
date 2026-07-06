@@ -23,26 +23,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ReporteServicio {
 
-    @Autowired
-    private ActividadRepositorio actividadRepositorio;
+    private final ActividadRepositorio actividadRepositorio;
+    private final ReporteRepositorio reporteRepositorio;
+    private final UsuarioRepositorio usuarioRepositorio;
+    private final CursoRepositorio cursoRepositorio;
+    private final InscripcionRepositorio inscripcionRepositorio;
 
-    @Autowired
-    private ReporteRepositorio reporteRepositorio;
-
-    @Autowired
-    private UsuarioRepositorio usuarioRepositorio;
-
-    @Autowired
-    private CursoRepositorio cursoRepositorio;
-
-    @Autowired
-    private InscripcionRepositorio inscripcionRepositorio;
+    public ReporteServicio(
+            ActividadRepositorio actividadRepositorio,
+            ReporteRepositorio reporteRepositorio,
+            UsuarioRepositorio usuarioRepositorio,
+            CursoRepositorio cursoRepositorio,
+            InscripcionRepositorio inscripcionRepositorio
+    ) {
+        this.actividadRepositorio = actividadRepositorio;
+        this.reporteRepositorio = reporteRepositorio;
+        this.usuarioRepositorio = usuarioRepositorio;
+        this.cursoRepositorio = cursoRepositorio;
+        this.inscripcionRepositorio = inscripcionRepositorio;
+    }
 
     @Transactional
     public void crearReporte(String respuesta, String idActividad, String idUser, String archivoUrl) throws MyException {
@@ -194,43 +198,58 @@ public class ReporteServicio {
 
         List<RendimientoAlumnoDto> resultado = new ArrayList<>();
         for (Usuario alumno : alumnos) {
-            Set<String> actividadesConEntrega = new HashSet<>();
-            int atrasadas = 0;
-            int calificadas = 0;
-            double sumaNotas = 0;
-            int cantidadNotas = 0;
-
-            for (Actividad actividad : actividades) {
-                List<Reporte> intentos = reporteRepositorio.buscarReportesPorUsuarioYActividad(alumno.getId(), actividad.getId());
-                if (intentos.isEmpty()) {
-                    continue;
-                }
-
-                actividadesConEntrega.add(actividad.getId());
-                Reporte ultimoIntento = intentos.get(0);
-
-                if (ultimoIntento.getEstado() == EstadoEntrega.ATRASADO) {
-                    atrasadas++;
-                } else if (ultimoIntento.getEstado() == EstadoEntrega.CALIFICADO) {
-                    calificadas++;
-                    try {
-                        sumaNotas += Double.parseDouble(ultimoIntento.getNota());
-                        cantidadNotas++;
-                    } catch (NumberFormatException ignorado) {
-                        // Notas no numericas (p.ej. "Por Calificar") no participan del promedio
-                    }
-                }
-            }
-
-            int entregadas = actividadesConEntrega.size();
-            int pendientes = actividades.size() - entregadas;
-            Double promedio = cantidadNotas > 0 ? sumaNotas / cantidadNotas : null;
-
-            resultado.add(new RendimientoAlumnoDto(
-                    alumno.getId(), alumno.getNombre(), alumno.getEmail(),
-                    actividades.size(), entregadas, pendientes, atrasadas, calificadas, promedio));
+            resultado.add(calcularRendimientoAlumno(alumno, actividades));
         }
 
         return resultado;
+    }
+
+    private RendimientoAlumnoDto calcularRendimientoAlumno(Usuario alumno, List<Actividad> actividades) {
+        Set<String> actividadesConEntrega = new HashSet<>();
+        int atrasadas = 0;
+        int calificadas = 0;
+        double sumaNotas = 0;
+        int cantidadNotas = 0;
+
+        for (Actividad actividad : actividades) {
+            Reporte ultimoIntento = ultimoIntentoDe(alumno, actividad);
+            if (ultimoIntento == null) {
+                continue;
+            }
+
+            actividadesConEntrega.add(actividad.getId());
+            if (ultimoIntento.getEstado() == EstadoEntrega.ATRASADO) {
+                atrasadas++;
+            } else if (ultimoIntento.getEstado() == EstadoEntrega.CALIFICADO) {
+                calificadas++;
+                Double nota = notaComoNumero(ultimoIntento.getNota());
+                if (nota != null) {
+                    sumaNotas += nota;
+                    cantidadNotas++;
+                }
+            }
+        }
+
+        int entregadas = actividadesConEntrega.size();
+        int pendientes = actividades.size() - entregadas;
+        Double promedio = cantidadNotas > 0 ? sumaNotas / cantidadNotas : null;
+
+        return new RendimientoAlumnoDto(
+                alumno.getId(), alumno.getNombre(), alumno.getEmail(),
+                actividades.size(), entregadas, pendientes, atrasadas, calificadas, promedio);
+    }
+
+    private Reporte ultimoIntentoDe(Usuario alumno, Actividad actividad) {
+        List<Reporte> intentos = reporteRepositorio.buscarReportesPorUsuarioYActividad(alumno.getId(), actividad.getId());
+        return intentos.isEmpty() ? null : intentos.get(0);
+    }
+
+    private Double notaComoNumero(String nota) {
+        try {
+            return Double.parseDouble(nota);
+        } catch (NumberFormatException ignorado) {
+            // Notas no numericas (p.ej. "Por Calificar") no participan del promedio
+            return null;
+        }
     }
 }

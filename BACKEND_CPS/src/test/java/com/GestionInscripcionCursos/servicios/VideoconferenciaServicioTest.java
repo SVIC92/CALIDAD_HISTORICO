@@ -105,24 +105,27 @@ class VideoconferenciaServicioTest {
         @Test
         @DisplayName("con salaUuid vacio lanza IllegalArgumentException")
         void salaUuidVacioLanzaExcepcion() {
+            List<String> usuarioIds = List.of("u-1");
             assertThrows(IllegalArgumentException.class, () ->
-                    videoconferenciaServicio.invitarUsuarios(" ", List.of("u-1"), RolSala.PARTICIPANTE));
+                    videoconferenciaServicio.invitarUsuarios(" ", usuarioIds, RolSala.PARTICIPANTE));
         }
 
         @Test
         @DisplayName("con lista de usuarios vacia lanza IllegalArgumentException")
         void listaUsuariosVaciaLanzaExcepcion() {
+            List<String> usuarioIds = List.of();
             assertThrows(IllegalArgumentException.class, () ->
-                    videoconferenciaServicio.invitarUsuarios("Sala-1", List.of(), RolSala.PARTICIPANTE));
+                    videoconferenciaServicio.invitarUsuarios("Sala-1", usuarioIds, RolSala.PARTICIPANTE));
         }
 
         @Test
         @DisplayName("con sala inexistente lanza IllegalArgumentException")
         void salaInexistenteLanzaExcepcion() {
             when(videoRepo.findBySalaUuid("Sala-1")).thenReturn(Optional.empty());
+            List<String> usuarioIds = List.of("u-1");
 
             assertThrows(IllegalArgumentException.class, () ->
-                    videoconferenciaServicio.invitarUsuarios("Sala-1", List.of("u-1"), RolSala.PARTICIPANTE));
+                    videoconferenciaServicio.invitarUsuarios("Sala-1", usuarioIds, RolSala.PARTICIPANTE));
         }
 
         @Test

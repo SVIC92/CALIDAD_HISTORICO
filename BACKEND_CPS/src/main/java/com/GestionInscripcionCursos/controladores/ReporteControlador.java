@@ -135,7 +135,7 @@ public class ReporteControlador {
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @PostMapping("/calificar-rubrica/{id}")
-    public ResponseEntity<?> calificarConRubrica(
+    public ResponseEntity<Object> calificarConRubrica(
             @PathVariable String id,
             @RequestBody Map<String, Integer> puntajesPorCriterioId,
             @RequestParam(required = false, defaultValue = "") String comentario) {
@@ -149,7 +149,7 @@ public class ReporteControlador {
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @GetMapping("/rendimiento/curso/{cursoId}")
-    public ResponseEntity<?> rendimientoPorCurso(@PathVariable String cursoId) {
+    public ResponseEntity<Object> rendimientoPorCurso(@PathVariable String cursoId) {
         try {
             List<RendimientoAlumnoDto> rendimiento = reporteServicio.calcularRendimientoCurso(cursoId);
             return ResponseEntity.ok(rendimiento);

@@ -9,7 +9,6 @@ import com.GestionInscripcionCursos.servicios.AuditoriaServicio;
 import com.GestionInscripcionCursos.servicios.RecuperacionPasswordServicio;
 import com.GestionInscripcionCursos.servicios.TwoFactorServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,23 +31,28 @@ public class AuthControlador {
 
     private static final Logger log = LoggerFactory.getLogger(AuthControlador.class);
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
+    private final UsuarioServicio usuarioServicio;
+    private final JwtUtil jwtUtil;
+    private final RecuperacionPasswordServicio recuperacionPasswordServicio;
+    private final TwoFactorServicio twoFactorServicio;
+    private final AuditoriaServicio auditoriaServicio;
 
-    @Autowired
-    private UsuarioServicio usuarioServicio;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private RecuperacionPasswordServicio recuperacionPasswordServicio;
-
-    @Autowired
-    private TwoFactorServicio twoFactorServicio;
-
-    @Autowired
-    private AuditoriaServicio auditoriaServicio;
+    public AuthControlador(
+            AuthenticationManager authenticationManager,
+            UsuarioServicio usuarioServicio,
+            JwtUtil jwtUtil,
+            RecuperacionPasswordServicio recuperacionPasswordServicio,
+            TwoFactorServicio twoFactorServicio,
+            AuditoriaServicio auditoriaServicio
+    ) {
+        this.authenticationManager = authenticationManager;
+        this.usuarioServicio = usuarioServicio;
+        this.jwtUtil = jwtUtil;
+        this.recuperacionPasswordServicio = recuperacionPasswordServicio;
+        this.twoFactorServicio = twoFactorServicio;
+        this.auditoriaServicio = auditoriaServicio;
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> crearTokenAutenticacion(@RequestBody Map<String, String> credenciales) throws Exception {

@@ -8,7 +8,6 @@ import com.GestionInscripcionCursos.servicios.RubricaServicio;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,15 +25,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/rubricas")
 public class RubricaControlador {
 
-    @Autowired
-    private RubricaServicio rubricaServicio;
+    private static final String CLAVE_ERROR = "error";
 
-    @Autowired
-    private ActividadServicio actividadServicio;
+    private final RubricaServicio rubricaServicio;
+    private final ActividadServicio actividadServicio;
+
+    public RubricaControlador(RubricaServicio rubricaServicio, ActividadServicio actividadServicio) {
+        this.rubricaServicio = rubricaServicio;
+        this.actividadServicio = actividadServicio;
+    }
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @PostMapping
-    public ResponseEntity<?> guardar(
+    public ResponseEntity<Object> guardar(
             @RequestBody RubricaGeneradaDto dto,
             @RequestParam String cursoId,
             Authentication auth
@@ -43,7 +46,7 @@ public class RubricaControlador {
             Rubrica guardada = rubricaServicio.guardarDesdeGeneracion(dto, cursoId, auth.getName());
             return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -55,22 +58,22 @@ public class RubricaControlador {
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<?> buscarPorId(@PathVariable String id) {
+    public ResponseEntity<Object> buscarPorId(@PathVariable String id) {
         try {
             return ResponseEntity.ok(rubricaServicio.buscarPorId(id));
         } catch (MyException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @PatchMapping("/{rubricaId}/asignar/{actividadId}")
-    public ResponseEntity<?> asignarAActividad(@PathVariable String rubricaId, @PathVariable String actividadId) {
+    public ResponseEntity<Object> asignarAActividad(@PathVariable String rubricaId, @PathVariable String actividadId) {
         try {
             actividadServicio.asignarRubrica(actividadId, rubricaId);
             return ResponseEntity.ok(Map.of("mensaje", "Rúbrica asignada a la actividad correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 }

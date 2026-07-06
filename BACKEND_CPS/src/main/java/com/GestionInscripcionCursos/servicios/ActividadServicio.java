@@ -17,20 +17,24 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ActividadServicio {
 
-    @Autowired
-    private ActividadRepositorio actividadRepositorio;
+    private final ActividadRepositorio actividadRepositorio;
+    private final CursoRepositorio cursoRepositorio;
+    private final RubricaRepositorio rubricaRepositorio;
 
-    @Autowired
-    private CursoRepositorio cursoRepositorio;
-
-    @Autowired
-    private RubricaRepositorio rubricaRepositorio;
+    public ActividadServicio(
+            ActividadRepositorio actividadRepositorio,
+            CursoRepositorio cursoRepositorio,
+            RubricaRepositorio rubricaRepositorio
+    ) {
+        this.actividadRepositorio = actividadRepositorio;
+        this.cursoRepositorio = cursoRepositorio;
+        this.rubricaRepositorio = rubricaRepositorio;
+    }
 
     @Transactional
     public void crearActividad(String nombre, String descripcion, Date fechaVencimiento, Integer intentosPermitidos, String idCurso) throws MyException {

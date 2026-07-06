@@ -152,7 +152,7 @@ class UsuarioServicioTest {
 
         @Test
         @DisplayName("email cerca del limite de 255 caracteres con formato valido es aceptado")
-        void registrarAceptaEmailLargoValido() throws MyException {
+        void registrarAceptaEmailLargoValido() {
             String localPart = "a".repeat(64);
             String email = localPart + "@" + "b".repeat(60) + ".com";
             when(usuarioRepositorio.buscarPorEmail(email)).thenReturn(null);

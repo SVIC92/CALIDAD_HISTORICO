@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -28,16 +27,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class UsuarioServicio implements UserDetailsService {
 
-    @Autowired
-    private UsuarioRepositorio usuarioRepositorio;
-
-    @Autowired
-    private CarreraRepositorio carreraRepositorio;
-
-    @Autowired
-    private AuditoriaServicio auditoriaServicio;
+    private final UsuarioRepositorio usuarioRepositorio;
+    private final CarreraRepositorio carreraRepositorio;
+    private final AuditoriaServicio auditoriaServicio;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public UsuarioServicio(
+            UsuarioRepositorio usuarioRepositorio,
+            CarreraRepositorio carreraRepositorio,
+            AuditoriaServicio auditoriaServicio
+    ) {
+        this.usuarioRepositorio = usuarioRepositorio;
+        this.carreraRepositorio = carreraRepositorio;
+        this.auditoriaServicio = auditoriaServicio;
+    }
 
     @Transactional
     public void registrar(String nombre, String email, String password, String password2) throws MyException {

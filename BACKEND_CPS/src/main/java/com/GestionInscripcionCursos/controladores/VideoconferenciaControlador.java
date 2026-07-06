@@ -7,7 +7,6 @@ import com.GestionInscripcionCursos.repositorios.VideoconferenciaRepositorio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import com.GestionInscripcionCursos.servicios.VideoconferenciaServicio;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -16,14 +15,19 @@ import java.util.List;
 @RequestMapping("/api/videoconferencias")
 public class VideoconferenciaControlador {
 
-    @Autowired
-    private VideoconferenciaServicio videoServicio;
+    private final VideoconferenciaServicio videoServicio;
+    private final VideoconferenciaRepositorio videoRepo;
+    private final UsuarioServicio usuarioServicio;
 
-    @Autowired
-    private VideoconferenciaRepositorio videoRepo;
-
-    @Autowired
-    private UsuarioServicio usuarioServicio;
+    public VideoconferenciaControlador(
+            VideoconferenciaServicio videoServicio,
+            VideoconferenciaRepositorio videoRepo,
+            UsuarioServicio usuarioServicio
+    ) {
+        this.videoServicio = videoServicio;
+        this.videoRepo = videoRepo;
+        this.usuarioServicio = usuarioServicio;
+    }
 
     @GetMapping("/publicas")
     public List<Videoconferencia> listarPublicasDisponibles() {
@@ -37,7 +41,7 @@ public class VideoconferenciaControlador {
 
     // Aquí puedes capturar el usuario actual autenticado desde tu lógica de sesión o JWT
     @PostMapping("/crear")
-    public ResponseEntity<?> crear(@RequestParam String titulo, @RequestParam int capacidad, @RequestParam boolean esPublica, @RequestParam String creadorId) {
+    public ResponseEntity<Object> crear(@RequestParam String titulo, @RequestParam int capacidad, @RequestParam boolean esPublica, @RequestParam String creadorId) {
         try {
             Usuario creador = usuarioServicio.buscarPorId(creadorId);
             return ResponseEntity.ok(videoServicio.crearSala(titulo, capacidad, esPublica, creador));

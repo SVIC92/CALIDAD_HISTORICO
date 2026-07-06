@@ -74,7 +74,7 @@ class RecuperacionPasswordServicioTest {
 
         @Test
         @DisplayName("con usuario inexistente no lanza excepcion ni envia correo (no revela si el email existe)")
-        void usuarioInexistenteNoHaceNada() throws MyException {
+        void usuarioInexistenteNoHaceNada() {
             when(usuarioRepositorio.buscarPorEmail("nadie@dominio.com")).thenReturn(null);
 
             assertDoesNotThrow(() -> recuperacionServicio.solicitarRecuperacion("nadie@dominio.com"));

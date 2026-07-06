@@ -9,7 +9,6 @@ import com.GestionInscripcionCursos.servicios.AuditoriaServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,11 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class AdminControlador {
 
-    @Autowired
-    private UsuarioServicio usuarioServicio;
+    private final UsuarioServicio usuarioServicio;
+    private final AuditoriaServicio auditoriaServicio;
 
-    @Autowired
-    private AuditoriaServicio auditoriaServicio;
+    public AdminControlador(UsuarioServicio usuarioServicio, AuditoriaServicio auditoriaServicio) {
+        this.usuarioServicio = usuarioServicio;
+        this.auditoriaServicio = auditoriaServicio;
+    }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/dashboard")
