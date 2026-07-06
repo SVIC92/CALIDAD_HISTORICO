@@ -20,6 +20,7 @@ public class RecuperacionPasswordServicio {
     private final UsuarioRepositorio usuarioRepositorio;
     private final PasswordResetTokenRepositorio tokenRepositorio;
     private final CorreoServicio correoServicio;
+    private final AuditoriaServicio auditoriaServicio;
 
     @Value("${app.frontend.reset-password-url:${FRONTEND_RESET_URL:https://calidad-historico.vercel.app/reset-password}}")
     private String resetPasswordUrl;
@@ -27,11 +28,13 @@ public class RecuperacionPasswordServicio {
     public RecuperacionPasswordServicio(
             UsuarioRepositorio usuarioRepositorio,
             PasswordResetTokenRepositorio tokenRepositorio,
-            CorreoServicio correoServicio
+            CorreoServicio correoServicio,
+            AuditoriaServicio auditoriaServicio
     ) {
         this.usuarioRepositorio = usuarioRepositorio;
         this.tokenRepositorio = tokenRepositorio;
         this.correoServicio = correoServicio;
+        this.auditoriaServicio = auditoriaServicio;
     }
 
     @Transactional
@@ -96,6 +99,9 @@ public class RecuperacionPasswordServicio {
 
         token.setUsed(true);
         tokenRepositorio.save(token);
+
+        auditoriaServicio.registrar(AuditoriaServicio.CAMBIO_PASSWORD, usuario.getEmail(),
+                "Contraseña reestablecida mediante token de recuperacion", true);
     }
 
     private void validarNuevaPassword(String token, String password, String password2) throws MyException {

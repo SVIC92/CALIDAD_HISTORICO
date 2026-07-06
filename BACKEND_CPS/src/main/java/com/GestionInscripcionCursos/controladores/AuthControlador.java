@@ -5,6 +5,7 @@ import com.GestionInscripcionCursos.dto.ResetPasswordRequestDto;
 import com.GestionInscripcionCursos.excepciones.MyException;
 import com.GestionInscripcionCursos.seguridad.JwtUtil;
 import com.GestionInscripcionCursos.entidades.Usuario;
+import com.GestionInscripcionCursos.servicios.AuditoriaServicio;
 import com.GestionInscripcionCursos.servicios.RecuperacionPasswordServicio;
 import com.GestionInscripcionCursos.servicios.TwoFactorServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
@@ -46,24 +47,30 @@ public class AuthControlador {
     @Autowired
     private TwoFactorServicio twoFactorServicio;
 
+    @Autowired
+    private AuditoriaServicio auditoriaServicio;
+
     @PostMapping("/login")
     public ResponseEntity<?> crearTokenAutenticacion(@RequestBody Map<String, String> credenciales) throws Exception {
+        String email = credenciales.get("email");
         try {
             // Verificamos email y contraseña
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(credenciales.get("email"), credenciales.get("password"))
+                    new UsernamePasswordAuthenticationToken(email, credenciales.get("password"))
             );
         } catch (Exception e) {
-            log.warn("Intento de login fallido para el email: {}", credenciales.get("email"));
+            log.warn("Intento de login fallido para el email: {}", email);
+            auditoriaServicio.registrar(AuditoriaServicio.LOGIN_FALLIDO, email, "Credenciales incorrectas", false);
             return ResponseEntity.status(401).body(Map.of("error", "Credenciales incorrectas"));
         }
 
         // Si es correcto, generamos el token
-        Usuario usuario = usuarioServicio.buscarEmail(credenciales.get("email"));
+        Usuario usuario = usuarioServicio.buscarEmail(email);
         if (usuario != null && usuario.isTwoFactorEnabled()) {
             String otp = credenciales.get("otp");
             boolean otpValido = twoFactorServicio.validarCodigo(usuario.getTwoFactorSecret(), otp);
             if (!otpValido) {
+                auditoriaServicio.registrar(AuditoriaServicio.LOGIN_FALLIDO, email, "Codigo 2FA invalido o ausente", false);
                 return ResponseEntity.status(401).body(Map.of(
                         "twoFactorRequired", true,
                         "mensaje", "Codigo de autenticacion invalido o ausente"
@@ -71,15 +78,16 @@ public class AuthControlador {
             }
         }
 
-        final UserDetails userDetails = usuarioServicio.loadUserByUsername(credenciales.get("email"));
+        final UserDetails userDetails = usuarioServicio.loadUserByUsername(email);
         final String jwt = jwtUtil.generateToken(userDetails);
+        auditoriaServicio.registrar(AuditoriaServicio.LOGIN_EXITOSO, email, "Inicio de sesion correcto", true);
 
         // Preparamos la respuesta para React
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("token", jwt);
         respuesta.put("rol", userDetails.getAuthorities().iterator().next().getAuthority());
         respuesta.put("twoFactorEnabled", usuario != null && usuario.isTwoFactorEnabled());
-        
+
         return ResponseEntity.ok(respuesta);
     }
 

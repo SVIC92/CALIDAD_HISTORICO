@@ -34,6 +34,9 @@ public class UsuarioServicio implements UserDetailsService {
     @Autowired
     private CarreraRepositorio carreraRepositorio;
 
+    @Autowired
+    private AuditoriaServicio auditoriaServicio;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Transactional
@@ -266,7 +269,10 @@ public class UsuarioServicio implements UserDetailsService {
             usuario.setCicloActual(1);
         }
 
-        return usuarioRepositorio.save(usuario);
+        Usuario creado = usuarioRepositorio.save(usuario);
+        auditoriaServicio.registrar(AuditoriaServicio.USUARIO_CREADO, creado.getEmail(),
+                "Usuario creado por un administrador con rol " + creado.getRol(), true);
+        return creado;
     }
 
     @Transactional
@@ -331,21 +337,30 @@ public class UsuarioServicio implements UserDetailsService {
             usuario.setCicloActual(cicloActual);
         }
 
-        return usuarioRepositorio.save(usuario);
+        Usuario actualizado = usuarioRepositorio.save(usuario);
+        auditoriaServicio.registrar(AuditoriaServicio.USUARIO_ACTUALIZADO, actualizado.getEmail(),
+                "Datos del usuario actualizados por un administrador", true);
+        return actualizado;
     }
 
     @Transactional
     public Usuario desactivarUsuario(String id) throws MyException {
         Usuario usuario = buscarPorId(id);
         usuario.setActivo(false);
-        return usuarioRepositorio.save(usuario);
+        Usuario guardado = usuarioRepositorio.save(usuario);
+        auditoriaServicio.registrar(AuditoriaServicio.USUARIO_DESACTIVADO, guardado.getEmail(),
+                "Usuario desactivado por un administrador", true);
+        return guardado;
     }
 
     @Transactional
     public Usuario activarUsuario(String id) throws MyException {
         Usuario usuario = buscarPorId(id);
         usuario.setActivo(true);
-        return usuarioRepositorio.save(usuario);
+        Usuario guardado = usuarioRepositorio.save(usuario);
+        auditoriaServicio.registrar(AuditoriaServicio.USUARIO_ACTIVADO, guardado.getEmail(),
+                "Usuario activado por un administrador", true);
+        return guardado;
     }
 
     private Rol resolverRol(String rolTexto) throws MyException {

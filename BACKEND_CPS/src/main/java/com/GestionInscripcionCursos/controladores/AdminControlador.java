@@ -2,8 +2,10 @@ package com.GestionInscripcionCursos.controladores;
 
 import com.GestionInscripcionCursos.dto.UsuarioAdminRequestDto;
 import com.GestionInscripcionCursos.dto.UsuarioResumenDto;
+import com.GestionInscripcionCursos.entidades.EventoAuditoria;
 import com.GestionInscripcionCursos.entidades.Usuario;
 import com.GestionInscripcionCursos.excepciones.MyException;
+import com.GestionInscripcionCursos.servicios.AuditoriaServicio;
 import com.GestionInscripcionCursos.servicios.UsuarioServicio;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +29,19 @@ public class AdminControlador {
     @Autowired
     private UsuarioServicio usuarioServicio;
 
+    @Autowired
+    private AuditoriaServicio auditoriaServicio;
+
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/dashboard")
     public ResponseEntity<?> panelAdministrativo() {
         return ResponseEntity.ok(Map.of("mensaje", "Dashboard admin"));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/auditoria")
+    public ResponseEntity<List<EventoAuditoria>> listarAuditoria() {
+        return ResponseEntity.ok(auditoriaServicio.listarRecientes());
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")

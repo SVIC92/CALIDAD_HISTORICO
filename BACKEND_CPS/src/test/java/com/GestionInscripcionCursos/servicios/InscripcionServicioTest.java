@@ -285,6 +285,23 @@ class InscripcionServicioTest {
 
             assertEquals("Curso no encontrado", ex.getMessage());
         }
+
+        @Test
+        @DisplayName("Alumno ya inscrito y aprobado en el curso -> lanza MyException y no guarda (RF-06)")
+        void alumnoYaInscrito_lanzaExcepcion() {
+            Usuario al = alumno("alu-1");
+            Curso curso = curso("curso-1", "Base de Datos", 40);
+
+            when(usuarioRepositorio.findById("alu-1")).thenReturn(Optional.of(al));
+            when(cursoRepositorio.findById("curso-1")).thenReturn(Optional.of(curso));
+            when(inscripcionRepositorio.existeInscripcionAprobada("alu-1", "curso-1")).thenReturn(true);
+
+            MyException ex = assertThrows(MyException.class,
+                    () -> inscripcionServicio.inscribirAlumnoDirecto("alu-1", "curso-1"));
+
+            assertEquals("El alumno ya está inscrito en este curso", ex.getMessage());
+            verify(inscripcionRepositorio, never()).save(any());
+        }
     }
 
     // =====================================================================

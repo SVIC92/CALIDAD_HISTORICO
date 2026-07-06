@@ -70,6 +70,10 @@ public class InscripcionServicio {
         Curso curso = cursoRepositorio.findById(cursoId)
                 .orElseThrow(() -> new MyException("Curso no encontrado"));
 
+        if (Boolean.TRUE.equals(inscripcionRepositorio.existeInscripcionAprobada(usuarioId, cursoId))) {
+            throw new MyException("El alumno ya está inscrito en este curso");
+        }
+
         // Comprobación de aforo: contamos directamente en BD en lugar de cargar toda la tabla
         if (curso.getCapacidadMaxima() != null) {
             Long alumnosInscritosActualmente = inscripcionRepositorio.contarAlumnosAprobadosPorCurso(cursoId);
