@@ -170,6 +170,150 @@ class UsuarioServicioTest {
             assertTrue(ex.getMessage().contains("255"));
             verify(usuarioRepositorio, never()).buscarPorEmail(anyString());
         }
+
+        // -----------------------------------------------------------
+        // Rama faltante: nombre / email nulos o en blanco
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("con nombre nulo lanza MyException")
+        void registrarConNombreNuloLanzaExcepcion() {
+            MyException ex = assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar(null, "ana@dominio.com", "clave123", "clave123"));
+            assertTrue(ex.getMessage().toLowerCase().contains("nombre"));
+            verify(usuarioRepositorio, never()).buscarPorEmail(anyString());
+        }
+
+        @Test
+        @DisplayName("con nombre en blanco lanza MyException")
+        void registrarConNombreEnBlancoLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("   ", "ana@dominio.com", "clave123", "clave123"));
+        }
+
+        @Test
+        @DisplayName("con email nulo lanza MyException")
+        void registrarConEmailNuloLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", null, "clave123", "clave123"));
+        }
+
+        @Test
+        @DisplayName("con email en blanco lanza MyException")
+        void registrarConEmailEnBlancoLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "   ", "clave123", "clave123"));
+        }
+
+        // -----------------------------------------------------------
+        // Rama faltante: password / password2 nulos, boundary y longitud maxima
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("con password nula lanza MyException")
+        void registrarConPasswordNulaLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", null, null));
+        }
+
+        @Test
+        @DisplayName("con password de exactamente 5 caracteres (limite invalido) lanza MyException")
+        void registrarConPasswordDe5CaracteresLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", "12345", "12345"));
+        }
+
+        @Test
+        @DisplayName("con password de exactamente 6 caracteres (limite valido) es aceptada")
+        void registrarConPasswordDe6CaracteresEsAceptada() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            assertDoesNotThrow(() ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", "123456", "123456"));
+        }
+
+        @Test
+        @DisplayName("con password2 nula lanza MyException")
+        void registrarConPassword2NulaLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            MyException ex = assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", null));
+            assertTrue(ex.getMessage().contains("confirmar"));
+        }
+
+        @Test
+        @DisplayName("con password2 en blanco lanza MyException")
+        void registrarConPassword2EnBlancoLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", "   "));
+        }
+
+        @Test
+        @DisplayName("con password mayor a 255 caracteres lanza MyException")
+        void registrarConPasswordDemasiadoLargaLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+            String passwordGigante = "a1".repeat(150);
+
+            MyException ex = assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", passwordGigante, passwordGigante));
+            assertTrue(ex.getMessage().contains("255"));
+        }
+
+        // -----------------------------------------------------------
+        // Rama faltante: boundary de cicloActual
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("con ciclo actual igual a 0 (limite invalido) lanza MyException")
+        void registrarConCicloActualCeroLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", "clave123", null, 0));
+        }
+
+        @Test
+        @DisplayName("con ciclo actual igual a 14 (limite valido) es aceptado")
+        void registrarConCicloActualCatorceEsAceptado() throws MyException {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+
+            usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", "clave123", null, 14);
+
+            verify(usuarioRepositorio).save(argThatUsuario(u -> u.getCicloActual() == 14));
+        }
+
+        // -----------------------------------------------------------
+        // Rama faltante: resolverCarreraSiExiste (por nombre / no encontrada)
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("resuelve la carrera por nombre cuando no se encuentra por id")
+        void registrarResuelveCarreraPorNombreCuandoNoExistePorId() throws MyException {
+            Carrera carrera = new Carrera();
+            carrera.setId("car-2");
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+            when(carreraRepositorio.findById("Ingenieria")).thenReturn(Optional.empty());
+            when(carreraRepositorio.findByNombreIgnoreCase("Ingenieria")).thenReturn(Optional.of(carrera));
+
+            usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", "clave123", "Ingenieria", null);
+
+            verify(usuarioRepositorio).save(argThatUsuario(u -> u.getCarrera() == carrera));
+        }
+
+        @Test
+        @DisplayName("carrera no encontrada ni por id ni por nombre asigna carrera nula sin lanzar")
+        void registrarConCarreraInexistenteAsignaNull() throws MyException {
+            when(usuarioRepositorio.buscarPorEmail("ana@dominio.com")).thenReturn(null);
+            when(carreraRepositorio.findById("Fantasma")).thenReturn(Optional.empty());
+            when(carreraRepositorio.findByNombreIgnoreCase("Fantasma")).thenReturn(Optional.empty());
+
+            usuarioServicio.registrar("Ana", "ana@dominio.com", "clave123", "clave123", "Fantasma", null);
+
+            verify(usuarioRepositorio).save(argThatUsuario(u -> u.getCarrera() == null));
+        }
     }
 
     // =====================================================================
@@ -205,6 +349,27 @@ class UsuarioServicioTest {
         void conPasswordCortaLanzaExcepcion() {
             assertThrows(MyException.class, () ->
                     usuarioServicio.crearOActualizarAdminPrueba("Admin", "admin@dominio.com", "123"));
+        }
+
+        @Test
+        @DisplayName("con nombre nulo lanza MyException")
+        void conNombreNuloLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.crearOActualizarAdminPrueba(null, "admin@dominio.com", "clave123"));
+        }
+
+        @Test
+        @DisplayName("con email nulo lanza MyException")
+        void conEmailNuloLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.crearOActualizarAdminPrueba("Admin", null, "clave123"));
+        }
+
+        @Test
+        @DisplayName("con password nula lanza MyException")
+        void conPasswordNulaLanzaExcepcion() {
+            assertThrows(MyException.class, () ->
+                    usuarioServicio.crearOActualizarAdminPrueba("Admin", "admin@dominio.com", null));
         }
     }
 
@@ -358,6 +523,195 @@ class UsuarioServicioTest {
             Usuario activado = usuarioServicio.activarUsuario("1");
             assertTrue(activado.isActivo());
             verify(auditoriaServicio).registrar(eq("USUARIO_ACTIVADO"), eq("ana@dominio.com"), anyString(), eq(true));
+        }
+
+        // -----------------------------------------------------------
+        // Rama faltante: crearUsuarioAdmin (nombre/email nulos, password corta, ciclo)
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("crearUsuarioAdmin con nombre nulo lanza MyException")
+        void crearConNombreNuloLanzaExcepcion() {
+            assertThrows(MyException.class, () -> usuarioServicio.crearUsuarioAdmin(
+                    null, "nuevo@dominio.com", "clave123", "ALUMNO", null, null));
+        }
+
+        @Test
+        @DisplayName("crearUsuarioAdmin con email nulo lanza MyException")
+        void crearConEmailNuloLanzaExcepcion() {
+            assertThrows(MyException.class, () -> usuarioServicio.crearUsuarioAdmin(
+                    "Nuevo", null, "clave123", "ALUMNO", null, null));
+        }
+
+        @Test
+        @DisplayName("crearUsuarioAdmin con password corta lanza MyException")
+        void crearConPasswordCortaLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("nuevo@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () -> usuarioServicio.crearUsuarioAdmin(
+                    "Nuevo", "nuevo@dominio.com", "123", "ALUMNO", null, null));
+        }
+
+        @Test
+        @DisplayName("crearUsuarioAdmin con ciclo actual fuera de rango lanza MyException")
+        void crearConCicloActualFueraDeRangoLanzaExcepcion() {
+            when(usuarioRepositorio.buscarPorEmail("nuevo@dominio.com")).thenReturn(null);
+
+            assertThrows(MyException.class, () -> usuarioServicio.crearUsuarioAdmin(
+                    "Nuevo", "nuevo@dominio.com", "clave123", "ALUMNO", null, 0));
+        }
+
+        @Test
+        @DisplayName("crearUsuarioAdmin con ciclo actual valido lo asigna")
+        void crearConCicloActualValidoLoAsigna() throws MyException {
+            when(usuarioRepositorio.buscarPorEmail("nuevo@dominio.com")).thenReturn(null);
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario creado = usuarioServicio.crearUsuarioAdmin(
+                    "Nuevo", "nuevo@dominio.com", "clave123", "PROFESOR", null, 7);
+
+            assertEquals(7, creado.getCicloActual());
+        }
+
+        // -----------------------------------------------------------
+        // Rama faltante: actualizarUsuarioAdmin (ramas "!= null" de cada campo)
+        // -----------------------------------------------------------
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con nombre valido lo actualiza")
+        void actualizarConNombreValidoLoActualiza() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", "  Nuevo Nombre  ", null, null, null, null, null);
+
+            assertEquals("Nuevo Nombre", actualizado.getNombre());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con nombre en blanco lanza MyException")
+        void actualizarConNombreEnBlancoLanzaExcepcion() {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+
+            assertThrows(MyException.class, () -> usuarioServicio.actualizarUsuarioAdmin(
+                    "1", "   ", null, null, null, null, null));
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con email en blanco lanza MyException")
+        void actualizarConEmailEnBlancoLanzaExcepcion() {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+
+            assertThrows(MyException.class, () -> usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, "   ", null, null, null, null));
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con password en blanco no modifica la contrasena existente")
+        void actualizarConPasswordEnBlancoNoActualizaPassword() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            String passwordOriginal = objetivo.getPassword();
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, "   ", null, null, null);
+
+            assertEquals(passwordOriginal, actualizado.getPassword());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con password no vacia pero corta lanza MyException")
+        void actualizarConPasswordCortaLanzaExcepcion() {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+
+            assertThrows(MyException.class, () -> usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, "123", null, null, null));
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con password valida la actualiza")
+        void actualizarConPasswordValidaLaActualiza() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            String passwordOriginal = objetivo.getPassword();
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, "nuevaClave123", null, null, null);
+
+            assertNotEquals(passwordOriginal, actualizado.getPassword());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con rolTexto lo actualiza")
+        void actualizarConRolTextoLoActualiza() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, null, "PROFESOR", null, null);
+
+            assertEquals(Rol.PROFESOR, actualizado.getRol());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con carreraReferencia en blanco quita la carrera asignada")
+        void actualizarConCarreraEnBlancoQuitaCarrera() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            Carrera carreraPrevia = new Carrera();
+            carreraPrevia.setId("car-1");
+            objetivo.setCarrera(carreraPrevia);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, null, null, "   ", null);
+
+            assertNull(actualizado.getCarrera());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con carreraReferencia valida la resuelve y asigna")
+        void actualizarConCarreraValidaLaAsigna() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            Carrera carrera = new Carrera();
+            carrera.setId("car-2");
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(carreraRepositorio.findById("car-2")).thenReturn(Optional.of(carrera));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, null, null, "car-2", null);
+
+            assertEquals(carrera, actualizado.getCarrera());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con ciclo actual valido lo actualiza")
+        void actualizarConCicloActualValidoLoActualiza() throws MyException {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+            when(usuarioRepositorio.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Usuario actualizado = usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, null, null, null, 10);
+
+            assertEquals(10, actualizado.getCicloActual());
+        }
+
+        @Test
+        @DisplayName("actualizarUsuarioAdmin con ciclo actual fuera de rango lanza MyException")
+        void actualizarConCicloActualFueraDeRangoLanzaExcepcion() {
+            Usuario objetivo = usuario("1", "actual@dominio.com", Rol.ALUMNO, true);
+            when(usuarioRepositorio.findById("1")).thenReturn(Optional.of(objetivo));
+
+            assertThrows(MyException.class, () -> usuarioServicio.actualizarUsuarioAdmin(
+                    "1", null, null, null, null, null, 15));
         }
     }
 

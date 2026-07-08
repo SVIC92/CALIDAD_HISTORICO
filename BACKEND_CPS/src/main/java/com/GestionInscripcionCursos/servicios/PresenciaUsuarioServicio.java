@@ -2,6 +2,7 @@ package com.GestionInscripcionCursos.servicios;
 
 import com.GestionInscripcionCursos.dto.UsuarioConectadoDto;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,13 +23,19 @@ public class PresenciaUsuarioServicio {
     private final Map<String, EstadoConexion> sesiones = new ConcurrentHashMap<>();
     private final List<SseEmitter> emisores = new CopyOnWriteArrayList<>();
     private final Duration timeoutConexion;
+    private Clock clock = Clock.systemUTC();
 
     public PresenciaUsuarioServicio(@Value("${app.presencia.timeout-segundos:90}") long timeoutSegundos) {
         this.timeoutConexion = Duration.ofSeconds(timeoutSegundos);
     }
 
+    /** Visible solo para pruebas: permite simular el paso del tiempo sin usar Thread.sleep. */
+    void establecerClockParaPruebas(Clock clock) {
+        this.clock = clock;
+    }
+
     public void registrarActividad(String email, Collection<? extends GrantedAuthority> authorities) {
-        Instant ahora = Instant.now();
+        Instant ahora = Instant.now(clock);
         String rol = extraerRol(authorities);
 
         sesiones.compute(email, (k, actual) -> {
@@ -95,7 +102,7 @@ public class PresenciaUsuarioServicio {
     }
 
     private void limpiarInactivos() {
-        Instant limite = Instant.now().minus(timeoutConexion);
+        Instant limite = Instant.now(clock).minus(timeoutConexion);
         sesiones.entrySet().removeIf(entry -> entry.getValue().ultimaActividad().isBefore(limite));
     }
 

@@ -1,65 +1,69 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este archivo proporciona guía a Claude Code (claude.ai/code) al trabajar con código en este repositorio.
 
-## Overview
+## Descripción general
 
-Full-stack course-enrollment / academic-management platform ("Gestión de Inscripción de Cursos" / GCI+). The repo is a monorepo with three independently-deployed parts:
+Plataforma full-stack de inscripción de cursos / gestión académica ("Gestión de Inscripción de Cursos" / GCI+). El repositorio es un monorepo con tres partes desplegadas de forma independiente:
 
-- **`BACKEND_CPS/`** — Spring Boot 3.4 REST + WebSocket API (Java 17, Maven). Deployed on Render via the Dockerfile.
-- **`FRONTEND_CPS/`** — React 19 SPA built with Vite 8 + Material-UI v9. Deployed on Vercel.
-- **`MICRO-SERVICES/transcripcion/`** — Python FastAPI WebSocket service doing live speech-to-text with Vosk (Kaldi model), used to caption videoconferences.
+- **`BACKEND_CPS/`** — API REST + WebSocket con Spring Boot 3.4 (Java 17, Maven). Desplegado en Render mediante el Dockerfile.
+- **`FRONTEND_CPS/`** — SPA en React 19 construida con Vite 8 + Material-UI v9. Desplegado en Vercel.
+- **`MICRO-SERVICES/transcripcion/`** — Servicio Python FastAPI por WebSocket que hace speech-to-text en vivo con Vosk (modelo Kaldi), usado para subtitular videoconferencias.
 
-**The codebase is written in Spanish** — package names, classes, variables, routes, and comments. Match this convention (e.g. `controladores`, `servicios`, `inscribirAlumnoDirecto`).
+**El código está escrito en español** — nombres de paquetes, clases, variables, rutas y comentarios. Respeta esta convención (p. ej. `controladores`, `servicios`, `inscribirAlumnoDirecto`).
 
-## Commands
+## Comandos
 
 ### Backend (`BACKEND_CPS/`)
 ```bash
-./mvnw spring-boot:run            # run dev server on :8080 (use mvnw.cmd in cmd.exe/PowerShell)
-./mvnw clean package              # build the jar (target/GestionInscripcionCursos-0.0.1-SNAPSHOT.jar)
-./mvnw test                       # run all tests
-./mvnw test -Dtest=InscripcionServicioTest                     # single test class
-./mvnw test -Dtest=InscripcionServicioTest#metodoDePrueba      # single test method
+./mvnw spring-boot:run            # levanta el servidor de desarrollo en :8080 (usa mvnw.cmd en cmd.exe/PowerShell)
+./mvnw clean package              # genera el jar (target/GestionInscripcionCursos-0.0.1-SNAPSHOT.jar)
+./mvnw test                       # ejecuta todos los tests
+./mvnw test -Dtest=InscripcionServicioTest                     # una sola clase de test
+./mvnw test -Dtest=InscripcionServicioTest#metodoDePrueba      # un solo método de test
+./mvnw verify -Pe2e -De2e.admin.email=... -De2e.admin.password=... -De2e.alumno.email=... -De2e.alumno.password=...
+                                   # pruebas E2E con Selenium (requiere backend+frontend corriendo); ver docs/E2E_SELENIUM.md
 ```
-Requires env vars to function (placeholders default to empty in `application.properties`): `DB_PASSWORD`, `JWT_SECRET`, `GROQ_API_KEY`, `COHERE_API_KEY`, `CLOUDINARY_*`, `MAIL_PASSWORD`. Sonar scanner plugin is wired in `pom.xml`.
+Requiere variables de entorno para funcionar (los placeholders quedan vacíos por defecto en `application.properties`): `DB_PASSWORD`, `JWT_SECRET`, `GROQ_API_KEY`, `COHERE_API_KEY`, `CLOUDINARY_*`, `MAIL_PASSWORD`. El plugin de Sonar scanner está configurado en `pom.xml`.
 
 ### Frontend (`FRONTEND_CPS/`)
 ```bash
 npm install
-npm start          # Vite dev server (note: "start", not "dev") on :5173
-npm run build      # production build to dist/
+npm start          # servidor de desarrollo de Vite (nota: es "start", no "dev") en :5173
+npm run build      # build de producción a dist/
 npm run lint       # ESLint
-npm run preview    # serve the production build
+npm run preview    # sirve el build de producción
 ```
-API base URL resolves automatically in `src/API/axios.js`: localhost → `VITE_LOCAL_API_BASE_URL` (default `http://localhost:8080/api`), otherwise → `VITE_API_BASE_URL` (default the Render URL). For local backend, set `VITE_LOCAL_API_BASE_URL` in `.env.local`.
+No hay test runner configurado en el frontend (sin script `test` en `package.json`); los únicos tests automatizados del repo son los del backend.
+La URL base de la API se resuelve automáticamente en `src/API/axios.js`: localhost → `VITE_LOCAL_API_BASE_URL` (por defecto `http://localhost:8080/api`), en otro caso → `VITE_API_BASE_URL` (por defecto la URL de Render). Para backend local, define `VITE_LOCAL_API_BASE_URL` en `.env.local`.
 
-### Transcription microservice (`MICRO-SERVICES/transcripcion/`)
+### Microservicio de transcripción (`MICRO-SERVICES/transcripcion/`)
 ```bash
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 7860
 ```
-Needs a Vosk model directory at `./model` (or `VOSK_MODEL_PATH`). Posts results to the backend at `SPRING_BOOT_URL` (defaults to `/api/subtitulos/interno`).
+Necesita un directorio de modelo Vosk en `./model` (o `VOSK_MODEL_PATH`). Envía los resultados al backend en `SPRING_BOOT_URL` (por defecto `/api/subtitulos/interno`).
 
-## Architecture
+## Arquitectura
 
-### Backend layering
-Single Maven module, package root `com.GestionInscripcionCursos`, conventional layers:
-`controladores` (REST + WebSocket endpoints) → `servicios` (business logic) → `repositorios` (Spring Data JPA) → `entidades` (JPA entities). Plus `dto`, `enumeraciones`, `excepciones` (`MyException` is the app's checked business exception), `seguridad`, `configuracion`, `util`.
+### Capas del backend
+Módulo Maven único, paquete raíz `com.GestionInscripcionCursos`, capas convencionales:
+`controladores` (endpoints REST + WebSocket) → `servicios` (lógica de negocio) → `repositorios` (Spring Data JPA) → `entidades` (entidades JPA). Además `dto`, `enumeraciones`, `excepciones` (`MyException` es la excepción de negocio checked de la app), `seguridad`, `configuracion`, `util`.
 
-- **Persistence:** PostgreSQL (Neon cloud) with `spring.jpa.hibernate.ddl-auto=update` — schema is managed by Hibernate from the entities, not migrations. `configuracion/SchemaBootstrap.java` runs raw `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` at startup to patch legacy DBs (currently the 2FA columns) before entities load. MySQL connector is also on the classpath but PostgreSQL is the active driver.
-- **Security:** `SeguridadWeb.java` (at the package root, *not* in `seguridad/`) defines the `SecurityFilterChain` — stateless JWT, CSRF off, CORS from `app.cors.allowed-origin-patterns`. `seguridad/JwtFiltro` authenticates each request from the `Authorization: Bearer` header and records presence via `PresenciaUsuarioServicio`. **Note:** `/api/**` is currently `permitAll()` ("temporalmente abierto"); real authorization relies on `@PreAuthorize` (method security is enabled via `@EnableMethodSecurity`) and the frontend role guards. Roles enum is `ADMIN, PROFESOR, ALUMNO`, surfaced to clients as `ROLE_*` authorities.
-- **Realtime (WebSocket/STOMP):** `configuracion/WebSocketConfig.java` exposes the `/ws-chat` SockJS endpoint with a simple broker on `/queue`, `/topic`, `/user`. STOMP CONNECT frames are authenticated by JWT in a channel interceptor (separate from the HTTP filter). Powers institutional chat, user presence, videoconference signaling, and synced music.
-- **AI features (`servicios/IaServicio`, `CohereServicio`):** chat assistant calls the **Groq** API (OpenAI-compatible, default model `llama-3.1-8b-instant`); rubric/syllabus generation prefers **Cohere** (`command-r-08-2024`) with a local fallback. All keys are optional — services degrade to fallbacks when unset.
-- **Other integrations:** Cloudinary (file/image upload, `ArchivoServicio`), Brevo SMTP (mail / password reset via `CorreoServicio` + `RecuperacionPasswordServicio`), TOTP 2FA with ZXing QR codes (`TwoFactorServicio`), scheduled auto-grading (`EvaluacionAutomaticaTask`).
-- **Cross-cutting domain rule:** schedule-overlap validation lives in `util/HorarioUtil` (`primerCruce`) — overlap is `inicioA < finB && finA > inicioB` (touching endpoints do **not** overlap). This is the RF05 requirement and is the focus of `InscripcionServicioTest`.
+- **Persistencia:** PostgreSQL (Neon cloud) con `spring.jpa.hibernate.ddl-auto=update` — el esquema lo gestiona Hibernate a partir de las entidades, no hay migraciones. `configuracion/SchemaBootstrap.java` ejecuta `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` en crudo al iniciar para parchar BDs antiguas (actualmente las columnas de 2FA) antes de que carguen las entidades. El conector de MySQL también está en el classpath, pero PostgreSQL es el driver activo.
+- **Seguridad:** `SeguridadWeb.java` (en la raíz del paquete, *no* en `seguridad/`) define el `SecurityFilterChain` — JWT stateless, CSRF desactivado, CORS desde `app.cors.allowed-origin-patterns`. `seguridad/JwtFiltro` autentica cada request a partir del header `Authorization: Bearer` y registra la presencia vía `PresenciaUsuarioServicio`. **Nota:** `/api/**` está actualmente `permitAll()` ("temporalmente abierto"); la autorización real depende de `@PreAuthorize` (la seguridad a nivel de método está habilitada vía `@EnableMethodSecurity`) y de los guards de rol del frontend. El enum de roles es `ADMIN, PROFESOR, ALUMNO`, expuesto a los clientes como authorities `ROLE_*`.
+- **Tiempo real (WebSocket/STOMP):** `configuracion/WebSocketConfig.java` expone el endpoint SockJS `/ws-chat` con un broker simple en `/queue`, `/topic`, `/user`. Los frames STOMP CONNECT se autentican por JWT en un channel interceptor (independiente del filtro HTTP). Da soporte al chat institucional, presencia de usuarios, señalización de videoconferencia y música sincronizada.
+- **Funciones de IA (`servicios/IaServicio`, `CohereServicio`):** el asistente de chat llama a la API de **Groq** (compatible con OpenAI, modelo por defecto `llama-3.1-8b-instant`); la generación de rúbricas/sílabos prioriza **Cohere** (`command-r-08-2024`) con un fallback local. Todas las claves son opcionales — los servicios degradan a fallbacks cuando no están configuradas.
+- **Otras integraciones:** Cloudinary (subida de archivos/imágenes, `ArchivoServicio`), Brevo SMTP (correo / recuperación de contraseña vía `CorreoServicio` + `RecuperacionPasswordServicio`), TOTP 2FA con códigos QR de ZXing (`TwoFactorServicio`), calificación automática programada (`EvaluacionAutomaticaTask`).
+- **Regla de dominio transversal:** la validación de cruce de horarios vive en `util/HorarioUtil` (`primerCruce`) — el cruce es `inicioA < finB && finA > inicioB` (los extremos que se tocan **no** se consideran cruce). Este es el requerimiento RF05 y es el foco de `InscripcionServicioTest`; ver `docs/TDD_RF05_CruceHorarios.md` para la matriz de casos Red→Green→Refactor detrás de esos tests.
 
-### Frontend structure
-`src/` is organized as `pages/` (route screens), `components/` (shared UI), `layouts/DashboardLayout.jsx`, `services/` (one module per backend domain, e.g. `CursoService.js`), `API/axios.js` (the configured axios instance with a request interceptor that injects the bearer token), `context/`, and `utils/`.
+### Estructura del frontend
+`src/` está organizado en `pages/` (pantallas de rutas), `components/` (UI compartida), `layouts/DashboardLayout.jsx`, `services/` (un módulo por dominio del backend, p. ej. `CursoService.js`), `API/axios.js` (la instancia de axios configurada con un interceptor de request que inyecta el bearer token), `context/`, y `utils/`.
 
-- **Routing & auth:** all routes are declared in `src/App.jsx`. `components/RutasProtegidas.jsx` is the auth/role gate; it reads `token` and `rol` from `localStorage`. Routes are nested by role (`ROLE_ADMIN` / `ROLE_PROFESOR` / `ROLE_ALUMNO`); `/dashboard` redirects to the role-specific dashboard.
-- **Data & state:** TanStack React Query for server state, Zustand for client state, React Hook Form for forms. UI is Material-UI v9 (`@mui/material`), with accessibility helpers (OpenDyslexic font, reading-aid overlay, floating accessibility menu).
-- **Domain integrations:** STOMP over SockJS (`@stomp/stompjs`, `sockjs-client`) for chat/realtime, Jitsi (`@jitsi/react-sdk`) for videoconferencing, `jspdf` + `xlsx` for report exports, `react-youtube` for the synced study room.
+- **Ruteo y autenticación:** todas las rutas se declaran en `src/App.jsx`. `components/RutasProtegidas.jsx` es el guard de autenticación/rol; lee `token` y `rol` de `localStorage`. Las rutas están anidadas por rol (`ROLE_ADMIN` / `ROLE_PROFESOR` / `ROLE_ALUMNO`); `/dashboard` redirige al dashboard específico del rol.
+- **Datos y estado:** TanStack React Query para estado del servidor, Zustand para estado del cliente, React Hook Form para formularios. La UI es Material-UI v9 (`@mui/material`), con ayudas de accesibilidad (fuente OpenDyslexic, overlay de asistencia de lectura, menú flotante de accesibilidad).
+- **Integraciones de dominio:** STOMP sobre SockJS (`@stomp/stompjs`, `sockjs-client`) para chat/tiempo real, Jitsi (`@jitsi/react-sdk`) para videoconferencia, `jspdf` + `xlsx` para exportar reportes, `react-youtube` para la sala de estudio sincronizada.
+- **La generación con IA sobrevive a la navegación:** la generación de rúbricas/sílabos (`RubricaIA.jsx`, `SilaboIA.jsx`) es síncrona en el backend, pero el frontend guarda el estado `idle/cargando/listo/error` en `store/useIaGeneracionStore.js` (Zustand) en lugar de estado de componente, de modo que la petición sobrevive aunque el usuario navegue a otra página. `components/GeneracionIaNotificador.jsx` está montado globalmente y muestra un Snackbar con un enlace "Ver ahora" cuando la generación termina en una ruta distinta.
 
-### How the three parts connect
-Frontend → backend over REST (`/api/...`) authenticated with the JWT bearer token, and over STOMP/SockJS (`/ws-chat`) for realtime. The transcription microservice receives raw audio from the browser over its own WebSocket (`/ws/transcribir/{salaUuid}/{usuarioId}`), transcribes with Vosk, and POSTs caption text back to the backend's internal endpoint (`/api/subtitulos/interno`), which fan-outs to clients via STOMP.
+### Cómo se conectan las tres partes
+El frontend se conecta al backend por REST (`/api/...`) autenticado con el bearer token JWT, y por STOMP/SockJS (`/ws-chat`) para tiempo real. El microservicio de transcripción recibe audio crudo del navegador por su propio WebSocket (`/ws/transcribir/{salaUuid}/{usuarioId}`), lo transcribe con Vosk, y envía el texto de los subtítulos de vuelta al endpoint interno del backend (`/api/subtitulos/interno`), que lo distribuye a los clientes vía STOMP.

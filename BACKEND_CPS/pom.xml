@@ -29,6 +29,8 @@
     <properties>
         <java.version>17</java.version>
         <lombok.version>1.18.38</lombok.version>
+        <e2e.baseUrl>http://localhost:5173</e2e.baseUrl>
+        <e2e.headless>false</e2e.headless>
     </properties>
     <dependencies>
         
@@ -145,6 +147,18 @@
             <artifactId>cloudinary-http44</artifactId>
             <version>1.36.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>4.27.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.bonigarcia</groupId>
+            <artifactId>webdrivermanager</artifactId>
+            <version>5.9.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -193,5 +207,37 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Pruebas Selenium E2E: NO corren con `mvn test` ni `mvn verify` normales.
+             Requieren el backend (:8080) y el frontend (:5173) levantados manualmente.
+             Ejecutar con: mvn verify -Pe2e -->
+        <profile>
+            <id>e2e</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.5.2</version>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <e2e.baseUrl>${e2e.baseUrl}</e2e.baseUrl>
+                                <e2e.headless>${e2e.headless}</e2e.headless>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
