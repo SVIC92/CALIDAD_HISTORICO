@@ -28,4 +28,7 @@ public interface ReporteRepositorio extends JpaRepository<Reporte, String> {
 
     @Query("SELECT r FROM Reporte r WHERE r.usuario.id = :idUser AND r.actividad.id = :idActividad ORDER BY r.fechaCreacion DESC")
     List<Reporte> buscarReportesPorUsuarioYActividad(@Param("idUser") String idUser, @Param("idActividad") String idActividad);
+
+    @Query("SELECT r FROM Reporte r WHERE r.actividad.id IN :idsActividad")
+    List<Reporte> buscarReportesPorIdsActividad(@Param("idsActividad") List<String> idsActividad);
 }

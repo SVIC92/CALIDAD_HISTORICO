@@ -21,22 +21,27 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/portal")
 public class PortalControlador {
-    
+
+    private static final String CLAVE_MENSAJE = "mensaje";
+    private static final String CLAVE_ERROR = "error";
+    private static final String MSG_LOGUEO_EXITOSO = "Logueo exitoso";
+    private static final String CLAVE_REDIRECT_TO = "redirectTo";
+
     @Autowired
     private UsuarioServicio usuarioServicio;
 
     @GetMapping("/")
-    public ResponseEntity<?> index() {
-        return ResponseEntity.ok(Map.of("mensaje", "API de GestionInscripcionCursos"));
+    public ResponseEntity<Object> index() {
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "API de GestionInscripcionCursos"));
     }
     
     @GetMapping("/registrar")
-    public ResponseEntity<?> registrar() {
-        return ResponseEntity.ok(Map.of("mensaje", "Endpoint para registrar usuarios"));
+    public ResponseEntity<Object> registrar() {
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Endpoint para registrar usuarios"));
     }
     
     @PostMapping("/registro")
-    public ResponseEntity<?> registro(
+    public ResponseEntity<Object> registro(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String password,
@@ -65,18 +70,18 @@ public class PortalControlador {
                             "carrera", usuario.getCarrera() != null ? usuario.getCarrera().getNombre() : "",
                             "cicloActual", usuario.getCicloActual() != null ? usuario.getCicloActual() : 0));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         } catch (DataIntegrityViolationException ex) {
             String detalle = ex.getMostSpecificCause() != null
                     ? ex.getMostSpecificCause().getMessage()
                     : ex.getMessage();
             return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Error de integridad en base de datos al registrar usuario. Verifica email único y datos obligatorios.",
+                    CLAVE_ERROR, "Error de integridad en base de datos al registrar usuario. Verifica email único y datos obligatorios.",
                     "detalle", detalle
             ));
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error interno al registrar usuario", "detalle", ex.getMessage()));
+                    .body(Map.of(CLAVE_ERROR, "Error interno al registrar usuario", "detalle", ex.getMessage()));
         }
     }
 
@@ -110,48 +115,48 @@ public class PortalControlador {
     }
     
     @GetMapping("/login")
-    public ResponseEntity<?> login(@RequestParam(required = false) String error) {
+    public ResponseEntity<Object> login(@RequestParam(required = false) String error) {
         if (error != null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Email o Contraseña invalidos"));
+                    .body(Map.of(CLAVE_ERROR, "Email o Contraseña invalidos"));
         }
-        return ResponseEntity.ok(Map.of("mensaje", "Login endpoint"));
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Login endpoint"));
     }
 
     @PreAuthorize("hasAnyRole('ALUMNO', 'PROFESOR', 'ADMIN')")
     @GetMapping("/inicio")
-    public ResponseEntity<?> inicio(Authentication authentication) {
+    public ResponseEntity<Object> inicio(Authentication authentication) {
 
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "No hay usuario autenticado"));
+                    .body(Map.of(CLAVE_ERROR, "No hay usuario autenticado"));
         }
 
         Usuario logueado = usuarioServicio.buscarEmail(authentication.getName());
 
         if (logueado == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "No hay usuario autenticado"));
+                    .body(Map.of(CLAVE_ERROR, "No hay usuario autenticado"));
         }
 
         if (logueado.getRol().toString().equals("ADMIN")) {
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Logueo exitoso",
+                    CLAVE_MENSAJE, MSG_LOGUEO_EXITOSO,
                     "rol", logueado.getRol(),
-                    "redirectTo", "/admin/dashboard"));
+                    CLAVE_REDIRECT_TO, "/admin/dashboard"));
         }
 
         if (logueado.getRol().toString().equals("PROFESOR")) {
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Logueo exitoso",
+                    CLAVE_MENSAJE, MSG_LOGUEO_EXITOSO,
                     "rol", logueado.getRol(),
-                    "redirectTo", "/profesor/dashboard"));
+                    CLAVE_REDIRECT_TO, "/profesor/dashboard"));
         }
 
         return ResponseEntity.ok(Map.of(
-                "mensaje", "Logueo exitoso",
+                CLAVE_MENSAJE, MSG_LOGUEO_EXITOSO,
                 "rol", logueado.getRol(),
-                "redirectTo", "/inicio"));
+                CLAVE_REDIRECT_TO, "/inicio"));
     }
 
     

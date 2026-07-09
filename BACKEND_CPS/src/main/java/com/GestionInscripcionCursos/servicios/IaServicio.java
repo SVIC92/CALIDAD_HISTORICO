@@ -101,6 +101,11 @@ public class IaServicio {
     private static final int MAX_MENSAJES_CONTEXTO = 10;
     private static final int MAX_MENSAJES_HISTORIAL = 50;
 
+    private static final String ROL_ADMIN = "ADMIN";
+    private static final String ROL_PROFESOR = "PROFESOR";
+    private static final String ROL_ALUMNO = "ALUMNO";
+    private static final String CLAVE_CONTENT = "content";
+
     // ==========================================
     // CHAT EXCLUSIVO CON GROQ (multi-turno)
     // ==========================================
@@ -190,21 +195,21 @@ public class IaServicio {
 
     public IaSugerenciasDto obtenerSugerencias(String rol) {
         List<String> sugerencias = switch (rol) {
-            case "ADMIN" -> List.of(
+            case ROL_ADMIN -> List.of(
                 "¿Cuántos cursos activos hay actualmente en el sistema?",
                 "¿Cuántas inscripciones están pendientes de aprobación?",
                 "¿Cuáles son los cursos con mayor demanda de inscritos?",
                 "¿Cómo puedo generar un reporte de inscripciones?",
                 "¿Qué acciones administrativas puedo realizar hoy?"
             );
-            case "PROFESOR" -> List.of(
+            case ROL_PROFESOR -> List.of(
                 "¿En qué cursos estoy inscrito como profesor?",
                 "¿Cómo creo una actividad para mis alumnos?",
                 "¿Cómo genero una rúbrica de evaluación con IA?",
                 "¿Cómo creo un sílabo con ayuda de la IA?",
                 "¿Qué herramientas de evaluación tengo disponibles?"
             );
-            case "ALUMNO" -> List.of(
+            case ROL_ALUMNO -> List.of(
                 "¿En qué cursos estoy matriculado?",
                 "¿Qué cursos están disponibles para inscribirme?",
                 "¿Cómo me inscribo en un nuevo curso?",
@@ -234,7 +239,7 @@ public class IaServicio {
             array.forEach(nodo -> {
                 Map<String, Object> msg = new LinkedHashMap<>();
                 msg.put("role", nodo.path("role").asText("user"));
-                msg.put("content", nodo.path("content").asText(""));
+                msg.put(CLAVE_CONTENT, nodo.path(CLAVE_CONTENT).asText(""));
                 mensajes.add(msg);
             });
             int desde = Math.max(0, mensajes.size() - limite);
@@ -250,12 +255,12 @@ public class IaServicio {
 
         Map<String, Object> msgUsuario = new LinkedHashMap<>();
         msgUsuario.put("role", "user");
-        msgUsuario.put("content", mensaje);
+        msgUsuario.put(CLAVE_CONTENT, mensaje);
         conversacion.add(msgUsuario);
 
         Map<String, Object> msgAsistente = new LinkedHashMap<>();
         msgAsistente.put("role", "assistant");
-        msgAsistente.put("content", respuesta);
+        msgAsistente.put(CLAVE_CONTENT, respuesta);
         conversacion.add(msgAsistente);
 
         if (conversacion.size() > MAX_MENSAJES_HISTORIAL) {
@@ -281,7 +286,7 @@ public class IaServicio {
             List<IaMensajeDto> mensajes = new ArrayList<>();
             array.forEach(nodo -> mensajes.add(new IaMensajeDto(
                     nodo.path("role").asText("user"),
-                    nodo.path("content").asText("")
+                    nodo.path(CLAVE_CONTENT).asText("")
             )));
             return mensajes;
         } catch (Exception e) {
@@ -548,15 +553,15 @@ public class IaServicio {
         );
 
         String instruccionesRol = switch (rol) {
-            case "ADMIN" ->
+            case ROL_ADMIN ->
                 " Como ADMIN puedes: gestionar usuarios, aprobar/rechazar inscripciones, "
                 + "administrar cursos y carreras, generar reportes y ver estadisticas. "
                 + "Sugiere acciones concretas del panel administrativo cuando corresponda.";
-            case "PROFESOR" ->
+            case ROL_PROFESOR ->
                 " Como PROFESOR puedes: ver tus cursos asignados, crear y gestionar actividades, "
                 + "evaluar alumnos, generar rubricas con IA, crear silabos y acceder al chat de aula. "
                 + "Da instrucciones claras sobre como usar las herramientas del sistema.";
-            case "ALUMNO" ->
+            case ROL_ALUMNO ->
                 " Como ALUMNO puedes: ver tus cursos inscritos, consultar actividades pendientes, "
                 + "inscribirte en cursos disponibles, ver tu progreso academico y acceder al chat de aula. "
                 + "Orienta al alumno sobre sus proximos pasos y oportunidades academicas.";
@@ -579,9 +584,9 @@ public class IaServicio {
     private String construirRespuestaFallback(String rol, String mensaje, Usuario usuario) {
         String contextoDatos = construirContextoDatosUsuario(rol, usuario);
         String recomendacion = switch (rol) {
-            case "ADMIN" -> "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
-            case "PROFESOR" -> "Puedes revisar cursos, actividades, evaluacion y seguimiento academico del aula.";
-            case "ALUMNO" -> "Puedes revisar tus inscripciones, actividades pendientes, requisitos y progreso academico.";
+            case ROL_ADMIN -> "Puedes revisar gestion de usuarios, cursos y reportes desde el panel administrativo.";
+            case ROL_PROFESOR -> "Puedes revisar cursos, actividades, evaluacion y seguimiento academico del aula.";
+            case ROL_ALUMNO -> "Puedes revisar tus inscripciones, actividades pendientes, requisitos y progreso academico.";
             default -> "Puedes revisar las opciones disponibles dentro del sistema segun tu perfil.";
         };
 
@@ -601,7 +606,7 @@ public class IaServicio {
 
         try {
             switch (rol) {
-                case "ADMIN": {
+                case ROL_ADMIN: {
                     List<Curso> cursosActivos = cursoRepositorio.buscarCursosActivos(new Date());
                     long totalInscripciones = inscripcionRepositorio.count();
                     int pendientesAlumno = inscripcionRepositorio.listarPendientesAlumno().size();
@@ -614,7 +619,7 @@ public class IaServicio {
                             + "- Inscripciones pendientes de profesores: " + pendientesProfesor + "\n"
                             + "- Cursos activos (muestra): " + resumirCursos(cursosActivos, 6);
                 }
-                case "PROFESOR": {
+                case ROL_PROFESOR: {
                     List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosProfesor(idUsuario);
                     List<Curso> cursosDisponibles = cursoRepositorio.buscarCursosDisponiblesProfesor(idUsuario);
 
@@ -624,7 +629,7 @@ public class IaServicio {
                             + "- Inscritos (muestra): " + resumirCursos(cursosInscritos, 6) + "\n"
                             + "- Disponibles (muestra): " + resumirCursos(cursosDisponibles, 6);
                 }
-                case "ALUMNO": {
+                case ROL_ALUMNO: {
                     List<Curso> cursosInscritos = cursoRepositorio.buscarCursosInscritosAlumno(idUsuario);
                     List<Curso> cursosDisponibles = cursoRepositorio.buscarCursosDisponiblesAlumno(idUsuario);
 
@@ -886,7 +891,7 @@ public class IaServicio {
 
             Map<String, Object> mensajeDelSistema = new LinkedHashMap<>();
             mensajeDelSistema.put("role", "system");
-            mensajeDelSistema.put("content", promptSistema);
+            mensajeDelSistema.put(CLAVE_CONTENT, promptSistema);
             mensajes.add(mensajeDelSistema);
 
             if (historialPrevio != null && !historialPrevio.isEmpty()) {
@@ -895,7 +900,7 @@ public class IaServicio {
 
             Map<String, Object> mensajeDelUsuario = new LinkedHashMap<>();
             mensajeDelUsuario.put("role", "user");
-            mensajeDelUsuario.put("content", mensajeUsuario);
+            mensajeDelUsuario.put(CLAVE_CONTENT, mensajeUsuario);
             mensajes.add(mensajeDelUsuario);
 
             Map<String, Object> cuerpoRequest = new LinkedHashMap<>();
@@ -927,7 +932,7 @@ public class IaServicio {
                 throw new IllegalStateException("No se encontraron resultados en la respuesta de Groq");
             }
             
-            JsonNode contenido = choices.get(0).path("message").path("content");
+            JsonNode contenido = choices.get(0).path("message").path(CLAVE_CONTENT);
 
             if (contenido.isNull() || contenido.isMissingNode() || contenido.asText().isBlank()) {
                 throw new IllegalStateException("Respuesta vacía de Groq");

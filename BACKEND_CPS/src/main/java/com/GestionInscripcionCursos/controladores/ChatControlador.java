@@ -68,7 +68,7 @@ public class ChatControlador {
 
     // --- Endpoint REST para subir y enviar archivos ---
     @PostMapping("/enviar-archivo")
-    public ResponseEntity<?> enviarArchivo(
+    public ResponseEntity<Object> enviarArchivo(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("idReceptor") String idReceptor,
             @RequestParam("tipo") String tipo,
@@ -94,14 +94,14 @@ public class ChatControlador {
     }
 
     @PutMapping("/marcar-leidos/{idEmisor}")
-    public ResponseEntity<?> marcarLeidos(@PathVariable String idEmisor, Authentication authentication) {
+    public ResponseEntity<Object> marcarLeidos(@PathVariable String idEmisor, Authentication authentication) {
         Usuario receptor = usuarioServicio.buscarEmail(authentication.getName());
         chatServicio.marcarMensajesLeidos(idEmisor, receptor.getId());
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/gifs")
-    public ResponseEntity<?> buscarGifs(@RequestParam(defaultValue = "") String query) {
+    public ResponseEntity<Object> buscarGifs(@RequestParam(defaultValue = "") String query) {
         try {
             return ResponseEntity.ok(chatServicio.buscarGifs(query));
         } catch (MyException e) {

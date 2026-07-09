@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CorreoServicio {
 
+    private static final String SALUDO_HOLA = "Hola ";
+
     private final JavaMailSender mailSender;
 
     @Value("${app.mail.from:${spring.mail.username:}}")
@@ -32,7 +34,7 @@ public class CorreoServicio {
         String linkSeguro = escaparHtml(link);
         String asunto = "Reestablecer contraseña";
 
-        String cuerpoPlano = "Hola " + nombreUsuario + ",\n\n"
+        String cuerpoPlano = SALUDO_HOLA + nombreUsuario + ",\n\n"
                 + "Recibimos una solicitud para reestablecer tu contraseña.\n"
                 + "Haz clic en el siguiente enlace para continuar:\n"
                 + link + "\n\n"
@@ -41,7 +43,7 @@ public class CorreoServicio {
 
         String cuerpoHtml = construirCorreoHtml(
                 "Recuperación de contraseña",
-                "Hola " + nombreSeguro + ",",
+                SALUDO_HOLA + nombreSeguro + ",",
                 "Recibimos una solicitud para reestablecer tu contraseña. Haz clic en el botón para continuar.",
                 "Reestablecer contraseña",
                 linkSeguro,
@@ -70,7 +72,7 @@ public class CorreoServicio {
 
         String cuerpoHtml = construirCorreoHtml(
                 "Invitación a videoconferencia",
-                "Hola " + nombreSeguro + ",",
+                SALUDO_HOLA + nombreSeguro + ",",
                 "Has sido invitado a la reunión <strong>" + salaSeguro + "</strong> con el rol de <strong>" + rolSeguro + "</strong>.",
                 "Unirme a la reunión",
                 enlaceSeguro,

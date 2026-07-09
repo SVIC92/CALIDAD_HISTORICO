@@ -88,7 +88,7 @@ class EvaluacionAutomaticaTaskTest {
 
             when(actividadRepositorio.buscarActividadesVencidas(any(Date.class))).thenReturn(List.of(act));
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("curso-1")).thenReturn(List.of(al));
-            when(reporteRepositorio.contarReportesPorUsuarioYActividad("alu-1", "act-1")).thenReturn(0L);
+            when(reporteRepositorio.buscarReportesPorIdActividad("act-1")).thenReturn(List.of());
 
             evaluacionAutomaticaTask.calificarActividadesVencidas();
 
@@ -106,9 +106,13 @@ class EvaluacionAutomaticaTaskTest {
             Actividad act = actividad("act-1", c);
             Usuario al = alumno("alu-1");
 
+            Reporte reporteExistente = new Reporte();
+            reporteExistente.setUsuario(al);
+            reporteExistente.setActividad(act);
+
             when(actividadRepositorio.buscarActividadesVencidas(any(Date.class))).thenReturn(List.of(act));
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("curso-1")).thenReturn(List.of(al));
-            when(reporteRepositorio.contarReportesPorUsuarioYActividad("alu-1", "act-1")).thenReturn(1L);
+            when(reporteRepositorio.buscarReportesPorIdActividad("act-1")).thenReturn(List.of(reporteExistente));
 
             evaluacionAutomaticaTask.calificarActividadesVencidas();
 
@@ -125,16 +129,20 @@ class EvaluacionAutomaticaTaskTest {
             Usuario alSinEntrega = alumno("alu-1");
             Usuario alConEntrega = alumno("alu-2");
 
+            Reporte reporteDeAlConEntrega = new Reporte();
+            reporteDeAlConEntrega.setUsuario(alConEntrega);
+            reporteDeAlConEntrega.setActividad(act1);
+
             when(actividadRepositorio.buscarActividadesVencidas(any(Date.class))).thenReturn(List.of(act1, act2));
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("curso-1")).thenReturn(List.of(alSinEntrega, alConEntrega));
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("curso-2")).thenReturn(List.of());
-            when(reporteRepositorio.contarReportesPorUsuarioYActividad("alu-1", "act-1")).thenReturn(0L);
-            when(reporteRepositorio.contarReportesPorUsuarioYActividad("alu-2", "act-1")).thenReturn(3L);
+            when(reporteRepositorio.buscarReportesPorIdActividad("act-1")).thenReturn(List.of(reporteDeAlConEntrega));
 
             evaluacionAutomaticaTask.calificarActividadesVencidas();
 
             verify(reporteRepositorio, times(1)).save(any(Reporte.class));
             verify(reporteRepositorio).save(argThat(r -> r.getUsuario() == alSinEntrega));
+            verify(reporteRepositorio, never()).buscarReportesPorIdActividad("act-2");
         }
     }
 }

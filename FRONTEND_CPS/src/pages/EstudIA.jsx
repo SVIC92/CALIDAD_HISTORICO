@@ -10,10 +10,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Send, SmartToy } from '@mui/icons-material';
+import { DeleteSweep, Send, SmartToy } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import IaService from '../services/IaService';
 import PageHeader from '../components/PageHeader';
+import FloatingConfirmModal from '../components/FloatingConfirmModal';
 
 const roleLabelByCode = {
   ROLE_ADMIN: 'Administrador',
@@ -43,6 +44,8 @@ const EstudIA = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [loadingHistorial, setLoadingHistorial] = useState(true);
   const [sending, setSending] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmLimpiar, setConfirmLimpiar] = useState(false);
   const bottomRef = useRef(null);
 
   const rolLabel = useMemo(() => roleLabelByCode[rol] || 'Usuario', [rol]);
@@ -53,13 +56,15 @@ const EstudIA = () => {
         setLoadingHistorial(true);
         setErrorMsg('');
 
-        const historial = await IaService.obtenerUltimoHistorial();
+        const conversacion = await IaService.obtenerConversacion();
+        const mensajesPrevios = conversacion?.mensajes || [];
 
-        if (historial?.ultimoMensaje && historial?.ultimaRespuesta) {
-          setMessages([
-            createMsg('user', historial.ultimoMensaje, historial.fechaActualizacion),
-            createMsg('assistant', historial.ultimaRespuesta, historial.fechaActualizacion),
-          ]);
+        if (mensajesPrevios.length > 0) {
+          setMessages(
+            mensajesPrevios.map((msg) =>
+              createMsg(msg.rol === 'assistant' ? 'assistant' : 'user', msg.contenido),
+            ),
+          );
         } else {
           setMessages([
             createMsg(
@@ -90,6 +95,26 @@ const EstudIA = () => {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  const handleLimpiarChat = async () => {
+    setClearing(true);
+    setErrorMsg('');
+    try {
+      await IaService.limpiarHistorial();
+      setMessages([
+        createMsg(
+          'assistant',
+          `Historial eliminado. Estoy listo para ayudarte con consultas de ${rolLabel.toLowerCase()}.`,
+          new Date().toISOString(),
+        ),
+      ]);
+    } catch (error) {
+      const backendMessage = error?.response?.data?.error || error?.response?.data || error?.message;
+      setErrorMsg(backendMessage || 'No se pudo limpiar el historial de conversación.');
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -131,9 +156,21 @@ const EstudIA = () => {
         icon={<SmartToy />}
         onBack={() => navigate('/modulo/ia')}
         actions={(
-          <Typography variant="body2" color="text.secondary">
-            Rol activo: {rolLabel}
-          </Typography>
+          <>
+            <Typography variant="body2" color="text.secondary">
+              Rol activo: {rolLabel}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteSweep />}
+              onClick={() => setConfirmLimpiar(true)}
+              disabled={loadingHistorial || clearing || messages.length === 0}
+            >
+              Limpiar chat
+            </Button>
+          </>
         )}
       />
 
@@ -230,6 +267,19 @@ const EstudIA = () => {
           </Button>
         </Stack>
       </Paper>
+
+      <FloatingConfirmModal
+        open={confirmLimpiar}
+        title="Limpiar chat"
+        message="Se eliminará todo el historial de conversación con EstudIA guardado en el servidor. Esta acción no se puede deshacer."
+        confirmText="Limpiar"
+        severity="error"
+        onClose={() => setConfirmLimpiar(false)}
+        onConfirm={async () => {
+          setConfirmLimpiar(false);
+          await handleLimpiarChat();
+        }}
+      />
     </Box>
   );
 };

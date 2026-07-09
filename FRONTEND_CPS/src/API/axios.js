@@ -50,8 +50,15 @@ const resolveBaseUrl = () => {
 
 const resolvedBaseUrl = resolveBaseUrl();
 
+// Render (free tier) suspende el backend por inactividad y puede tardar
+// hasta ~60s en "despertar" en el primer request. El timeout se deja holgado
+// para no cortar ese arranque en frio; solo evita que un request quede
+// colgado para siempre ante una falla real de red.
+const REQUEST_TIMEOUT_MS = 60000;
+
 const api = axios.create({
   baseURL: resolvedBaseUrl,
+  timeout: REQUEST_TIMEOUT_MS,
 });
 api.interceptors.request.use(
   (config) => {
@@ -62,6 +69,16 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  },
+);
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === "ECONNABORTED" || error.message === "Network Error") {
+      error.message =
+        "No se pudo conectar con el servidor. Si es la primera visita en un rato, puede tardar hasta un minuto en iniciar — intenta de nuevo en unos segundos.";
+    }
     return Promise.reject(error);
   },
 );

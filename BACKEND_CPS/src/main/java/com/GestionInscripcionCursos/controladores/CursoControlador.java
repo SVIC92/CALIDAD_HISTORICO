@@ -32,6 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/curso")
 public class CursoControlador {
 
+    private static final String CLAVE_MENSAJE = "mensaje";
+    private static final String CLAVE_ERROR = "error";
+
     @Autowired
     private CursoServicio cursoServicio;
 
@@ -40,13 +43,13 @@ public class CursoControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/registrar")
-    public ResponseEntity<?> registrar() {
-        return ResponseEntity.ok(Map.of("mensaje", "Endpoint para registrar curso"));
+    public ResponseEntity<Object> registrar() {
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Endpoint para registrar curso"));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/registro")
-    public ResponseEntity<?> registro(
+    public ResponseEntity<Object> registro(
             @RequestParam String nombre,
             @RequestParam(required = false) String codigoCurso,
             @RequestParam String descripcion,
@@ -84,9 +87,9 @@ public class CursoControlador {
                 carrera
             ));
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("mensaje", "Curso registrado correctamente"));
+                    .body(Map.of(CLAVE_MENSAJE, "Curso registrado correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -114,7 +117,7 @@ public class CursoControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/modificar/{id}")
-    public ResponseEntity<?> modificar(
+    public ResponseEntity<Object> modificar(
             @PathVariable String id,
             @RequestParam String nombre,
             @RequestParam(required = false) String codigoCurso,
@@ -154,19 +157,19 @@ public class CursoControlador {
             ));
             return ResponseEntity.ok(cursoServicio.buscarPorId(id));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
 
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/eliminar/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable String id) {
+    public ResponseEntity<Object> eliminar(@PathVariable String id) {
         try {
             cursoServicio.eliminarCurso(id);
-            return ResponseEntity.ok(Map.of("mensaje", "Curso eliminado correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Curso eliminado correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -226,7 +229,7 @@ public class CursoControlador {
 
     @PreAuthorize("hasAnyRole('PROFESOR', 'ALUMNO')")
     @PostMapping("/inscribir/{id}")
-    public ResponseEntity<?> inscribirCurso(@PathVariable String id) {
+    public ResponseEntity<Object> inscribirCurso(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String emailUser = authentication.getName();
@@ -236,17 +239,17 @@ public class CursoControlador {
         try {
             cursoServicio.inscribirCurso(usuario.getId(), id);
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Curso inscrito correctamente",
+                    CLAVE_MENSAJE, "Curso inscrito correctamente",
                     "rol", usuario.getRol().name()));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
 
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/{idCurso}/horarios/agregar")
-    public ResponseEntity<?> agregarHorario(
+    public ResponseEntity<Object> agregarHorario(
             @PathVariable String idCurso,
             @RequestParam String diaSemana,
             @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime horaInicio,
@@ -258,7 +261,7 @@ public class CursoControlador {
             HorarioSesion horario = cursoServicio.agregarHorario(idCurso, diaSemana, horaInicio, horaFin, aula, modalidad);
             return ResponseEntity.status(HttpStatus.CREATED).body(horario);
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -269,21 +272,21 @@ public class CursoControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @DeleteMapping("/{idCurso}/horarios/{idHorario}")
-    public ResponseEntity<?> eliminarHorario(
+    public ResponseEntity<Object> eliminarHorario(
             @PathVariable String idCurso,
             @PathVariable String idHorario
     ) {
         try {
             cursoServicio.eliminarHorario(idCurso, idHorario);
-            return ResponseEntity.ok(Map.of("mensaje", "Horario eliminado correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Horario eliminado correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/{idCurso}/prerequisitos/agregar")
-    public ResponseEntity<?> agregarPrerequisito(
+    public ResponseEntity<Object> agregarPrerequisito(
             @PathVariable String idCurso,
             @RequestParam String idCursoPrerequisito,
             @RequestParam(required = false) Boolean obligatorio,
@@ -293,7 +296,7 @@ public class CursoControlador {
             CursoPrerequisito prerequisito = cursoServicio.agregarPrerequisito(idCurso, idCursoPrerequisito, obligatorio, observacion);
             return ResponseEntity.status(HttpStatus.CREATED).body(prerequisito);
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 

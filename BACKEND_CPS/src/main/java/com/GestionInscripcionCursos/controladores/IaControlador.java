@@ -31,6 +31,8 @@ public class IaControlador {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IaControlador.class);
 
+    private static final String CLAVE_ERROR = "error";
+
     private final IaServicio iaServicio;
 
     public IaControlador(IaServicio iaServicio) {
@@ -39,27 +41,27 @@ public class IaControlador {
 
     @PreAuthorize("hasRole('ALUMNO')")
     @PostMapping("/chat/alumno")
-    public ResponseEntity<?> chatAlumno(@RequestBody IaChatRequestDto request, Authentication auth) {
+    public ResponseEntity<Object> chatAlumno(@RequestBody IaChatRequestDto request, Authentication auth) {
         return ejecutarChatSeguro(request, auth, "ALUMNO");
     }
 
     @PreAuthorize("hasRole('PROFESOR')")
     @PostMapping("/chat/profesor")
-    public ResponseEntity<?> chatProfesor(@RequestBody IaChatRequestDto request, Authentication auth) {
+    public ResponseEntity<Object> chatProfesor(@RequestBody IaChatRequestDto request, Authentication auth) {
         return ejecutarChatSeguro(request, auth, "PROFESOR");
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/chat/admin")
-    public ResponseEntity<?> chatAdmin(@RequestBody IaChatRequestDto request, Authentication auth) {
+    public ResponseEntity<Object> chatAdmin(@RequestBody IaChatRequestDto request, Authentication auth) {
         return ejecutarChatSeguro(request, auth, "ADMIN");
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/historial/ultimo")
-    public ResponseEntity<?> ultimoHistorial(Authentication auth) {
+    public ResponseEntity<Object> ultimoHistorial(Authentication auth) {
         return iaServicio.obtenerUltimoHistorial(auth.getName())
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.ok(Map.of("mensaje", "No hay historial disponible")));
     }
 
@@ -72,7 +74,7 @@ public class IaControlador {
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/historial")
-    public ResponseEntity<?> limpiarHistorial(Authentication auth) {
+    public ResponseEntity<Object> limpiarHistorial(Authentication auth) {
         iaServicio.limpiarHistorial(auth.getName());
         return ResponseEntity.ok(Map.of("mensaje", "Historial de conversacion eliminado correctamente"));
     }
@@ -87,71 +89,71 @@ public class IaControlador {
 
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     @PostMapping("/rubricas/generar")
-    public ResponseEntity<?> generarRubrica(
+    public ResponseEntity<Object> generarRubrica(
             @RequestBody RubricaGeneracionRequestDto request,
             Authentication auth
     ) {
         try {
             return ResponseEntity.ok(iaServicio.generarRubrica(auth.getName(), request));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         } catch (Exception ex) {
             LOGGER.error("Error generando rúbrica", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error interno al generar la rúbrica"));
+                    .body(Map.of(CLAVE_ERROR, "Error interno al generar la rúbrica"));
         }
     }
     @PostMapping("/silabo/generar")
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
-    public ResponseEntity<?> generarSilabo(
+    public ResponseEntity<Object> generarSilabo(
             @RequestBody SilaboGeneracionRequestDto request) {
         try {
             SilaboGeneradoDto silabo = iaServicio.generarSilabo(request);
             return ResponseEntity.ok(silabo);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         } catch (IllegalStateException ex) {
             LOGGER.error("Error de configuración/servicio IA al generar sílabo: {}", ex.getMessage());
             String detalle = (ex.getMessage() == null || ex.getMessage().isBlank())
                 ? "Sin detalle disponible"
                 : ex.getMessage();
             Map<String, String> body = new LinkedHashMap<>();
-            body.put("error", "El servicio de IA no esta disponible temporalmente");
+            body.put(CLAVE_ERROR, "El servicio de IA no esta disponible temporalmente");
             body.put("detalle", detalle);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
         } catch (Exception ex) {
             LOGGER.error("Error no controlado al generar sílabo con IA", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error interno al generar el sílabo"));
+                    .body(Map.of(CLAVE_ERROR, "Error interno al generar el sílabo"));
         }
     }
 
-    private ResponseEntity<?> ejecutarChatSeguro(IaChatRequestDto request, Authentication auth, String rol) {
+    private ResponseEntity<Object> ejecutarChatSeguro(IaChatRequestDto request, Authentication auth, String rol) {
         try {
             if (auth == null || auth.getName() == null || auth.getName().isBlank()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "No hay usuario autenticado para procesar el chat"));
+                        .body(Map.of(CLAVE_ERROR, "No hay usuario autenticado para procesar el chat"));
             }
             if (request == null || request.mensaje() == null || request.mensaje().isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "El mensaje es obligatorio"));
+                return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, "El mensaje es obligatorio"));
             }
             IaChatResponseDto respuesta = iaServicio.chatearSegunRol(auth.getName(), rol, request.mensaje());
             return ResponseEntity.ok(respuesta);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         } catch (IllegalStateException ex) {
             LOGGER.error("Error de configuración/servicio IA para rol {}: {}", rol, ex.getMessage());
             String detalle = (ex.getMessage() == null || ex.getMessage().isBlank())
                 ? "Sin detalle disponible"
                 : ex.getMessage();
             Map<String, String> body = new LinkedHashMap<>();
-            body.put("error", "El servicio de IA no esta disponible temporalmente");
+            body.put(CLAVE_ERROR, "El servicio de IA no esta disponible temporalmente");
             body.put("detalle", detalle);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
         } catch (Exception ex) {
             LOGGER.error("Error no controlado en chat IA para rol {}", rol, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error interno al procesar el chat IA"));
+                    .body(Map.of(CLAVE_ERROR, "Error interno al procesar el chat IA"));
         }
     }
 }

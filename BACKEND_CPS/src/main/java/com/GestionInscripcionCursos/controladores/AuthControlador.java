@@ -31,6 +31,11 @@ public class AuthControlador {
 
     private static final Logger log = LoggerFactory.getLogger(AuthControlador.class);
 
+    private static final String CLAVE_ERROR = "error";
+    private static final String CLAVE_MENSAJE = "mensaje";
+    private static final String CLAVE_ENABLED = "enabled";
+    private static final String MSG_USUARIO_NO_ENCONTRADO = "Usuario no encontrado";
+
     private final AuthenticationManager authenticationManager;
     private final UsuarioServicio usuarioServicio;
     private final JwtUtil jwtUtil;
@@ -55,7 +60,7 @@ public class AuthControlador {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> crearTokenAutenticacion(@RequestBody Map<String, String> credenciales) throws Exception {
+    public ResponseEntity<Object> crearTokenAutenticacion(@RequestBody Map<String, String> credenciales) throws Exception {
         String email = credenciales.get("email");
         try {
             // Verificamos email y contraseña
@@ -65,7 +70,7 @@ public class AuthControlador {
         } catch (Exception e) {
             log.warn("Intento de login fallido para el email: {}", email);
             auditoriaServicio.registrar(AuditoriaServicio.LOGIN_FALLIDO, email, "Credenciales incorrectas", false);
-            return ResponseEntity.status(401).body(Map.of("error", "Credenciales incorrectas"));
+            return ResponseEntity.status(401).body(Map.of(CLAVE_ERROR, "Credenciales incorrectas"));
         }
 
         // Si es correcto, generamos el token
@@ -77,7 +82,7 @@ public class AuthControlador {
                 auditoriaServicio.registrar(AuditoriaServicio.LOGIN_FALLIDO, email, "Codigo 2FA invalido o ausente", false);
                 return ResponseEntity.status(401).body(Map.of(
                         "twoFactorRequired", true,
-                        "mensaje", "Codigo de autenticacion invalido o ausente"
+                        CLAVE_MENSAJE, "Codigo de autenticacion invalido o ausente"
                 ));
             }
         }
@@ -97,20 +102,20 @@ public class AuthControlador {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/2fa/status")
-    public ResponseEntity<?> twoFactorStatus(Authentication authentication) {
+    public ResponseEntity<Object> twoFactorStatus(Authentication authentication) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_ERROR, MSG_USUARIO_NO_ENCONTRADO));
         }
-        return ResponseEntity.ok(Map.of("enabled", usuario.isTwoFactorEnabled()));
+        return ResponseEntity.ok(Map.of(CLAVE_ENABLED, usuario.isTwoFactorEnabled()));
     }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/2fa/setup")
-    public ResponseEntity<?> setupTwoFactor(Authentication authentication) {
+    public ResponseEntity<Object> setupTwoFactor(Authentication authentication) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_ERROR, MSG_USUARIO_NO_ENCONTRADO));
         }
 
         String secret = usuario.getTwoFactorSecret();
@@ -124,17 +129,17 @@ public class AuthControlador {
         return ResponseEntity.ok(Map.of(
                 "secret", secret,
                 "otpAuthUrl", otpAuthUrl,
-                "enabled", usuario.isTwoFactorEnabled()
+                CLAVE_ENABLED, usuario.isTwoFactorEnabled()
         ));
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping(value = "/2fa/qr", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<?> twoFactorQr(Authentication authentication,
+    public ResponseEntity<Object> twoFactorQr(Authentication authentication,
             @RequestParam(defaultValue = "280") int size) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_ERROR, MSG_USUARIO_NO_ENCONTRADO));
         }
 
         String secret = usuario.getTwoFactorSecret();
@@ -148,7 +153,7 @@ public class AuthControlador {
         byte[] qr = twoFactorServicio.generarQrPng(otpAuthUrl, size);
 
         if (qr.length == 0) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "No se pudo generar el QR"));
+            return ResponseEntity.internalServerError().body(Map.of(CLAVE_ERROR, "No se pudo generar el QR"));
         }
 
         return ResponseEntity.ok()
@@ -159,40 +164,40 @@ public class AuthControlador {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/2fa/enable")
-    public ResponseEntity<?> enableTwoFactor(Authentication authentication, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Object> enableTwoFactor(Authentication authentication, @RequestBody Map<String, String> body) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_ERROR, MSG_USUARIO_NO_ENCONTRADO));
         }
 
         String secret = usuario.getTwoFactorSecret();
         if (secret == null || secret.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Primero debes generar la configuracion 2FA"));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, "Primero debes generar la configuracion 2FA"));
         }
 
         String codigo = body != null ? body.get("code") : null;
         if (!twoFactorServicio.validarCodigo(secret, codigo)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Codigo de autenticacion invalido"));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, "Codigo de autenticacion invalido"));
         }
 
         usuario.setTwoFactorEnabled(true);
         usuarioServicio.guardar(usuario);
 
-        return ResponseEntity.ok(Map.of("mensaje", "Two factor activado correctamente", "enabled", true));
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Two factor activado correctamente", CLAVE_ENABLED, true));
     }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/2fa/disable")
-    public ResponseEntity<?> disableTwoFactor(Authentication authentication, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Object> disableTwoFactor(Authentication authentication, @RequestBody Map<String, String> body) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_ERROR, MSG_USUARIO_NO_ENCONTRADO));
         }
 
         if (usuario.isTwoFactorEnabled()) {
             String codigo = body != null ? body.get("code") : null;
             if (!twoFactorServicio.validarCodigo(usuario.getTwoFactorSecret(), codigo)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Codigo de autenticacion invalido"));
+                return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, "Codigo de autenticacion invalido"));
             }
         }
 
@@ -200,42 +205,42 @@ public class AuthControlador {
         usuario.setTwoFactorSecret(null);
         usuarioServicio.guardar(usuario);
 
-        return ResponseEntity.ok(Map.of("mensaje", "Two factor desactivado correctamente", "enabled", false));
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Two factor desactivado correctamente", CLAVE_ENABLED, false));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> solicitarRecuperacion(@RequestBody RecuperacionPasswordRequestDto request) {
+    public ResponseEntity<Object> solicitarRecuperacion(@RequestBody RecuperacionPasswordRequestDto request) {
         try {
             recuperacionPasswordServicio.solicitarRecuperacion(request != null ? request.getEmail() : null);
             return ResponseEntity.ok(Map.of(
-                    "mensaje",
+                    CLAVE_MENSAJE,
                     "Si el correo existe en el sistema, recibiras un enlace para reestablecer tu contraseña"
             ));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+    public ResponseEntity<Object> resetPassword(@RequestBody ResetPasswordRequestDto request) {
         try {
             recuperacionPasswordServicio.reestablecerPassword(
                     request.getToken(),
                     request.getPassword(),
                     request.getPassword2()
             );
-            return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Contraseña actualizada correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
-    public ResponseEntity<?> perfilActual(Authentication authentication) {
+    public ResponseEntity<Object> perfilActual(Authentication authentication) {
         Usuario usuario = usuarioServicio.buscarEmail(authentication.getName());
         if (usuario == null) {
-            return ResponseEntity.status(404).body(Map.of("mensaje", "Usuario no encontrado"));
+            return ResponseEntity.status(404).body(Map.of(CLAVE_MENSAJE, MSG_USUARIO_NO_ENCONTRADO));
         }
 
         String rol = usuario.getRol() != null ? usuario.getRol().name() : null;

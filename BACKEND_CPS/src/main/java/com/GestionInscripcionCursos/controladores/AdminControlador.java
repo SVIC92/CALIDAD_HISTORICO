@@ -25,6 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class AdminControlador {
 
+    private static final String CLAVE_MENSAJE = "mensaje";
+    private static final String CLAVE_ERROR = "error";
+
     private final UsuarioServicio usuarioServicio;
     private final AuditoriaServicio auditoriaServicio;
 
@@ -35,8 +38,8 @@ public class AdminControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/dashboard")
-    public ResponseEntity<?> panelAdministrativo() {
-        return ResponseEntity.ok(Map.of("mensaje", "Dashboard admin"));
+    public ResponseEntity<Object> panelAdministrativo() {
+        return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Dashboard admin"));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
@@ -53,18 +56,18 @@ public class AdminControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/usuarios/{id}")
-    public ResponseEntity<?> obtenerUsuario(@PathVariable String id) {
+    public ResponseEntity<Object> obtenerUsuario(@PathVariable String id) {
         try {
             Usuario usuario = usuarioServicio.buscarPorId(id);
             return ResponseEntity.ok(mapearUsuario(usuario));
         } catch (MyException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/usuarios")
-    public ResponseEntity<?> crearUsuario(@RequestBody UsuarioAdminRequestDto request) {
+    public ResponseEntity<Object> crearUsuario(@RequestBody UsuarioAdminRequestDto request) {
         try {
             Usuario usuario = usuarioServicio.crearUsuarioAdmin(
                     request.nombre(),
@@ -76,13 +79,13 @@ public class AdminControlador {
             );
             return ResponseEntity.status(HttpStatus.CREATED).body(mapearUsuario(usuario));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/usuarios/{id}")
-    public ResponseEntity<?> actualizarUsuario(@PathVariable String id, @RequestBody UsuarioAdminRequestDto request) {
+    public ResponseEntity<Object> actualizarUsuario(@PathVariable String id, @RequestBody UsuarioAdminRequestDto request) {
         try {
             Usuario usuario = usuarioServicio.actualizarUsuarioAdmin(
                     id,
@@ -96,37 +99,37 @@ public class AdminControlador {
             return ResponseEntity.ok(mapearUsuario(usuario));
         } catch (MyException ex) {
             HttpStatus status = esNoEncontrado(ex.getMessage()) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(status).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PatchMapping("/usuarios/{id}/desactivar")
-    public ResponseEntity<?> desactivarUsuario(@PathVariable String id) {
+    public ResponseEntity<Object> desactivarUsuario(@PathVariable String id) {
         try {
             Usuario usuario = usuarioServicio.desactivarUsuario(id);
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Usuario desactivado correctamente",
+                    CLAVE_MENSAJE, "Usuario desactivado correctamente",
                     "usuario", mapearUsuario(usuario)
             ));
         } catch (MyException ex) {
             HttpStatus status = esNoEncontrado(ex.getMessage()) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(status).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PatchMapping("/usuarios/{id}/activar")
-    public ResponseEntity<?> activarUsuario(@PathVariable String id) {
+    public ResponseEntity<Object> activarUsuario(@PathVariable String id) {
         try {
             Usuario usuario = usuarioServicio.activarUsuario(id);
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Usuario activado correctamente",
+                    CLAVE_MENSAJE, "Usuario activado correctamente",
                     "usuario", mapearUsuario(usuario)
             ));
         } catch (MyException ex) {
             HttpStatus status = esNoEncontrado(ex.getMessage()) ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(status).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 

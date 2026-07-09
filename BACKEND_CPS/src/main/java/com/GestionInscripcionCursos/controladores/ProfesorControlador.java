@@ -23,7 +23,7 @@ public class ProfesorControlador {
     private UsuarioServicio usuarioServicio;
     
     @GetMapping("/dashboard")
-    public ResponseEntity<?> panelAdministrativo() {
+    public ResponseEntity<Object> panelAdministrativo() {
         return ResponseEntity.ok(Map.of("mensaje", "Dashboard profesor"));
     }
 

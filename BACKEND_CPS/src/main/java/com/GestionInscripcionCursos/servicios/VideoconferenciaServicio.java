@@ -18,6 +18,8 @@ public class VideoconferenciaServicio {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VideoconferenciaServicio.class);
 
+    private static final String MSG_SALA_NO_ENCONTRADA = "Sala no encontrada";
+
     private final VideoconferenciaRepositorio videoRepo;
     private final VideoconferenciaParticipanteRepositorio participanteRepo;
     private final UsuarioRepositorio usuarioRepo;
@@ -63,7 +65,7 @@ public class VideoconferenciaServicio {
         }
 
         Videoconferencia sala = videoRepo.findBySalaUuid(salaUuid)
-                .orElseThrow(() -> new IllegalArgumentException("Sala no encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_SALA_NO_ENCONTRADA));
 
         String enlace = construirEnlaceSala(salaUuid);
         for (String id : usuarioIds) {
@@ -99,7 +101,7 @@ public class VideoconferenciaServicio {
         }
 
         videoRepo.findBySalaUuid(salaUuid)
-                .orElseThrow(() -> new IllegalArgumentException("Sala no encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_SALA_NO_ENCONTRADA));
 
         return participanteRepo.findByVideoconferenciaSalaUuid(salaUuid).stream()
                 .sorted(Comparator.comparing(
@@ -121,7 +123,7 @@ public class VideoconferenciaServicio {
         }
 
         Videoconferencia sala = videoRepo.findBySalaUuid(salaUuid)
-                .orElseThrow(() -> new IllegalArgumentException("Sala no encontrada"));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_SALA_NO_ENCONTRADA));
 
         Usuario usuario = usuarioRepo.findById(usuarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));

@@ -13,7 +13,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class EvaluacionAutomaticaTask {
@@ -35,12 +37,20 @@ public class EvaluacionAutomaticaTask {
 
         for (Actividad actividad : vencidas) {
             List<Usuario> alumnos = inscripcionRepositorio.buscarAlumnosAprobadosPorCurso(actividad.getCurso().getId());
-            
+            if (alumnos.isEmpty()) {
+                continue;
+            }
+
+            // Una sola consulta por actividad (en vez de una por cada alumno) para saber
+            // quienes ya entregaron algo.
+            Set<String> alumnosConReporte = new HashSet<>();
+            for (Reporte reporte : reporteRepositorio.buscarReportesPorIdActividad(actividad.getId())) {
+                alumnosConReporte.add(reporte.getUsuario().getId());
+            }
+
             for (Usuario alumno : alumnos) {
-                Long cantidadReportes = reporteRepositorio.contarReportesPorUsuarioYActividad(alumno.getId(), actividad.getId());
-                
-                // Si el alumno no envió ningún reporte (0 intentos usados), se le asigna 00 automáticamente
-                if (cantidadReportes == 0) {
+                // Si el alumno no envió ningún reporte, se le asigna 00 automáticamente
+                if (!alumnosConReporte.contains(alumno.getId())) {
                     Reporte reporteAuto = new Reporte(
                         "No entregado (Cierre automático)",
                         "00",

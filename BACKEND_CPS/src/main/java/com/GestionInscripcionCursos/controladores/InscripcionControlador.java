@@ -18,7 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/inscripcion")
 public class InscripcionControlador {
-    
+
+    private static final String CLAVE_MENSAJE = "mensaje";
+    private static final String CLAVE_ERROR = "error";
+
     @Autowired
     private InscripcionServicio inscripcionServicio;
     
@@ -55,58 +58,58 @@ public class InscripcionControlador {
     
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/aprobar/{id}")
-    public ResponseEntity<?> aprobar(@PathVariable String id) {
+    public ResponseEntity<Object> aprobar(@PathVariable String id) {
         try {
             inscripcionServicio.aprobar(id);
-            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion aprobada correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Inscripcion aprobada correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESOR')")
     @PostMapping("/rechazar/{id}")
-    public ResponseEntity<?> rechazar(@PathVariable String id) {
+    public ResponseEntity<Object> rechazar(@PathVariable String id) {
         try {
             inscripcionServicio.rechazar(id);
-            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion rechazada correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Inscripcion rechazada correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/aprobarProfesor/{id}")
-    public ResponseEntity<?> aprobarProfesor(@PathVariable String id) {
+    public ResponseEntity<Object> aprobarProfesor(@PathVariable String id) {
         try {
             inscripcionServicio.aprobarInscripcionProfesor(id);
-            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion de profesor aprobada y asignada al curso"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Inscripcion de profesor aprobada y asignada al curso"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/rechazarProfesor/{id}")
-    public ResponseEntity<?> rechazarProfesor(@PathVariable String id) {
+    public ResponseEntity<Object> rechazarProfesor(@PathVariable String id) {
         try {
             inscripcionServicio.rechazarInscripcionProfesor(id);
-            return ResponseEntity.ok(Map.of("mensaje", "Inscripcion de profesor rechazada correctamente"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Inscripcion de profesor rechazada correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/inscribirAlumnoDirecto")
-    public ResponseEntity<?> inscribirAlumnoDirecto(
+    public ResponseEntity<Object> inscribirAlumnoDirecto(
             @RequestParam String usuarioId,
             @RequestParam String cursoId) {
         try {
             inscripcionServicio.inscribirAlumnoDirecto(usuarioId, cursoId);
-            return ResponseEntity.ok(Map.of("mensaje", "Alumno inscrito directamente al curso"));
+            return ResponseEntity.ok(Map.of(CLAVE_MENSAJE, "Alumno inscrito directamente al curso"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 

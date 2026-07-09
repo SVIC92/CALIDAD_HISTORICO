@@ -26,6 +26,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class InscripcionServicio {
 
+    private static final String MSG_INSCRIPCION_NO_ENCONTRADA = "Inscripcion no encontrada";
+    private static final String ESTADO_APROBADO = "APROBADO";
+
     @Autowired
     private InscripcionRepositorio inscripcionRepositorio;
 
@@ -91,7 +94,7 @@ public class InscripcionServicio {
         nuevaInscripcion.setFechaCreacion(new Date());
         nuevaInscripcion.setUsuario(alumno);
         nuevaInscripcion.setCurso(curso);
-        nuevaInscripcion.setEstado("APROBADO");
+        nuevaInscripcion.setEstado(ESTADO_APROBADO);
 
         inscripcionRepositorio.save(nuevaInscripcion);
     }
@@ -118,11 +121,11 @@ public class InscripcionServicio {
     public void aprobar(String id) throws MyException {
 
         Inscripcion inscripcion = inscripcionRepositorio.findById(id)
-                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
+                .orElseThrow(() -> new MyException(MSG_INSCRIPCION_NO_ENCONTRADA));
 
         validarInscripcionAlumno(inscripcion);
 
-        inscripcion.setEstado("APROBADO");
+        inscripcion.setEstado(ESTADO_APROBADO);
 
         inscripcionRepositorio.save(inscripcion);
 
@@ -132,7 +135,7 @@ public class InscripcionServicio {
     public void rechazar(String id) throws MyException {
 
         Inscripcion inscripcion = inscripcionRepositorio.findById(id)
-                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
+                .orElseThrow(() -> new MyException(MSG_INSCRIPCION_NO_ENCONTRADA));
 
         validarInscripcionAlumno(inscripcion);
 
@@ -145,7 +148,7 @@ public class InscripcionServicio {
     @Transactional
     public void aprobarInscripcionProfesor(String id) throws MyException {
     Inscripcion inscripcion = inscripcionRepositorio.findById(id)
-            .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
+            .orElseThrow(() -> new MyException(MSG_INSCRIPCION_NO_ENCONTRADA));
     validarInscripcionProfesor(inscripcion);
 
     Usuario usuario = inscripcion.getUsuario();
@@ -160,7 +163,7 @@ public class InscripcionServicio {
     // NUEVO: Validar que el profesor no tenga cruces de horario
     validarCruceHorarios(usuario, curso);
 
-    inscripcion.setEstado("APROBADO");
+    inscripcion.setEstado(ESTADO_APROBADO);
     curso.setProfesorAsignado(usuario);
     cursoRepositorio.save(curso);
     inscripcionRepositorio.save(inscripcion);
@@ -169,7 +172,7 @@ public class InscripcionServicio {
     @Transactional
     public void rechazarInscripcionProfesor(String id) throws MyException {
         Inscripcion inscripcion = inscripcionRepositorio.findById(id)
-                .orElseThrow(() -> new MyException("Inscripcion no encontrada"));
+                .orElseThrow(() -> new MyException(MSG_INSCRIPCION_NO_ENCONTRADA));
 
         validarInscripcionProfesor(inscripcion);
 

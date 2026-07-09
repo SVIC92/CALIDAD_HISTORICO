@@ -11,6 +11,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -30,7 +31,10 @@ import org.hibernate.annotations.GenericGenerator;
 
 
 @Entity
-@Table(name = "reporte")
+@Table(name = "reporte", indexes = {
+        @Index(name = "idx_reporte_usuario_actividad", columnList = "usuario_id, actividad_id"),
+        @Index(name = "idx_reporte_actividad", columnList = "actividad_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

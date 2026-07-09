@@ -303,14 +303,14 @@ class ReporteServicioTest {
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("c-1")).thenReturn(List.of(ana));
 
             // act1: calificada con nota numerica 18
-            when(reporteRepositorio.buscarReportesPorUsuarioYActividad("u-1", "a-1"))
-                    .thenReturn(List.of(reporte("r-1", act1, EstadoEntrega.CALIFICADO, "18")));
+            Reporte reporteAct1 = reporte("r-1", act1, EstadoEntrega.CALIFICADO, "18");
+            reporteAct1.setUsuario(ana);
             // act2: atrasada
-            when(reporteRepositorio.buscarReportesPorUsuarioYActividad("u-1", "a-2"))
-                    .thenReturn(List.of(reporte("r-2", act2, EstadoEntrega.ATRASADO, "00")));
-            // act3: sin entrega (pendiente)
-            when(reporteRepositorio.buscarReportesPorUsuarioYActividad("u-1", "a-3"))
-                    .thenReturn(List.of());
+            Reporte reporteAct2 = reporte("r-2", act2, EstadoEntrega.ATRASADO, "00");
+            reporteAct2.setUsuario(ana);
+            // act3: sin entrega (pendiente) -> no se incluye ningun reporte para esa actividad
+            when(reporteRepositorio.buscarReportesPorIdsActividad(List.of("a-1", "a-2", "a-3")))
+                    .thenReturn(List.of(reporteAct1, reporteAct2));
 
             List<RendimientoAlumnoDto> resultado = reporteServicio.calcularRendimientoCurso("c-1");
 
@@ -336,8 +336,10 @@ class ReporteServicioTest {
             Usuario ana = alumno("u-1", "Ana", "ana@dominio.com");
             when(inscripcionRepositorio.buscarAlumnosAprobadosPorCurso("c-1")).thenReturn(List.of(ana));
 
-            when(reporteRepositorio.buscarReportesPorUsuarioYActividad("u-1", "a-1"))
-                    .thenReturn(List.of(reporte("r-1", act1, EstadoEntrega.CALIFICADO, "Por Calificar")));
+            Reporte reporteAct1 = reporte("r-1", act1, EstadoEntrega.CALIFICADO, "Por Calificar");
+            reporteAct1.setUsuario(ana);
+            when(reporteRepositorio.buscarReportesPorIdsActividad(List.of("a-1")))
+                    .thenReturn(List.of(reporteAct1));
 
             RendimientoAlumnoDto dto = reporteServicio.calcularRendimientoCurso("c-1").get(0);
 

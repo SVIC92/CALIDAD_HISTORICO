@@ -13,6 +13,8 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class VideoconferenciaLobbyControlador {
 
+    private static final String PREFIJO_TOPIC_SALA = "/topic/sala/";
+
     private final SimpMessagingTemplate messagingTemplate;
     private final VideoconferenciaServicio videoconferenciaServicio;
 
@@ -26,7 +28,7 @@ public class VideoconferenciaLobbyControlador {
 
     @MessageMapping("/sala/{salaUuid}/solicitar-acceso")
     public void solicitarAcceso(@DestinationVariable String salaUuid, @Payload SolicitudEntradaDto solicitud) {
-        messagingTemplate.convertAndSend("/topic/sala/" + salaUuid + "/lobby-admin", solicitud);
+        messagingTemplate.convertAndSend(PREFIJO_TOPIC_SALA + salaUuid + "/lobby-admin", solicitud);
     }
     @MessageMapping("/sala/{salaUuid}/responder-acceso")
     public void responderAcceso(@DestinationVariable String salaUuid, @Payload SolicitudEntradaDto respuesta) {
@@ -38,12 +40,12 @@ public class VideoconferenciaLobbyControlador {
             );
 
             messagingTemplate.convertAndSend(
-                    "/topic/sala/" + salaUuid + "/participantes",
+                    PREFIJO_TOPIC_SALA + salaUuid + "/participantes",
                     videoconferenciaServicio.listarParticipantes(salaUuid)
             );
         }
 
-        messagingTemplate.convertAndSend("/topic/sala/" + salaUuid + "/espera/" + respuesta.getUsuarioId(), respuesta);
+        messagingTemplate.convertAndSend(PREFIJO_TOPIC_SALA + salaUuid + "/espera/" + respuesta.getUsuarioId(), respuesta);
     }
     @MessageMapping("/sala/{salaUuid}/cambiar-rol-en-vivo")
     public void cambiarRolEnVivo(@DestinationVariable String salaUuid, @Payload CambioRolDinamicoDto cambioRol) {
@@ -58,7 +60,7 @@ public class VideoconferenciaLobbyControlador {
         cambioNormalizado.setUsuarioId(participanteActualizado.getUsuarioId());
         cambioNormalizado.setNuevoRol(participanteActualizado.getRolSala());
 
-        messagingTemplate.convertAndSend("/topic/sala/" + salaUuid + "/roles-en-vivo", cambioNormalizado);
-        messagingTemplate.convertAndSend("/topic/sala/" + salaUuid + "/participantes", videoconferenciaServicio.listarParticipantes(salaUuid));
+        messagingTemplate.convertAndSend(PREFIJO_TOPIC_SALA + salaUuid + "/roles-en-vivo", cambioNormalizado);
+        messagingTemplate.convertAndSend(PREFIJO_TOPIC_SALA + salaUuid + "/participantes", videoconferenciaServicio.listarParticipantes(salaUuid));
     }
 }

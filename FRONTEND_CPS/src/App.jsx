@@ -1,39 +1,63 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { Backdrop, CircularProgress, Typography } from '@mui/material';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import DashboardLayout from './layouts/DashboardLayout';
 import RutasProtegidas from './components/RutasProtegidas';
-import Login from './pages/Login'
-import Registro from './pages/Registro';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import PerfilUsuario from './pages/PerfilUsuario';
-import DashboardAdmin from './pages/DashboardAdmin';
-import DashboardProfesor from './pages/DashboardProfesor';
-import DashboardAlumno from './pages/DashboardAlumno';
-import CursosHub from './pages/CursosHub';
-import CursosListado from './pages/CursosListado';
-import CursosDictadosProfesor from './pages/CursosDictadosProfesor';
-import Carreras from './pages/Carreras';
-import Actividades from './pages/Actividades';
-import Inscripciones from './pages/Inscripciones';
-import Reportes from './pages/Reportes';
-import Configuracion from './pages/Configuracion';
-import EstudIA from './pages/EstudIA';
-import IAHub from './pages/IAHub';
-import RubricaIA from './pages/RubricaIA';
-import SilaboIA from './pages/SilaboIA';
-import ListadoUsuarios from './pages/ListadoUsuarios';
-import UsuarioHub from './pages/UsuarioHub';
-import UsuariosConectados from './pages/UsuariosConectados';
-import ModuloPlaceholder from './pages/ModuloPlaceholder';
-import NoAutorizado from './pages/NoAutorizado';
-import HorarioProfesor from './pages/HorarioProfesor';
-import HorarioAlumno from './pages/HorarioAlumno';
-import ChatInstitucional from './pages/ChatInstitucional'
-import SalaEstudioMUI from './pages/SalaEstudioMUI';
 import { useLoadingScreen } from './context/LoadingScreenContext';
 import AccessibilityFloatingMenu from './components/AccessibilityFloatingMenu';
 import ReadingAidOverlay from './components/ReadingAidOverlay';
+
+// Paginas cargadas de forma perezosa: evita que el primer request descargue
+// el codigo de todos los modulos (videoconferencia, chat, IA, admin, etc.)
+// cuando el usuario solo necesita, por ejemplo, la pantalla de login.
+const Login = lazy(() => import('./pages/Login'));
+const Registro = lazy(() => import('./pages/Registro'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const PerfilUsuario = lazy(() => import('./pages/PerfilUsuario'));
+const DashboardAdmin = lazy(() => import('./pages/DashboardAdmin'));
+const DashboardProfesor = lazy(() => import('./pages/DashboardProfesor'));
+const DashboardAlumno = lazy(() => import('./pages/DashboardAlumno'));
+const CursosHub = lazy(() => import('./pages/CursosHub'));
+const CursosListado = lazy(() => import('./pages/CursosListado'));
+const CursosDictadosProfesor = lazy(() => import('./pages/CursosDictadosProfesor'));
+const Carreras = lazy(() => import('./pages/Carreras'));
+const Actividades = lazy(() => import('./pages/Actividades'));
+const Inscripciones = lazy(() => import('./pages/Inscripciones'));
+const Reportes = lazy(() => import('./pages/Reportes'));
+const Configuracion = lazy(() => import('./pages/Configuracion'));
+const EstudIA = lazy(() => import('./pages/EstudIA'));
+const IAHub = lazy(() => import('./pages/IAHub'));
+const RubricaIA = lazy(() => import('./pages/RubricaIA'));
+const SilaboIA = lazy(() => import('./pages/SilaboIA'));
+const ListadoUsuarios = lazy(() => import('./pages/ListadoUsuarios'));
+const UsuarioHub = lazy(() => import('./pages/UsuarioHub'));
+const UsuariosConectados = lazy(() => import('./pages/UsuariosConectados'));
+const ModuloPlaceholder = lazy(() => import('./pages/ModuloPlaceholder'));
+const NoAutorizado = lazy(() => import('./pages/NoAutorizado'));
+const HorarioProfesor = lazy(() => import('./pages/HorarioProfesor'));
+const HorarioAlumno = lazy(() => import('./pages/HorarioAlumno'));
+const ChatInstitucional = lazy(() => import('./pages/ChatInstitucional'));
+const SalaEstudioMUI = lazy(() => import('./pages/SalaEstudioMUI'));
+
+const PageFallback = () => (
+  <Backdrop
+    open
+    sx={{
+      zIndex: (theme) => theme.zIndex.drawer + 2000,
+      color: '#fff',
+      flexDirection: 'column',
+      gap: 2,
+      backdropFilter: 'blur(2px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    }}
+  >
+    <CircularProgress color="inherit" />
+    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+      Cargando...
+    </Typography>
+  </Backdrop>
+);
 
 const DashboardRedirect = () => {
   const rol = localStorage.getItem('rol');
@@ -78,6 +102,7 @@ function App() {
   return (
     <>
       <RouteChangeLoader />
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
@@ -130,6 +155,7 @@ function App() {
           </Route>
         </Route>
       </Routes>
+      </Suspense>
       <AccessibilityFloatingMenu />
       <ReadingAidOverlay />
     </>

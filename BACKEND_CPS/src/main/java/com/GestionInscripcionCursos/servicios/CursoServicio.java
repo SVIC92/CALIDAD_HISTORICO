@@ -32,6 +32,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CursoServicio {
 
+    private static final String MSG_CURSO_NO_ENCONTRADO = "Curso no encontrado";
+
     @Autowired
     private CursoRepositorio cursoRepositorio;
 
@@ -140,7 +142,7 @@ public class CursoServicio {
         );
 
         Curso curso = cursoRepositorio.findById(id)
-                .orElseThrow(() -> new MyException("Curso no encontrado"));
+                .orElseThrow(() -> new MyException(MSG_CURSO_NO_ENCONTRADO));
 
         if (!curso.getCodigoCurso().equalsIgnoreCase(codigoNormalizado)
                 && cursoRepositorio.existsByCodigoCursoIgnoreCase(codigoNormalizado)) {
@@ -173,7 +175,7 @@ public class CursoServicio {
     public void eliminarCurso(String id) throws MyException {
 
         Curso curso = cursoRepositorio.findById(id)
-                .orElseThrow(() -> new MyException("Curso no encontrado"));
+                .orElseThrow(() -> new MyException(MSG_CURSO_NO_ENCONTRADO));
         curso.setEstado(EstadoCurso.INACTIVO);
         cursoRepositorio.save(curso);
 
@@ -417,7 +419,7 @@ public class CursoServicio {
 
         // 3. Lógica existente para guardar el horario
         Curso curso = cursoRepositorio.findById(idCurso)
-                .orElseThrow(() -> new MyException("Curso no encontrado"));
+                .orElseThrow(() -> new MyException(MSG_CURSO_NO_ENCONTRADO));
                 
         HorarioSesion horario = new HorarioSesion();
         horario.setCurso(curso);
@@ -467,7 +469,7 @@ public class CursoServicio {
                 .orElseThrow(() -> new MyException("Usuario no encontrado"));
 
         Curso curso = cursoRepositorio.findById(idCurso)
-                .orElseThrow(() -> new MyException("Curso no encontrado"));
+                .orElseThrow(() -> new MyException(MSG_CURSO_NO_ENCONTRADO));
 
         if (!EstadoCurso.ACTIVO.equals(curso.getEstado())) {
             throw new MyException("Solo puedes inscribirte en cursos con estado ACTIVO");

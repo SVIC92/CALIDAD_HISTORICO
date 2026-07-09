@@ -29,7 +29,7 @@ public class PresenciaControlador {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/ping")
-    public ResponseEntity<?> ping(Authentication authentication) {
+    public ResponseEntity<Object> ping(Authentication authentication) {
         presenciaUsuarioServicio.registrarActividad(authentication.getName(), authentication.getAuthorities());
         return ResponseEntity.ok().build();
     }

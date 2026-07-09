@@ -20,12 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/carrera")
 public class CarreraControlador {
 
+    private static final String CLAVE_ERROR = "error";
+
     @Autowired
     private CarreraServicio carreraServicio;
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/registro")
-    public ResponseEntity<?> registrar(
+    public ResponseEntity<Object> registrar(
             @RequestParam String codigo,
             @RequestParam String nombre,
             @RequestParam(required = false) String descripcion
@@ -34,7 +36,7 @@ public class CarreraControlador {
             Carrera carrera = carreraServicio.crear(codigo, nombre, descripcion);
             return ResponseEntity.status(HttpStatus.CREATED).body(carrera);
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -45,7 +47,7 @@ public class CarreraControlador {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("/modificar/{id}")
-    public ResponseEntity<?> modificar(
+    public ResponseEntity<Object> modificar(
             @PathVariable String id,
             @RequestParam(required = false) String codigo,
             @RequestParam(required = false) String nombre,
@@ -54,18 +56,18 @@ public class CarreraControlador {
         try {
             return ResponseEntity.ok(carreraServicio.modificar(id, codigo, nombre, descripcion));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/eliminar/{id}")
-    public ResponseEntity<?> eliminar(@PathVariable String id) {
+    public ResponseEntity<Object> eliminar(@PathVariable String id) {
         try {
             carreraServicio.eliminar(id);
             return ResponseEntity.ok(Map.of("mensaje", "Carrera eliminada correctamente"));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 }

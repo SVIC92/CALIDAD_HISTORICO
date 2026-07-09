@@ -18,11 +18,13 @@ import com.GestionInscripcionCursos.repositorios.UsuarioRepositorio;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -195,16 +197,55 @@ public class ReporteServicio {
 
         List<Actividad> actividades = actividadRepositorio.buscarActividadesPorIdCurso(curso.getId());
         List<Usuario> alumnos = inscripcionRepositorio.buscarAlumnosAprobadosPorCurso(curso.getId());
+        Map<String, Reporte> ultimoIntentoPorClave = cargarUltimosIntentosPorCurso(actividades);
 
         List<RendimientoAlumnoDto> resultado = new ArrayList<>();
         for (Usuario alumno : alumnos) {
-            resultado.add(calcularRendimientoAlumno(alumno, actividades));
+            resultado.add(calcularRendimientoAlumno(alumno, actividades, ultimoIntentoPorClave));
         }
 
         return resultado;
     }
 
-    private RendimientoAlumnoDto calcularRendimientoAlumno(Usuario alumno, List<Actividad> actividades) {
+    /**
+     * Trae en una sola consulta todos los reportes de las actividades del curso
+     * y se queda con el intento mas reciente por (alumno, actividad), en vez de
+     * consultar la BD una vez por cada combinacion alumno x actividad.
+     */
+    private Map<String, Reporte> cargarUltimosIntentosPorCurso(List<Actividad> actividades) {
+        if (actividades.isEmpty()) {
+            return Map.of();
+        }
+        List<String> idsActividad = actividades.stream().map(Actividad::getId).collect(Collectors.toList());
+        List<Reporte> todosLosReportes = reporteRepositorio.buscarReportesPorIdsActividad(idsActividad);
+
+        Map<String, Reporte> ultimoPorClave = new HashMap<>();
+        for (Reporte reporte : todosLosReportes) {
+            String clave = claveAlumnoActividad(reporte.getUsuario().getId(), reporte.getActividad().getId());
+            Reporte existente = ultimoPorClave.get(clave);
+            if (existente == null || esMasReciente(reporte, existente)) {
+                ultimoPorClave.put(clave, reporte);
+            }
+        }
+        return ultimoPorClave;
+    }
+
+    private String claveAlumnoActividad(String idAlumno, String idActividad) {
+        return idAlumno + "::" + idActividad;
+    }
+
+    private boolean esMasReciente(Reporte candidato, Reporte actual) {
+        if (candidato.getFechaCreacion() == null) {
+            return false;
+        }
+        if (actual.getFechaCreacion() == null) {
+            return true;
+        }
+        return candidato.getFechaCreacion().after(actual.getFechaCreacion());
+    }
+
+    private RendimientoAlumnoDto calcularRendimientoAlumno(
+            Usuario alumno, List<Actividad> actividades, Map<String, Reporte> ultimoIntentoPorClave) {
         Set<String> actividadesConEntrega = new HashSet<>();
         int atrasadas = 0;
         int calificadas = 0;
@@ -212,7 +253,7 @@ public class ReporteServicio {
         int cantidadNotas = 0;
 
         for (Actividad actividad : actividades) {
-            Reporte ultimoIntento = ultimoIntentoDe(alumno, actividad);
+            Reporte ultimoIntento = ultimoIntentoPorClave.get(claveAlumnoActividad(alumno.getId(), actividad.getId()));
             if (ultimoIntento == null) {
                 continue;
             }
@@ -237,11 +278,6 @@ public class ReporteServicio {
         return new RendimientoAlumnoDto(
                 alumno.getId(), alumno.getNombre(), alumno.getEmail(),
                 actividades.size(), entregadas, pendientes, atrasadas, calificadas, promedio);
-    }
-
-    private Reporte ultimoIntentoDe(Usuario alumno, Actividad actividad) {
-        List<Reporte> intentos = reporteRepositorio.buscarReportesPorUsuarioYActividad(alumno.getId(), actividad.getId());
-        return intentos.isEmpty() ? null : intentos.get(0);
     }
 
     private Double notaComoNumero(String nota) {

@@ -18,6 +18,16 @@ const IaService = {
     return respuesta.data;
   },
 
+  obtenerConversacion: async () => {
+    const respuesta = await axios.get('/ia/historial/conversacion');
+    return respuesta.data;
+  },
+
+  limpiarHistorial: async () => {
+    const respuesta = await axios.delete('/ia/historial');
+    return respuesta.data;
+  },
+
   generarRubrica: async (payload) => {
     const respuesta = await axios.post('/ia/rubricas/generar', payload);
     return respuesta.data;

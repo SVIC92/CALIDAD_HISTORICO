@@ -30,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/reporte")
 public class ReporteControlador {
 
+    private static final String CLAVE_ERROR = "error";
+
     @Autowired
     private ActividadServicio actividadServicio;
 
@@ -44,7 +46,7 @@ public class ReporteControlador {
 
     @PreAuthorize("hasAnyRole('ALUMNO')")
     @GetMapping("/registrar/{id}")
-    public ResponseEntity<?> registrar(@PathVariable String id) {
+    public ResponseEntity<Object> registrar(@PathVariable String id) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -61,13 +63,13 @@ public class ReporteControlador {
             return ResponseEntity.ok(actividad);
 
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
     @PostMapping("/registro/{id}")
     @PreAuthorize("hasAnyRole('ALUMNO')")
-    public ResponseEntity<?> registro(
+    public ResponseEntity<Object> registro(
             @PathVariable String id, 
             @RequestParam("respuesta") String respuesta,
             @RequestParam(value = "archivo", required = false) MultipartFile archivo) {
@@ -84,9 +86,9 @@ public class ReporteControlador {
             reporteServicio.crearReporte(respuesta, id, usuario.getId(), archivoUrl);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("mensaje", "Reporte registrado correctamente"));
         } catch (MyException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, e.getMessage()));
         }
     }
 
@@ -105,7 +107,7 @@ public class ReporteControlador {
     }
 
     @PostMapping("/calificar/{id}")
-    public ResponseEntity<?> calificar(
+    public ResponseEntity<Object> calificar(
             @PathVariable String id,
             @RequestParam String nota,
             @RequestParam String comentario) {
@@ -114,14 +116,14 @@ public class ReporteControlador {
             reporteServicio.calificarReporte(id, nota, comentario);
             return ResponseEntity.ok(reporteServicio.buscarPorId(id));
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
 
     }
 
     @GetMapping("/detalle/{id}")
     @PreAuthorize("hasAnyRole('ALUMNO')")
-    public ResponseEntity<?> verDetalle(@PathVariable String id) {
+    public ResponseEntity<Object> verDetalle(@PathVariable String id) {
         try {
             String emailUser = SecurityContextHolder.getContext().getAuthentication().getName();
             Usuario usuario = usuarioServicio.buscarEmail(emailUser);
@@ -129,7 +131,7 @@ public class ReporteControlador {
             List<Reporte> reportes = reporteServicio.listarReportesAlumno(usuario.getId(), id);
             return ResponseEntity.ok(reportes);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, e.getMessage()));
         }
     }
 
@@ -143,7 +145,7 @@ public class ReporteControlador {
             Reporte reporte = reporteServicio.calificarConRubrica(id, puntajesPorCriterioId, comentario);
             return ResponseEntity.ok(reporte);
         } catch (MyException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
@@ -154,7 +156,7 @@ public class ReporteControlador {
             List<RendimientoAlumnoDto> rendimiento = reporteServicio.calcularRendimientoCurso(cursoId);
             return ResponseEntity.ok(rendimiento);
         } catch (MyException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(CLAVE_ERROR, ex.getMessage()));
         }
     }
 
