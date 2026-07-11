@@ -45,6 +45,7 @@ columnas, no crea usuarios), y el auto-registro (`/registro`) siempre crea rol
 | `e2e.admin.password`   | `CursoCrudIT`, `InscripcionHorarioIT` |
 | `e2e.alumno.email`     | `InscripcionHorarioIT`              |
 | `e2e.alumno.password`  | `InscripcionHorarioIT`              |
+| `e2e.profesor.email`   | `InscripcionHorarioIT`              |
 
 Si falta alguna, el test que la necesita se **omite** (`Assumptions`, no
 falla) con un mensaje indicando qué propiedad falta.
@@ -55,6 +56,14 @@ si tu base está vacía). No hace falta que esté "limpia": `InscripcionHorarioI
 programa sus cursos de prueba en un horario aleatorio de madrugada (00:00–05:59)
 específicamente para no chocar con cursos reales ya inscritos en horario normal
 (ver `Interacciones.inicioAleatorioDeMadrugada`).
+
+**Cuenta PROFESOR** (`e2e.profesor.email`, no hace falta su contraseña — el test
+no inicia sesión con ella, solo la usa como referencia para el campo "Profesor
+asignado" al crear los cursos): créala por `/registro` y ascendela a rol
+`PROFESOR` en la base de datos, igual que con la cuenta ADMIN. Es obligatoria
+desde que `CursoServicio.inscribirCurso` rechaza la autoinscripción de un
+ALUMNO en un curso sin `profesorAsignado`; sin esta propiedad, `cursosAlumno
+.inscribirme(cursoA)` fallaría con "El curso aún no tiene un docente asignado".
 
 **Cuenta ADMIN** (no hay forma de autorregistrarse como admin — es
 intencional): la manera más simple de crear la primera es registrar una cuenta
@@ -72,7 +81,7 @@ contra producción.
 
 ```bash
 # desde BACKEND_CPS/
-./mvnw verify -Pe2e -De2e.admin.email=admin@test.com -De2e.admin.password=Admin123! -De2e.alumno.email=alumno@test.com -De2e.alumno.password=Alumno123!
+./mvnw verify -Pe2e -De2e.admin.email=admin@test.com -De2e.admin.password=Admin123! -De2e.alumno.email=alumno@test.com -De2e.alumno.password=Alumno123! -De2e.profesor.email=profesor@test.com
 
 # una sola clase
 ./mvnw verify -Pe2e -Dit.test=CursoCrudIT -De2e.admin.email=... -De2e.admin.password=...

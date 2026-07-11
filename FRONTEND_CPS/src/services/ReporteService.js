@@ -5,17 +5,22 @@ const ReporteService = {
     const respuesta = await axios.get(`/reporte/registrar/${actividadId}`);
     return respuesta.data;
   },
-  registro: async (cursoId, payloadOrNombre, descripcion) => {
+  registro: async (actividadId, payloadOrRespuesta, archivo) => {
     const payload =
-      typeof payloadOrNombre === "object"
-        ? payloadOrNombre
-        : { nombre: payloadOrNombre, descripcion };
-    const respuesta = await axios.post(`/actividad/registro/${cursoId}`, null, {
-      params: {
-        nombre: payload.nombre,
-        descripcion: payload.descripcion,
-        fechaVencimiento: payload.fechaVencimiento,
-        intentosPermitidos: payload.intentosPermitidos || 1, // <<< NUEVO
+      typeof payloadOrRespuesta === "object"
+        ? payloadOrRespuesta
+        : { respuesta: payloadOrRespuesta };
+    const archivoFinal = archivo ?? payload.archivo;
+
+    const formData = new FormData();
+    formData.append("respuesta", payload.respuesta ?? "");
+    if (archivoFinal) {
+      formData.append("archivo", archivoFinal);
+    }
+
+    const respuesta = await axios.post(`/reporte/registro/${actividadId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
       },
     });
     return respuesta.data;

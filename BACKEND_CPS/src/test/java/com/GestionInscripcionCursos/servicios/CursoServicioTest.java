@@ -631,10 +631,23 @@ class CursoServicioTest {
         }
 
         @Test
+        @DisplayName("alumno se inscribe en curso sin profesor asignado lanza MyException")
+        void cursoSinProfesorAsignadoLanzaExcepcion() {
+            Usuario alumno = usuario("a-1", Rol.ALUMNO);
+            Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
+            when(cursoRepositorio.findById("c-1")).thenReturn(Optional.of(c));
+
+            assertThrows(MyException.class, () -> cursoServicio.inscribirCurso("a-1", "c-1"));
+            verify(inscripcionRepositorio, never()).save(any());
+        }
+
+        @Test
         @DisplayName("alumno nuevo se inscribe directo como APROBADO")
         void alumnoNuevoSeInscribeAprobado() throws MyException {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
             when(cursoRepositorio.findById("c-1")).thenReturn(Optional.of(c));
             when(inscripcionRepositorio.buscarInscripcionPorIdUserIdCurso("a-1", "c-1")).thenReturn(null);
@@ -667,6 +680,7 @@ class CursoServicioTest {
         void capacidadLlenaLanzaExcepcion() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 2);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
             when(cursoRepositorio.findById("c-1")).thenReturn(Optional.of(c));
             when(inscripcionRepositorio.buscarInscripcionPorIdUserIdCurso("a-1", "c-1")).thenReturn(null);
@@ -681,6 +695,7 @@ class CursoServicioTest {
         void prerequisitoNoAprobadoLanzaExcepcion() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Curso requerido = curso("c-0", EstadoCurso.ACTIVO, 30);
             CursoPrerequisito prereq = new CursoPrerequisito();
             prereq.setPrerrequisito(requerido);
@@ -701,6 +716,7 @@ class CursoServicioTest {
         void mismoEstadoYaExistenteLanzaExcepcion() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Inscripcion existente = new Inscripcion(new Date(), "APROBADO", alumno, c);
 
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
@@ -737,6 +753,7 @@ class CursoServicioTest {
         void inscripcionExistenteConEstadoDiferenteActualiza() throws MyException {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Inscripcion existente = new Inscripcion(new Date(), "PENDIENTE", alumno, c);
 
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
@@ -757,6 +774,7 @@ class CursoServicioTest {
         void capacidadMaximaNulaOmiteValidacionCapacidad() throws MyException {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, null);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
             when(cursoRepositorio.findById("c-1")).thenReturn(Optional.of(c));
             when(inscripcionRepositorio.buscarInscripcionPorIdUserIdCurso("a-1", "c-1")).thenReturn(null);
@@ -774,6 +792,7 @@ class CursoServicioTest {
         void prerequisitoNoObligatorioSeOmite() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Curso requerido = curso("c-0", EstadoCurso.ACTIVO, 30);
             CursoPrerequisito prereq = new CursoPrerequisito();
             prereq.setPrerrequisito(requerido);
@@ -795,6 +814,7 @@ class CursoServicioTest {
         void prerequisitoSinCursoRequeridoSeOmite() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             CursoPrerequisito prereq = new CursoPrerequisito();
             prereq.setPrerrequisito(null);
             prereq.setObligatorio(true);
@@ -814,6 +834,7 @@ class CursoServicioTest {
         void prerequisitoAprobadoNoLanza() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Curso requerido = curso("c-0", EstadoCurso.ACTIVO, 30);
             CursoPrerequisito prereq = new CursoPrerequisito();
             prereq.setPrerrequisito(requerido);
@@ -836,6 +857,7 @@ class CursoServicioTest {
         void cruceDeHorariosLanzaExcepcion() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             Curso otroCursoInscrito = curso("c-2", EstadoCurso.ACTIVO, 30);
 
             HorarioSesion nuevoHorario = new HorarioSesion();
@@ -867,6 +889,7 @@ class CursoServicioTest {
         void horariosNuevoCursoNuloNoValidaCruce() {
             Usuario alumno = usuario("a-1", Rol.ALUMNO);
             Curso c = curso("c-1", EstadoCurso.ACTIVO, 30);
+            c.setProfesorAsignado(usuario("prof-1", Rol.PROFESOR));
             when(usuarioRepositorio.findById("a-1")).thenReturn(Optional.of(alumno));
             when(cursoRepositorio.findById("c-1")).thenReturn(Optional.of(c));
             when(inscripcionRepositorio.buscarInscripcionPorIdUserIdCurso("a-1", "c-1")).thenReturn(null);

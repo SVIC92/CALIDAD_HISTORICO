@@ -167,7 +167,21 @@ public class CursosPage {
      */
     public void registrarCurso(String nombre, String codigoCurso, String descripcion, String carrera,
                                 int capacidadMaxima, int creditos, LocalDate fechaTermino) {
+        registrarCurso(nombre, codigoCurso, descripcion, carrera, capacidadMaxima, creditos, fechaTermino, null);
+    }
+
+    /**
+     * Sobrecarga que además asigna un docente (email o id de una cuenta PROFESOR ya
+     * existente) al registrar. Necesaria para flujos que luego inscriben un ALUMNO: desde
+     * que CursoServicio.inscribirCurso valida profesorAsignado != null, un curso sin
+     * docente ya no admite autoinscripción de alumnos.
+     */
+    public void registrarCurso(String nombre, String codigoCurso, String descripcion, String carrera,
+                                int capacidadMaxima, int creditos, LocalDate fechaTermino, String profesorAsignado) {
         completarDatosBasicos(nombre, codigoCurso, descripcion, carrera, capacidadMaxima, creditos, fechaTermino);
+        if (profesorAsignado != null && !profesorAsignado.isBlank()) {
+            Interacciones.fijarValor(driver, driver.findElement(CAMPO_PROFESOR_ASIGNADO), profesorAsignado);
+        }
         clic(espera.until(ExpectedConditions.elementToBeClickable(BOTON_REGISTRAR)));
         espera.until(ExpectedConditions.invisibilityOfElementLocated(TITULO_DIALOGO_CURSO));
     }

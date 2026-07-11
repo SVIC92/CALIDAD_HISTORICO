@@ -22,10 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Réplica a nivel de interfaz del caso CP_RF05_03 cubierto a nivel de
  * servicio en InscripcionServicioTest (ver docs/TDD_RF05_CruceHorarios.md).
  *
- * Requiere dos cuentas ya existentes en la base de datos local/dev:
- *   -De2e.admin.email=...  -De2e.admin.password=...
- *   -De2e.alumno.email=... -De2e.alumno.password=...
+ * Requiere tres cuentas ya existentes en la base de datos local/dev:
+ *   -De2e.admin.email=...    -De2e.admin.password=...
+ *   -De2e.alumno.email=...   -De2e.alumno.password=...
+ *   -De2e.profesor.email=...
  * Si faltan las propiedades, el test se OMITE (no falla).
+ *
+ * Los dos cursos se crean con esa cuenta PROFESOR ya asignada como docente: desde que
+ * CursoServicio.inscribirCurso valida profesorAsignado != null para alumnos, un curso
+ * sin docente ya no admite autoinscripción y el test fallaría al llamar inscribirme().
  *
  * La hora de los cursos se sortea en cada corrida (ver
  * Interacciones.inicioAleatorioDeMadrugada) porque la cuenta ALUMNO no tiene forma de
@@ -42,6 +47,7 @@ class InscripcionHorarioIT extends ConfiguracionE2E {
         String adminPassword = propiedadRequerida("e2e.admin.password");
         String alumnoEmail = propiedadRequerida("e2e.alumno.email");
         String alumnoPassword = propiedadRequerida("e2e.alumno.password");
+        String profesorEmail = propiedadRequerida("e2e.profesor.email");
 
         String cursoA = Interacciones.nombreUnico("Curso Horario Base");
         String cursoB = Interacciones.nombreUnico("Curso Horario Cruzado");
@@ -65,8 +71,8 @@ class InscripcionHorarioIT extends ConfiguracionE2E {
         capturar("login-admin");
         CursosPage cursosAdmin = new CursosPage(driver, espera, baseUrl).navegar();
 
-        crearCursoConHorario(cursosAdmin, cursoA, diaPosicion, horaInicioA, horaFinA, "curso-a");
-        crearCursoConHorario(cursosAdmin, cursoB, diaPosicion, horaInicioB, horaFinB, "curso-b"); // se solapa con A
+        crearCursoConHorario(cursosAdmin, cursoA, diaPosicion, horaInicioA, horaFinA, "curso-a", profesorEmail);
+        crearCursoConHorario(cursosAdmin, cursoB, diaPosicion, horaInicioB, horaFinB, "curso-b", profesorEmail); // se solapa con A
 
         new NavbarPage(driver, espera).cerrarSesion();
 
@@ -89,7 +95,8 @@ class InscripcionHorarioIT extends ConfiguracionE2E {
     }
 
     private void crearCursoConHorario(CursosPage cursosAdmin, String nombre, int diaPosicion,
-                                       String horaInicio, String horaFin, String etiquetaCaptura) {
+                                       String horaInicio, String horaFin, String etiquetaCaptura,
+                                       String profesorEmail) {
         cursosAdmin.abrirNuevoCurso();
         cursosAdmin.registrarCurso(
                 nombre,
@@ -98,7 +105,8 @@ class InscripcionHorarioIT extends ConfiguracionE2E {
                 "Ingenieria de Sistemas",
                 30,
                 4,
-                LocalDate.now().plusMonths(4));
+                LocalDate.now().plusMonths(4),
+                profesorEmail);
         capturar(etiquetaCaptura + "-registrado");
 
         cursosAdmin.abrirHorarios(nombre);
