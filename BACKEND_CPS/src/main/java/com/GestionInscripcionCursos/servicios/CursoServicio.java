@@ -479,9 +479,12 @@ public class CursoServicio {
         String estadoObjetivo = Rol.ALUMNO.equals(usuario.getRol()) ? "APROBADO" : "PENDIENTE";
 
         if (Rol.ALUMNO.equals(usuario.getRol())) {
+            if (curso.getProfesorAsignado() == null) {
+                throw new MyException("El curso aún no tiene un docente asignado, no puedes inscribirte");
+            }
             validarCapacidadCurso(curso);
             validarPrerequisitosAlumno(idUser, idCurso);
-            
+
             validarCruceHorariosAlumno(idUser, curso);
         }
 
