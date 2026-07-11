@@ -25,13 +25,15 @@ public interface CursoRepositorio extends JpaRepository<Curso, String> {
     @Query("SELECT c FROM Curso c WHERE c.profesorAsignado IS NOT NULL AND LOWER(c.profesorAsignado.nombre) LIKE LOWER(CONCAT('%', :profesor, '%'))")
     public List<Curso> buscarPorProfesorAsignado(@Param("profesor") String profesor);
 
-    @Query("SELECT DISTINCT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE c.estado = 'ACTIVO' AND (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'PROFESOR' OR u.id IS NULL)")
+    @Query("SELECT c FROM Curso c WHERE c.estado = 'ACTIVO' "
+            + "AND NOT EXISTS (SELECT 1 FROM Inscripcion i WHERE i.curso = c AND i.usuario.id = :idUser AND i.estado = 'APROBADO')")
     public List<Curso> buscarCursosDisponiblesProfesor(@Param("idUser") String idUser);
 
     @Query("SELECT c FROM Curso c JOIN c.inscripciones i JOIN i.usuario u WHERE i.usuario.id = :idUser AND i.estado = 'APROBADO' AND u.rol = 'PROFESOR'")
     public List<Curso> buscarCursosInscritosProfesor(@Param("idUser") String idUser);
 
-    @Query("SELECT DISTINCT c FROM Curso c LEFT JOIN c.inscripciones i LEFT JOIN i.usuario u WHERE c.estado = 'ACTIVO' AND c.profesorAsignado IS NOT NULL AND (i.usuario.id != :idUser OR i.estado != 'APROBADO' OR i.usuario.id IS NULL) AND (u.rol = 'ALUMNO' OR u.id IS NULL)")
+    @Query("SELECT c FROM Curso c WHERE c.estado = 'ACTIVO' AND c.profesorAsignado IS NOT NULL "
+            + "AND NOT EXISTS (SELECT 1 FROM Inscripcion i WHERE i.curso = c AND i.usuario.id = :idUser AND i.estado = 'APROBADO')")
     public List<Curso> buscarCursosDisponiblesAlumno(@Param("idUser") String idUser);
 
     @Query("SELECT c FROM Curso c JOIN c.inscripciones i JOIN i.usuario u WHERE i.usuario.id = :idUser AND i.estado = 'APROBADO' AND u.rol = 'ALUMNO'")
